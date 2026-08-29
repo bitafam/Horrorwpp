@@ -1,0 +1,6 @@
+{
+  "name": "HorrorApp",
+  "description": "یک اپلیکیشن ترسناک فارسی کامل با آینه زمان، انتخاب اشتباه، داستانهای واقعی و کاربران، و پنل مدیریت Supabase مخفی",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
