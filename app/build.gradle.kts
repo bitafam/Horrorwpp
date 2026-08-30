@@ -18,8 +18,11 @@ android {
     versionCode = 1
     versionName = "1.0"
 
-    buildConfigField("String", "SUPABASE_URL", "\"https://your-project.supabase.co\"")
-    buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"your-supabase-publishable-key\"")
+    val supabaseUrl = System.getenv("SUPABASE_URL") ?: ""
+    val supabaseKey = System.getenv("SUPABASE_PUBLISHABLE_KEY") ?: ""
+
+    buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
+    buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$supabaseKey\"")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

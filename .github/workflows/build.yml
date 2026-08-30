@@ -71,6 +71,9 @@ jobs:
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug --build-cache --parallel --no-daemon
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
 
       - name: Prepare APK for Release
         run: |

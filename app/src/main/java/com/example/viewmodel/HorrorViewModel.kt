@@ -272,6 +272,10 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loginAdmin(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
+        if (!SupabaseClientProvider.isConfigured) {
+            onResult(false, "تنظیمات اتصال Supabase در این نسخه تنظیم نشده است. لطفاً متغیرهای SUPABASE_URL و SUPABASE_PUBLISHABLE_KEY را در GitHub Secrets تنظیم کنید.")
+            return
+        }
         viewModelScope.launch {
             _loading.value = true
             try {

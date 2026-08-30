@@ -1,6 +1,9 @@
 package com.example.data
 
-import okhttp3.Interceptor
+import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.OkHttpClient
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -16,22 +19,26 @@ import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
+@JsonClass(generateAdapter = true)
 data class AuthRequest(
     val email: String,
     val password: String
 )
 
+@JsonClass(generateAdapter = true)
 data class AuthResponse(
-    @com.squareup.moshi.Json(name = "access_token") val accessToken: String?,
-    @com.squareup.moshi.Json(name = "token_type") val tokenType: String?,
+    @Json(name = "access_token") val accessToken: String?,
+    @Json(name = "token_type") val tokenType: String?,
     val user: SupabaseUser?
 )
 
+@JsonClass(generateAdapter = true)
 data class SupabaseUser(
     val id: String,
     val email: String?
 )
 
+@JsonClass(generateAdapter = true)
 data class AiGenerationRequest(
     val provider: String,
     val model: String,
@@ -40,9 +47,10 @@ data class AiGenerationRequest(
     val section: String
 )
 
+@JsonClass(generateAdapter = true)
 data class AiGenerationResponse(
     val result: String,
-    val parsedData: List<Map<String, Any>>?
+    val parsedData: List<Map<String, Any>>? = null
 )
 
 interface SupabaseApi {
@@ -175,6 +183,14 @@ interface SupabaseApi {
 }
 
 object SupabaseClientProvider {
+    val isConfigured: Boolean
+        get() {
+            val url = com.example.BuildConfig.SUPABASE_URL
+            val key = com.example.BuildConfig.SUPABASE_PUBLISHABLE_KEY
+            return url.isNotBlank() && !url.contains("your-project") &&
+                   key.isNotBlank() && !key.contains("your-supabase")
+        }
+
     var supabaseUrl: String = try {
         val url = com.example.BuildConfig.SUPABASE_URL
         if (url.isNotBlank() && !url.contains("your-project")) url else "https://your-project.supabase.co"
@@ -189,6 +205,10 @@ object SupabaseClientProvider {
         "your-supabase-publishable-key"
     }
     var currentAuthToken: String? = null
+
+    private val moshi: Moshi = Moshi.Builder()
+        .addLast(KotlinJsonAdapterFactory())
+        .build()
 
     val api: SupabaseApi by lazy {
         val client = OkHttpClient.Builder()
@@ -205,13 +225,17 @@ object SupabaseClientProvider {
             }
             .build()
 
-        // Ensure URL has trailing slash
-        val baseUrl = if (supabaseUrl.endsWith("/")) supabaseUrl else "$supabaseUrl/"
+        // Ensure URL is a valid URL with trailing slash
+        val baseUrl = if (supabaseUrl.isNotBlank() && (supabaseUrl.startsWith("http://") || supabaseUrl.startsWith("https://"))) {
+            if (supabaseUrl.endsWith("/")) supabaseUrl else "$supabaseUrl/"
+        } else {
+            "https://placeholder.supabase.co/"
+        }
 
         Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
-            .addConverterFactory(MoshiConverterFactory.create())
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(SupabaseApi::class.java)
     }
