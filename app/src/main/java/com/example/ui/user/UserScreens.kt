@@ -541,150 +541,45 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                     label = "pulseAlpha"
                 )
 
-                // STUNNING CUSTOM BOTTOM NAVIGATION WITH INTEGRATED ARCHE/WAVE AND AI ENGINE
-                Column(
+                // STUNNING FLAT GOTHIC BOTTOM NAVIGATION
+                Surface(
+                    color = Color(0xFF030106),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Color.Transparent)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color(0xFFB8143F).copy(alpha = 0.5f),
+                                    Color(0xFFDEC595),
+                                    Color(0xFFB8143F).copy(alpha = 0.5f),
+                                    Color.Transparent
+                                )
+                            ),
+                            shape = RectangleShape
+                        )
                 ) {
-                    // 1. ARCHED TOP ROW ENCLOSING THE DYNAMIC AI TRIGGER
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        contentAlignment = Alignment.BottomCenter
-                    ) {
-                        // Drawing the central curve peak backdrop
-                        Canvas(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp)
-                        ) {
-                            val w = size.width
-                            val h = size.height
-                            val path = Path().apply {
-                                moveTo(0f, h)
-                                // Left wing of curve
-                                cubicTo(
-                                    w * 0.28f, h * 0.95f,
-                                    w * 0.35f, 6.dp.toPx(),
-                                    w * 0.5f, 6.dp.toPx()
-                                )
-                                // Right wing of curve
-                                cubicTo(
-                                    w * 0.65f, 6.dp.toPx(),
-                                    w * 0.72f, h * 0.95f,
-                                    w, h
-                                )
-                                lineTo(w, h * 2)
-                                lineTo(0f, h * 2)
-                                close()
-                            }
-                            drawPath(
-                                path = path,
-                                color = Color(0xFF030106)
-                            )
-                            
-                            // Glowing crimson stroke matching gothic palette
-                            val strokePath = Path().apply {
-                                moveTo(0f, h)
-                                cubicTo(
-                                    w * 0.28f, h * 0.95f,
-                                    w * 0.35f, 6.dp.toPx(),
-                                    w * 0.5f, 6.dp.toPx()
-                                )
-                                cubicTo(
-                                    w * 0.65f, 6.dp.toPx(),
-                                    w * 0.72f, h * 0.95f,
-                                    w, h
-                                )
-                            }
-                            drawPath(
-                                path = strokePath,
-                                brush = Brush.horizontalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color(0xFFB8143F).copy(alpha = 0.8f),
-                                        Color(0xFFDEC595),
-                                        Color(0xFFB8143F).copy(alpha = 0.8f),
-                                        Color.Transparent
-                                    )
-                                ),
-                                style = Stroke(width = 1.5.dp.toPx())
-                            )
-                        }
-
-                        // THE FLOATING PREMIUM PILL - "تولید داستان با هوش مصنوعی"
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .offset(y = 10.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color(0xFFB8143F))
-                                .border(1.dp, Color(0xFFDEC595), RoundedCornerShape(20.dp))
-                                .clickable { showAiStoryGeneratorDialog = true }
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "تولید داستان با هوش مصنوعی",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp
-                                )
-                                // NEW yellow badge overlapping
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(Color(0xFFFFB300))
-                                        .padding(horizontal = 4.dp, vertical = 1.dp)
-                                ) {
-                                    Text(
-                                        text = "جدید",
-                                        color = Color(0xFF3B2A10),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 7.sp
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // 2. STICKY SOLID HORIZONTAL NAVIGATION PANEL BELOW THE CURVE
-                    Surface(
-                        color = Color(0xFF030106),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .windowInsetsPadding(WindowInsets.navigationBars)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(68.dp)
-                                .drawBehind {
-                                    drawRect(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color(0xFFB8143F).copy(alpha = pulseAlpha),
-                                                Color.Transparent
-                                            )
+                            .height(68.dp)
+                            .drawBehind {
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFFB8143F).copy(alpha = pulseAlpha),
+                                            Color.Transparent
                                         )
                                     )
-                                }
-                                .padding(horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // 5 OPTION TAB BUTTONS EXACTLY PORTRAYING THE SCREENSHOT
+                                )
+                            }
+                            .padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // 5 OPTION TAB BUTTONS EXACTLY PORTRAYING THE SCREENSHOT
                             ScreenshotNavTab(
                                 title = "داستان‌ها",
                                 icon = Icons.Default.Home,
@@ -718,7 +613,6 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                         }
                     }
                 }
-            }
         ) { padding ->
             Box(
                 modifier = Modifier
@@ -1555,44 +1449,22 @@ fun GothicCalendarTimeMirror(timeMirrors: List<TimeMirrorContent>, viewModel: Ho
 
             // DYNAMIC NARRATIVE PREVIEW CARD AT BOTTOM
             item {
-                if (generatingLoreForDate == selectedDateKey) {
+                if (activeNarrative == null) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.3f), cornerRadiusDp = 12f),
+                            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.2f), cornerRadiusDp = 12f),
                         colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(
-                            modifier = Modifier.fillMaxWidth().padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            CircularProgressIndicator(color = Color(0xFFB8143F))
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "نبش قبر تاریخ و احضار راز گوتیک با هوش مصنوعی...",
-                                color = Color(0xFFDEC595),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                } else if (activeNarrative == null) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.3f), cornerRadiusDp = 12f),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier.padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Icon(
                                 Icons.Default.HourglassEmpty,
                                 contentDescription = null,
-                                tint = Color(0xFFDEC595),
+                                tint = Color(0xFFDEC595).copy(alpha = 0.6f),
                                 modifier = Modifier.size(36.dp)
                             )
                             Spacer(modifier = Modifier.height(8.dp))
@@ -1604,45 +1476,12 @@ fun GothicCalendarTimeMirror(timeMirrors: List<TimeMirrorContent>, viewModel: Ho
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "در لوح‌های تاریخی عمارت هیچ رازی برای این تاریخ ثبت نشده است. آیا مایلید با احضار کاتب ارواح، اسرار مکتوم این روز را با هوش مصنوعی کشف کنید؟",
+                                text = "در لوح‌های تاریخی عمارت هیچ رویداد ثبت‌شده‌ای برای این تاریخ یافت نشد.",
                                 color = Color(0xFF8B8496),
                                 fontSize = 11.sp,
                                 textAlign = TextAlign.Center,
                                 lineHeight = 18.sp
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFFB8143F))
-                                    .clickable {
-                                        generatingLoreForDate = selectedDateKey
-                                        val dayNumber = selectedDateKey.split("-").lastOrNull() ?: "۲۶"
-                                        val prompt = "یک داستان تاریخی گوتیک کوتاه و ترسناک در عمارت وحشت گوتیک برای تاریخ $dayNumber مهرماه سال ۱۴۰۵ به زبان فارسی بنویس. این داستان باید با لحنی بسیار مهیب، ادبی و کلاسیک باشد و حداکثر ۳ پاراگراف کوتاه داشته باشد. دارای یک عنوان بسیار مهیج هم باشد."
-                                        viewModel.generateAILore(prompt) { generatedResult ->
-                                            val titleLine = generatedResult.substringBefore("\n").replace("#", "").trim()
-                                            val bodyText = generatedResult.substringAfter("\n").trim()
-                                            aiGeneratedDays[selectedDateKey] = TimeMirrorContent(
-                                                id = "ai-$selectedDateKey",
-                                                date_key = selectedDateKey,
-                                                title = titleLine.ifBlank { "راز مفقوده تاریخ $dayNumber مهر" },
-                                                narrative = bodyText.ifBlank { generatedResult },
-                                                status = "PUBLISHED",
-                                                createdAt = null,
-                                                updatedAt = null
-                                            )
-                                            generatingLoreForDate = null
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    text = "احضار واقعه با هوش مصنوعی",
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                )
-                            }
                         }
                     }
                 } else {
@@ -2632,7 +2471,7 @@ fun GorgeousSettingsScreen(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "ـ پیکربندی غیب‌گویی و درگاه باستانی کاتبان عمارت ـ",
+            text = "ـ پیکربندی طنین‌ها و اتمسفر قلعه باستانی گوتیک ـ",
             style = MaterialTheme.typography.bodySmall.copy(
                 color = Color(0xFF8B8496),
                 fontSize = 11.sp
@@ -2640,43 +2479,6 @@ fun GorgeousSettingsScreen(
         )
 
         Spacer(modifier = Modifier.height(12.dp))
-
-        // API Key Settings Card
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.35f), cornerRadiusDp = 12f),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    text = "کلید هوش مصنوعی (Gemini API)",
-                    color = Color(0xFFDEC595),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-                Text(
-                    text = "کلید اختصاصی هوش مصنوعی شما جهت فراخوانی اسرار زمان و احضار کاتب ارواح عمارت استفاده می‌شود.",
-                    color = Color(0xFF8B8496),
-                    fontSize = 11.sp,
-                    lineHeight = 18.sp
-                )
-                OutlinedTextField(
-                    value = "••••••••••••••••••••",
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2B1C3D),
-                        unfocusedBorderColor = Color(0xFF2B1C3D),
-                        focusedTextColor = Color(0xFF8B8496),
-                        unfocusedTextColor = Color(0xFF8B8496)
-                    )
-                )
-            }
-        }
 
         // Ambient Sound Controls
         Card(
@@ -2730,44 +2532,6 @@ fun GorgeousSettingsScreen(
                             checkedTrackColor = Color(0xFF1E1428)
                         )
                     )
-                }
-            }
-        }
-
-        // Admin Access Section
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .gothicBorder(borderColor = Color(0xFFB8143F).copy(alpha = 0.5f), cornerRadiusDp = 12f),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF130E1C)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = "پایگاه سری کاتبان عمارت",
-                    color = Color(0xFFDEC595),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
-                Text(
-                    text = "بخش انحصاری مدیریت جهت تطهیر اعترافات کاربران، انتشار داستان‌های جدید و بررسی طالع آینه زمان.",
-                    color = Color(0xFF8B8496),
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Button(
-                    onClick = onOpenAdminLogin,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth().height(42.dp)
-                ) {
-                    Text("ورود به پنل کاتبان", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
