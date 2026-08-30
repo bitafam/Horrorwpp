@@ -8,32 +8,32 @@ class HorrorRepository(context: Context) {
     private val dao = HorrorDatabase.getDatabase(context).horrorDao()
     private val api = SupabaseClientProvider.api
 
-    suspend fun getTimeMirrorContent(forceRefresh: Boolean = false): List<TimeMirrorContent> = withContext(Dispatchers.IO) {
+    suspend fun getGrimFortunes(forceRefresh: Boolean = false): List<GrimFortune> = withContext(Dispatchers.IO) {
         try {
             if (forceRefresh) {
-                val resp = api.getTimeMirrorContent(status = "PUBLISHED")
+                val resp = api.getGrimFortunes(status = "PUBLISHED")
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
-                    dao.upsertTimeMirrors(list.map { CachedTimeMirror(it.id, it.date_key, it.title, it.narrative, it.status) })
+                    dao.upsertGrimFortunes(list.map { CachedGrimFortune(it.id, it.month_index, it.month_name, it.title, it.omen_poem, it.fortune_text, it.doom_level, it.status) })
                     return@withContext list
                 }
             }
-            val cached = dao.getTimeMirrors()
+            val cached = dao.getGrimFortunes()
             if (cached.isNotEmpty() && !forceRefresh) {
-                return@withContext cached.map { TimeMirrorContent(it.id, it.dateKey, it.title, it.narrative, it.status, null, null) }
+                return@withContext cached.map { GrimFortune(it.id, it.monthIndex, it.monthName, it.title, it.omenPoem, it.fortuneText, it.doomLevel, it.status, null, null) }
             }
             // fallback fetch
-            val resp = api.getTimeMirrorContent(status = "PUBLISHED")
+            val resp = api.getGrimFortunes(status = "PUBLISHED")
             if (resp.isSuccessful && resp.body() != null) {
                 val list = resp.body()!!
-                dao.upsertTimeMirrors(list.map { CachedTimeMirror(it.id, it.date_key, it.title, it.narrative, it.status) })
+                dao.upsertGrimFortunes(list.map { CachedGrimFortune(it.id, it.month_index, it.month_name, it.title, it.omen_poem, it.fortune_text, it.doom_level, it.status) })
                 list
             } else {
-                cached.map { TimeMirrorContent(it.id, it.dateKey, it.title, it.narrative, it.status, null, null) }
+                cached.map { GrimFortune(it.id, it.monthIndex, it.monthName, it.title, it.omenPoem, it.fortuneText, it.doomLevel, it.status, null, null) }
             }
         } catch (e: Exception) {
-            val cached = dao.getTimeMirrors()
-            cached.map { TimeMirrorContent(it.id, it.dateKey, it.title, it.narrative, it.status, null, null) }
+            val cached = dao.getGrimFortunes()
+            cached.map { GrimFortune(it.id, it.monthIndex, it.monthName, it.title, it.omenPoem, it.fortuneText, it.doomLevel, it.status, null, null) }
         }
     }
 

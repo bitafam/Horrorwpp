@@ -35,8 +35,12 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import androidx.compose.ui.res.painterResource
+import com.example.R
+import com.example.data.GrimFortune
 import com.example.data.RealStory
-import com.example.data.TimeMirrorContent
 import com.example.data.WrongChoiceScenario
 import com.example.ui.theme.*
 import com.example.viewmodel.HorrorViewModel
@@ -520,7 +524,7 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     var logoTapCount by remember { mutableIntStateOf(0) }
     var showAiStoryGeneratorDialog by remember { mutableStateOf(false) }
 
-    val timeMirrors by viewModel.timeMirrorList.collectAsState()
+    val grimFortunes by viewModel.grimFortunesList.collectAsState()
     val realStories by viewModel.realStoriesList.collectAsState()
     val scenarios by viewModel.scenariosList.collectAsState()
     val loading by viewModel.loading.collectAsState()
@@ -587,8 +591,8 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                                 onClick = { selectedTab = 0 }
                             )
                             ScreenshotNavTab(
-                                title = "آینه زمان",
-                                icon = Icons.Default.DateRange,
+                                title = "طالع شوم",
+                                icon = Icons.Default.AutoAwesome,
                                 selected = selectedTab == 1,
                                 onClick = { selectedTab = 1 }
                             )
@@ -647,7 +651,7 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                                     activeReadingStory = selected
                                 }
                             )
-                            1 -> GothicCalendarTimeMirror(timeMirrors, viewModel)
+                            1 -> GrimFortuneScreen(grimFortunes, viewModel)
                             2 -> BeautifulSubmitStoryScreen(viewModel) {
                                 selectedTab = 0 // Navigate back to stories tab
                             }
@@ -1133,18 +1137,36 @@ fun StoryItemCard(
                 .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Elegant modern custom-rendered canvas for thumbnail
+            // Elegant modern custom thumbnail (Image poster or procedural canvas fallback)
             Box(
                 modifier = Modifier
-                    .size(86.dp)
+                    .size(90.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(Color.Black)
                     .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.35f), RoundedCornerShape(10.dp))
             ) {
-                when (index % 3) {
-                    0 -> SpookyBellTowerCanvas(modifier = Modifier.matchParentSize())
-                    1 -> SpookyWindowCanvas(modifier = Modifier.matchParentSize())
-                    else -> SpookyCorridorCanvas(modifier = Modifier.matchParentSize())
+                if (!story.cover_image_url.isNullOrBlank()) {
+                    AsyncImage(
+                        model = story.cover_image_url,
+                        contentDescription = story.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(Color.Transparent, Color(0x77000000))
+                                )
+                            )
+                    )
+                } else {
+                    when (index % 3) {
+                        0 -> SpookyBellTowerCanvas(modifier = Modifier.matchParentSize())
+                        1 -> SpookyWindowCanvas(modifier = Modifier.matchParentSize())
+                        else -> SpookyCorridorCanvas(modifier = Modifier.matchParentSize())
+                    }
                 }
             }
 
@@ -1216,445 +1238,404 @@ fun StoryItemCard(
 }
 
 // ==========================================
-// TAB 2: THE MIRROR OF TIME (آینه زمان با تقویم گوتیک)
+// TAB 2: GRIM FORTUNE OF HAFEZ (طالع شوم حافظ شیرازی)
 // ==========================================
 
 @Composable
-fun GothicCalendarTimeMirror(timeMirrors: List<TimeMirrorContent>, viewModel: HorrorViewModel) {
-    var selectedDateKey by remember { mutableStateOf("1405-06-26") }
-    var currentMonthYear by remember { mutableStateOf("مهر ماه / OCTOBER") }
+fun GrimFortuneScreen(grimFortunes: List<GrimFortune>, viewModel: HorrorViewModel) {
+    var selectedMonthIndex by remember { mutableIntStateOf(1) }
+    var showMonthPicker by remember { mutableStateOf(false) }
+    var showFortuneCard by remember { mutableStateOf(false) }
+    var isGeneratingAiSingle by remember { mutableStateOf(false) }
+    var aiErrorMessage by remember { mutableStateOf<String?>(null) }
 
-    val aiGeneratedDays = remember { mutableStateMapOf<String, TimeMirrorContent>() }
-    var generatingLoreForDate by remember { mutableStateOf<String?>(null) }
+    val activeFortune = grimFortunes.find { it.month_index == selectedMonthIndex }
 
-    val activeNarrative = timeMirrors.find { it.date_key == selectedDateKey }
-        ?: aiGeneratedDays[selectedDateKey]
+    val monthNames = HorrorViewModel.PERSIAN_MONTHS
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF030106))
     ) {
-        // High-end Mirror crack background overlay
+        // High-end Gothic ambient crack canvas background
         MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
 
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // TITLE HEADER WITH PARCHMENT MOTIF
-            item {
-                Text(
-                    text = "آینه زمان",
-                    style = MaterialTheme.typography.displayLarge.copy(
-                        fontFamily = FontFamily.Serif,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 30.sp,
-                        color = Color(0xFFDEC595),
-                        textAlign = TextAlign.Center,
-                        letterSpacing = 1.sp
-                    )
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "ـ مـنـعـکــس‌کـنـنــدهٔ اســرار زمـان‌های گـذشـتــه ـ",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color(0xFF8B8496),
-                        fontSize = 11.sp,
-                        letterSpacing = 1.sp
-                    )
-                )
-            }
-
-            // GOTHIC SOLID PARCHMENT CALENDAR CARD
+            // TOP BANNER: DARK HAFEZ SHIRAZI WITH GOTHIC THEME
             item {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .gothicBorder(borderColor = Color(0xFFDEC595), cornerRadiusDp = 10f),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFDEC595) // Gorgeous vintage gold/sand parchment color
-                    ),
-                    shape = RoundedCornerShape(10.dp)
+                        .height(170.dp)
+                        .gothicBorder(borderColor = Color(0xFFDEC595), cornerRadiusDp = 14f),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0512)),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Header with custom next/prev month arrows
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        // Hafez Dark Illustration Image
+                        Image(
+                            painter = painterResource(id = R.drawable.img_dark_hafez_banner_1788111363222),
+                            contentDescription = "حافظ شیرازی در تم گوتیک",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        // Dark gothic gradient overlay to ensure readable typography
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Transparent,
+                                            Color(0xCC05020A),
+                                            Color(0xFA030106)
+                                        )
+                                    )
+                                )
+                        )
+
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(12.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = Color(0xFF553F1B),
-                                modifier = Modifier.size(24.dp)
-                            )
                             Text(
-                                text = currentMonthYear,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = Color(0xFF3B2A10),
-                                    fontWeight = FontWeight.Bold,
+                                text = "طالع شوم",
+                                style = MaterialTheme.typography.displayLarge.copy(
                                     fontFamily = FontFamily.Serif,
-                                    fontSize = 15.sp
-                                )
-                            )
-                            Icon(
-                                Icons.Default.ChevronLeft,
-                                contentDescription = null,
-                                tint = Color(0xFF553F1B),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        // Persian Weekdays header row (RTL structure)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            listOf("ش", "ی", "د", "س", "چ", "پ", "ج").forEach { d ->
-                                Text(
-                                    text = d,
-                                    modifier = Modifier.weight(1f),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 28.sp,
+                                    color = Color(0xFFDEC595),
                                     textAlign = TextAlign.Center,
-                                    color = Color(0xFF553F1B),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
+                                    letterSpacing = 1.sp
                                 )
-                            }
-                        }
-
-                        Divider(color = Color(0xFF553F1B).copy(alpha = 0.3f), thickness = 1.dp)
-
-                        // 31 days mapping matching layout sequence
-                        val totalDays = 31
-                        val startingOffset = 0
-                        val totalCells = totalDays + startingOffset
-
-                        var cellIndex = 0
-                        while (cellIndex < totalCells) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                for (col in 0..6) {
-                                    val currentCell = cellIndex + col
-                                    val dayNum = currentCell - startingOffset + 1
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (currentCell in startingOffset until totalCells) {
-                                            val dateStr = "1405-06-${String.format("%02d", dayNum)}"
-                                            val isSelected = selectedDateKey == dateStr
-                                            
-                                            val labelUnder = when (dayNum) {
-                                                3 -> "ارواح"
-                                                6 -> "سکوت"
-                                                7 -> "چشم‌سوم"
-                                                9 -> "کلاغ‌ها"
-                                                10 -> "برزخ"
-                                                12 -> "ارواح"
-                                                13 -> "کلاغ‌ها"
-                                                16, 17, 19, 21 -> "کلاغ‌ها"
-                                                22 -> "برزخ"
-                                                25 -> "خالی"
-                                                28 -> "سرخ"
-                                                else -> null
-                                            }
-                                            
-                                            val isBellHighlighted = dayNum == 26 || dayNum == 27
-                                            
-                                            val cellBg = when {
-                                                isBellHighlighted -> Color(0xFF130E1C)
-                                                isSelected -> Color(0xFFB8143F).copy(alpha = 0.35f)
-                                                else -> Color.Transparent
-                                            }
-                                            
-                                            val textCol = when {
-                                                isBellHighlighted -> Color(0xFFDEC595)
-                                                dayNum == 28 -> Color(0xFFB8143F)
-                                                else -> Color(0xFF3B2A10)
-                                            }
-
-                                             Column(
-                                                modifier = Modifier
-                                                    .fillMaxSize()
-                                                    .padding(1.dp)
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(cellBg)
-                                                    .border(
-                                                        if (isBellHighlighted) BorderStroke(1.5.dp, Color(0xFFDEC595))
-                                                        else BorderStroke(0.dp, Color.Transparent),
-                                                        RoundedCornerShape(6.dp)
-                                                    )
-                                                    .clickable { selectedDateKey = dateStr },
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center
-                                            ) {
-                                                // Fixed height upper box to align numbers horizontally and vertically
-                                                Box(
-                                                    modifier = Modifier.height(16.dp),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        text = dayNum.toString(),
-                                                        color = textCol,
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 12.sp,
-                                                        fontFamily = FontFamily.Serif
-                                                    )
-                                                }
-
-                                                // Fixed height lower box to align labels/badges horizontally and vertically
-                                                Box(
-                                                    modifier = Modifier.height(10.dp),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    if (isBellHighlighted) {
-                                                        Text(
-                                                            text = if (dayNum == 26) "ناقوس" else "عزا",
-                                                            fontSize = 6.sp,
-                                                            color = Color(0xFFDEC595),
-                                                            fontWeight = FontWeight.Bold
-                                                        )
-                                                    } else if (labelUnder != null) {
-                                                        Text(
-                                                            text = labelUnder,
-                                                            fontSize = 7.sp,
-                                                            color = if (dayNum == 28) Color(0xFFB8143F) else Color(0xFF553F1B).copy(alpha = 0.8f)
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                cellIndex += 7
-                            }
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "ـ نـدای شـوم لـسـان‌الـغـیـب در عـمـارت وحـشـت ـ",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFFDEC595).copy(alpha = 0.85f),
+                                    fontSize = 11.sp,
+                                    letterSpacing = 0.5.sp
+                                )
+                            )
                         }
                     }
                 }
             }
 
-            // DYNAMIC NARRATIVE PREVIEW CARD AT BOTTOM
+            // CENTER HERO: LARGE SPOOKY HAFEZIEH TOMB WITH GOTHIC VIBE
             item {
-                if (activeNarrative == null) {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.2f), cornerRadiusDp = 12f),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .gothicBorder(borderColor = Color(0xFFB8143F).copy(alpha = 0.7f), cornerRadiusDp = 14f),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0D0616)),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Image(
+                            painter = painterResource(id = R.drawable.img_hafezieh_tomb_1788111377028),
+                            contentDescription = "آرامگاه حافظیه در تم تاریک و ترسناک",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+
+                        // Ambient mystical aura over tomb
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0x33000000),
+                                            Color(0x44B8143F),
+                                            Color(0xCC05020A)
+                                        )
+                                    )
+                                )
+                        )
+
+                        // Floating Gothic Badge
+                        Surface(
+                            color = Color(0xDD0F081C),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f)),
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(12.dp)
                         ) {
-                            Icon(
-                                Icons.Default.HourglassEmpty,
-                                contentDescription = null,
-                                tint = Color(0xFFDEC595).copy(alpha = 0.6f),
-                                modifier = Modifier.size(36.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Color(0xFFDEC595),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "معبد تاریک اسرار",
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // Selected month indicator on tomb
+                        Surface(
+                            color = Color(0xDD0F081C),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFB8143F)),
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .padding(12.dp)
+                        ) {
                             Text(
-                                text = "کتیبه مفقوده برای این روز مرموز",
-                                color = Color(0xFFDEC595),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "در لوح‌های تاریخی عمارت هیچ رویداد ثبت‌شده‌ای برای این تاریخ یافت نشد.",
-                                color = Color(0xFF8B8496),
+                                text = "ماه منتخب: ${monthNames.getOrElse(selectedMonthIndex - 1) { "" }}",
+                                color = Color.White,
                                 fontSize = 11.sp,
-                                textAlign = TextAlign.Center,
-                                lineHeight = 18.sp
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                             )
                         }
                     }
-                } else {
+                }
+            }
+
+            // PRIMARY CALL TO ACTION: "طالع منو بگیر" BUTTON
+            item {
+                Button(
+                    onClick = {
+                        showMonthPicker = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .testTag("get_my_fortune_button"),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFB8143F)
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.5.dp, Color(0xFFDEC595))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Psychology,
+                            contentDescription = null,
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "طالع منو بگیر",
+                            style = MaterialTheme.typography.titleLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp,
+                                color = Color.White,
+                                fontFamily = FontFamily.Serif
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            // FORTUNE DISPLAY CARD
+            item {
+                if (activeFortune != null) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.3f), cornerRadiusDp = 12f),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
-                        shape = RoundedCornerShape(12.dp)
+                            .gothicBorder(borderColor = Color(0xFFDEC595), cornerRadiusDp = 14f),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F081C)),
+                        shape = RoundedCornerShape(14.dp)
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(18.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Header Row: Month Name & Doom Level Badge
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color.Black)
-                                ) {
-                                    SpookyBellTowerCanvas(modifier = Modifier.fillMaxSize())
-                                }
-
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(horizontal = 12.dp)
+                                Surface(
+                                    color = Color(0xFF1E0E2B),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFDEC595))
                                 ) {
                                     Text(
-                                        text = "مکاشفه تاریخ منتخب",
+                                        text = "متولدین ماه ${activeFortune.month_name}",
                                         color = Color(0xFFDEC595),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    Text(
-                                        text = activeNarrative.title,
-                                        color = Color.White,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = activeNarrative.narrative,
-                                        color = Color(0xFF8B8496),
-                                        fontSize = 11.sp,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
                                 }
 
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFFDEC595))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
+                                Surface(
+                                    color = when (activeFortune.doom_level) {
+                                        "نفرین ابدی" -> Color(0xFF8B0000)
+                                        "بسیار شوم" -> Color(0xFFB8143F)
+                                        else -> Color(0xFF4A154B)
+                                    },
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    val parts = selectedDateKey.split("-")
-                                    val dNum = parts.lastOrNull() ?: "۲۶"
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(
-                                            text = "مورخ",
-                                            color = Color(0xFF3B2A10),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "$dNum مهر",
-                                            color = Color(0xFF3B2A10),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
+                                    Text(
+                                        text = "درجه: ${activeFortune.doom_level ?: "شوم"}",
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
                                 }
                             }
 
                             Spacer(modifier = Modifier.height(14.dp))
 
+                            // Fortune Title
+                            Text(
+                                text = activeFortune.title,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = Color.White,
+                                    fontFamily = FontFamily.Serif,
+                                    textAlign = TextAlign.Center
+                                )
+                            )
+
+                            // Hafez Omen Poem Scroll Box
+                            if (!activeFortune.omen_poem.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    color = Color(0xFFDEC595),
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = BorderStroke(1.dp, Color(0xFF553F1B))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            Icons.Default.MenuBook,
+                                            contentDescription = null,
+                                            tint = Color(0xFF553F1B),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "« ${activeFortune.omen_poem} »",
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                color = Color(0xFF2C1E0A),
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                lineHeight = 22.sp,
+                                                textAlign = TextAlign.Center,
+                                                fontFamily = FontFamily.Serif
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Dark supernatural interpretation & life warning
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "تفسیر و سرنوشت شوم:",
+                                color = Color(0xFFDEC595),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.Start
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = activeFortune.fortune_text,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = Color(0xFFE2DCED),
+                                    fontSize = 13.sp,
+                                    lineHeight = 22.sp,
+                                    textAlign = TextAlign.Justify
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Action buttons: Change month or AI Regenerate
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                var showFullDialog by remember { mutableStateOf(false) }
-
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFFB8143F))
-                                        .clickable { showFullDialog = true }
-                                        .padding(horizontal = 20.dp, vertical = 10.dp)
+                                OutlinedButton(
+                                    onClick = { showMonthPicker = true },
+                                    modifier = Modifier.weight(1f),
+                                    border = BorderStroke(1.dp, Color(0xFFDEC595)),
+                                    shape = RoundedCornerShape(8.dp)
                                 ) {
-                                    Text(
-                                        text = "قرائت کتیبه زمان",
-                                        color = Color.White,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Text("تغییر ماه تولد", color = Color(0xFFDEC595), fontSize = 12.sp)
                                 }
 
-                                if (showFullDialog) {
-                                    AlertDialog(
-                                        onDismissRequest = { showFullDialog = false },
-                                        containerColor = Color(0xFF0F0918),
-                                        title = {
-                                            Text(
-                                                text = activeNarrative.title,
-                                                color = Color(0xFFDEC595),
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 16.sp
-                                            )
-                                        },
-                                        text = {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .heightIn(max = 250.dp)
-                                                    .verticalScroll(rememberScrollState())
-                                            ) {
-                                                Text(
-                                                    text = activeNarrative.narrative,
-                                                    color = Color.White,
-                                                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                                                    fontSize = 12.sp
-                                                )
-                                            }
-                                        },
-                                        confirmButton = {
-                                            Button(
-                                                onClick = { showFullDialog = false },
-                                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
-                                                shape = RoundedCornerShape(8.dp)
-                                            ) {
-                                                Text("بستن لوح", color = Color.White, fontWeight = FontWeight.Bold)
+                                Button(
+                                    onClick = {
+                                        isGeneratingAiSingle = true
+                                        viewModel.generateGrimFortuneForSingleMonth(selectedMonthIndex) { success, title, poem, desc, doom ->
+                                            isGeneratingAiSingle = false
+                                            if (success) {
+                                                viewModel.saveGrimFortune(
+                                                    monthIndex = selectedMonthIndex,
+                                                    title = title,
+                                                    poem = poem,
+                                                    fortuneText = desc,
+                                                    doomLevel = doom,
+                                                    status = "PUBLISHED"
+                                                ) {}
+                                            } else {
+                                                aiErrorMessage = desc
                                             }
                                         }
-                                    )
-                                }
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFFDEC595)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("۲۷", color = Color(0xFF3B2A10), fontSize = 12.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Serif)
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFF1E1428)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text("۲۸", color = Color(0xFFB8143F), fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Serif)
-                                            Icon(Icons.Default.Close, contentDescription = null, tint = Color(0xFFB8143F), modifier = Modifier.size(10.dp))
-                                        }
-                                    }
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFF100B1A)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF8B8496), modifier = Modifier.size(12.dp))
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A154B)),
+                                    border = BorderStroke(1.dp, Color(0xFFB8143F)),
+                                    shape = RoundedCornerShape(8.dp),
+                                    enabled = !isGeneratingAiSingle
+                                ) {
+                                    if (isGeneratingAiSingle) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            color = Color.White,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else {
+                                        Text("فال جدید با AI", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -1663,6 +1644,128 @@ fun GothicCalendarTimeMirror(timeMirrors: List<TimeMirrorContent>, viewModel: Ho
                 }
             }
         }
+    }
+
+    // MONTH PICKER DIALOG (ALL 12 PERSIAN MONTHS)
+    if (showMonthPicker) {
+        AlertDialog(
+            onDismissRequest = { showMonthPicker = false },
+            containerColor = Color(0xFF0D0616),
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = Color(0xFFDEC595),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "ماه تولد خود را برگزینید",
+                        color = Color(0xFFDEC595),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                        fontFamily = FontFamily.Serif
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 380.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "طالع و فال شوم حافظ بر اساس ماه تولد برای شما آشکار خواهد شد:",
+                        color = Color(0xFF8B8496),
+                        fontSize = 11.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        itemsIndexed(monthNames) { index, name ->
+                            val monthIdx = index + 1
+                            val isSelected = selectedMonthIndex == monthIdx
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedMonthIndex = monthIdx
+                                        showFortuneCard = true
+                                        showMonthPicker = false
+                                    },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Color(0xFFB8143F) else Color(0xFF190F28)
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSelected) Color(0xFFDEC595) else Color(0xFF3B2555)
+                                ),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "$monthIdx",
+                                        color = if (isSelected) Color(0xFFDEC595) else Color(0xFF8B8496),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = name,
+                                        color = if (isSelected) Color.White else Color(0xFFDEC595),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        fontFamily = FontFamily.Serif
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showMonthPicker = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("بستن", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
+
+    if (aiErrorMessage != null) {
+        AlertDialog(
+            onDismissRequest = { aiErrorMessage = null },
+            containerColor = Color(0xFF0F0918),
+            title = { Text("خطای هوش مصنوعی", color = Color(0xFFB8143F), fontWeight = FontWeight.Bold) },
+            text = { Text(aiErrorMessage ?: "", color = Color.White) },
+            confirmButton = {
+                Button(
+                    onClick = { aiErrorMessage = null },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F))
+                ) {
+                    Text("متوجه شدم", color = Color.White)
+                }
+            }
+        )
     }
 }
 
@@ -1881,9 +1984,11 @@ fun SubmitStoryDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
     var content by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var submitted by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSubmitting) onDismiss() },
         containerColor = Color(0xFF0F0918),
         title = {
             Text(
@@ -1909,9 +2014,21 @@ fun SubmitStoryDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 24.sp)
                     )
                 } else {
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color(0xFFE63956),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
                     OutlinedTextField(
                         value = title,
-                        onValueChange = { title = it },
+                        onValueChange = { 
+                            title = it 
+                            errorMessage = null
+                        },
                         label = { Text("عنوان راز / کتیبه") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
@@ -1927,7 +2044,10 @@ fun SubmitStoryDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
                     )
                     OutlinedTextField(
                         value = content,
-                        onValueChange = { content = it },
+                        onValueChange = { 
+                            content = it 
+                            errorMessage = null
+                        },
                         label = { Text("روایت حادثه ماورایی یا اعتراف شما") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 4,
@@ -1964,16 +2084,33 @@ fun SubmitStoryDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
             if (!submitted) {
                 Button(
                     onClick = {
-                        if (title.isNotBlank() && content.isNotBlank()) {
-                            viewModel.submitUserStory(title, content, author.ifBlank { "ناشناس" }) { success ->
-                                if (success) submitted = true
+                        if (title.isBlank() || content.isBlank()) {
+                            errorMessage = "لطفاً عنوان و متن داستان را وارد کنید."
+                            return@Button
+                        }
+                        isSubmitting = true
+                        viewModel.submitUserStory(title.trim(), content.trim(), author.ifBlank { "ناشناس" }) { success ->
+                            isSubmitting = false
+                            if (success) {
+                                submitted = true
+                            } else {
+                                errorMessage = "خطا در ثبت داستان، لطفاً اتصال اینترنت را بررسی کنید."
                             }
                         }
                     },
+                    enabled = !isSubmitting,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("ثبت در طومار", color = Color.White, fontWeight = FontWeight.Bold)
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("ثبت در طومار", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             } else {
                 Button(
@@ -1986,7 +2123,7 @@ fun SubmitStoryDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
             }
         },
         dismissButton = {
-            if (!submitted) {
+            if (!submitted && !isSubmitting) {
                 TextButton(onClick = onDismiss) {
                     Text("انصراف", color = Color(0xFF8B8496))
                 }
@@ -2170,7 +2307,7 @@ fun StoryReaderScreen(story: RealStory, onBack: () -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -2189,7 +2326,7 @@ fun StoryReaderScreen(story: RealStory, onBack: () -> Unit) {
                     )
                 )
             }
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Premium Font Size adjustment controller
             Row(
@@ -2216,17 +2353,45 @@ fun StoryReaderScreen(story: RealStory, onBack: () -> Unit) {
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)
                     .gothicBorder(borderColor = Color(0xFFDEC595), cornerRadiusDp = 12f)
                     .background(Color(0xFF0F0918))
-                    .padding(24.dp)
+                    .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    // STUNNING STORY POSTER COVER IF AVAILABLE
+                    if (!story.cover_image_url.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        ) {
+                            AsyncImage(
+                                model = story.cover_image_url,
+                                contentDescription = story.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(Color.Transparent, Color(0xBB000000))
+                                        )
+                                    )
+                            )
+                        }
+                    }
+
                     Text(
                         text = story.title,
                         style = MaterialTheme.typography.headlineSmall.copy(
@@ -2246,7 +2411,7 @@ fun StoryReaderScreen(story: RealStory, onBack: () -> Unit) {
                         )
                     }
                     Divider(color = Color(0xFFDEC595).copy(alpha = 0.25f))
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = story.content,
                         style = MaterialTheme.typography.bodyLarge.copy(
@@ -2280,6 +2445,8 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
     var content by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
     var submitted by remember { mutableStateOf(false) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     Column(
         modifier = Modifier
@@ -2364,9 +2531,21 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
                         }
                     }
                 } else {
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage ?: "",
+                            color = Color(0xFFE63956),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
                     OutlinedTextField(
                         value = title,
-                        onValueChange = { title = it },
+                        onValueChange = { 
+                            title = it 
+                            errorMessage = null
+                        },
                         label = { Text("عنوان راز / کتیبه") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
@@ -2382,7 +2561,10 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
                     )
                     OutlinedTextField(
                         value = content,
-                        onValueChange = { content = it },
+                        onValueChange = { 
+                            content = it 
+                            errorMessage = null
+                        },
                         label = { Text("روایت واقعه مرموز یا اعتراف شما") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 6,
@@ -2417,25 +2599,40 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
 
                     Button(
                         onClick = {
-                            if (title.isNotBlank() && content.isNotBlank()) {
-                                viewModel.submitUserStory(title, content, author.ifBlank { "ناشناس" }) { success ->
-                                    if (success) {
-                                        submitted = true
-                                        onSubmissionComplete()
-                                    }
+                            if (title.isBlank() || content.isBlank()) {
+                                errorMessage = "لطفاً عنوان و متن داستان را وارد کنید."
+                                return@Button
+                            }
+                            isSubmitting = true
+                            viewModel.submitUserStory(title.trim(), content.trim(), author.ifBlank { "ناشناس" }) { success ->
+                                isSubmitting = false
+                                if (success) {
+                                    submitted = true
+                                    onSubmissionComplete()
+                                } else {
+                                    errorMessage = "خطا در ثبت داستان، لطفاً اتصال اینترنت را بررسی کنید."
                                 }
                             }
                         },
+                        enabled = !isSubmitting,
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
                         shape = RoundedCornerShape(10.dp)
                     ) {
-                        Text(
-                            text = "حکاکی روی کتیبه گوتیک",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 14.sp
-                        )
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text(
+                                text = "حکاکی روی کتیبه گوتیک",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                fontSize = 14.sp
+                            )
+                        }
                     }
                 }
             }

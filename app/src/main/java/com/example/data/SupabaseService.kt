@@ -54,27 +54,27 @@ data class AiGenerationResponse(
 )
 
 interface SupabaseApi {
-    @GET("rest/v1/time_mirror_content")
-    suspend fun getTimeMirrorContent(
+    @GET("rest/v1/grim_fortunes")
+    suspend fun getGrimFortunes(
         @Query("select") select: String = "*",
         @Query("status") status: String? = null
-    ): Response<List<TimeMirrorContent>>
+    ): Response<List<GrimFortune>>
 
-    @POST("rest/v1/time_mirror_content")
+    @POST("rest/v1/grim_fortunes")
     @Headers("Prefer: return=representation")
-    suspend fun createTimeMirror(
+    suspend fun createGrimFortune(
         @Body item: Map<String, Any>
-    ): Response<List<TimeMirrorContent>>
+    ): Response<List<GrimFortune>>
 
-    @PATCH("rest/v1/time_mirror_content")
+    @PATCH("rest/v1/grim_fortunes")
     @Headers("Prefer: return=representation")
-    suspend fun updateTimeMirror(
+    suspend fun updateGrimFortune(
         @Query("id") idEq: String,
         @Body item: Map<String, Any>
-    ): Response<List<TimeMirrorContent>>
+    ): Response<List<GrimFortune>>
 
-    @DELETE("rest/v1/time_mirror_content")
-    suspend fun deleteTimeMirror(
+    @DELETE("rest/v1/grim_fortunes")
+    suspend fun deleteGrimFortune(
         @Query("id") idEq: String
     ): Response<ResponseBody>
 

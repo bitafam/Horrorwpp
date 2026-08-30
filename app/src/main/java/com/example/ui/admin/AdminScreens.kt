@@ -2,21 +2,39 @@ package com.example.ui.admin
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.data.*
 import com.example.ui.theme.*
+import com.example.viewmodel.AppMode
 import com.example.viewmodel.HorrorViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,12 +43,13 @@ fun AdminLoginScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var errorText by remember { mutableStateOf<String?>(null) }
+    var showPassword by remember { mutableStateOf(false) }
     val loading by viewModel.loading.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ورود امن ادمین (Supabase Auth)", fontWeight = FontWeight.Bold) },
+                title = { Text("ورود امن ادمین عمارت وحشت", fontWeight = FontWeight.Bold, color = SpectralWhite) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = null, tint = SpectralWhite)
@@ -57,7 +76,9 @@ fun AdminLoginScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(28.dp),
+                    modifier = Modifier
+                        .padding(28.dp)
+                        .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
@@ -78,14 +99,14 @@ fun AdminLoginScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
                         text = "برای دسترسی به پنل مدیریت، ایمیل و رمز عبور ادمین Supabase را وارد کنید.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MutedAsh,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
+                        onValueChange = { email = it; errorText = null },
                         label = { Text("ایمیل ادمین") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -93,31 +114,61 @@ fun AdminLoginScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BloodGlow,
                             unfocusedBorderColor = MutedAsh.copy(alpha = 0.4f),
-                            focusedLabelColor = BloodGlow
+                            focusedLabelColor = BloodGlow,
+                            focusedTextColor = SpectralWhite,
+                            unfocusedTextColor = SpectralWhite
                         )
                     )
 
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
+                        onValueChange = { password = it; errorText = null },
                         label = { Text("رمز عبور") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                        trailingIcon = {
+                            IconButton(onClick = { showPassword = !showPassword }) {
+                                Icon(
+                                    imageVector = if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null,
+                                    tint = MutedAsh
+                                )
+                            }
+                        },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = BloodGlow,
                             unfocusedBorderColor = MutedAsh.copy(alpha = 0.4f),
-                            focusedLabelColor = BloodGlow
+                            focusedLabelColor = BloodGlow,
+                            focusedTextColor = SpectralWhite,
+                            unfocusedTextColor = SpectralWhite
                         )
                     )
 
                     if (errorText != null) {
-                        Text(text = errorText!!, color = BloodGlow, style = MaterialTheme.typography.bodySmall)
+                        Surface(
+                            color = BloodCrimson.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, BloodGlow.copy(alpha = 0.4f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = errorText!!,
+                                color = BloodGlow,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(12.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
 
                     Button(
                         onClick = {
+                            if (email.isBlank() || password.isBlank()) {
+                                errorText = "لطفاً ایمیل و رمز عبور را وارد نمایید."
+                                return@Button
+                            }
                             viewModel.loginAdmin(email, password) { success, msg ->
                                 if (!success) {
                                     errorText = msg
@@ -147,17 +198,27 @@ fun AdminLoginScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
 fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
     var adminTab by remember { mutableIntStateOf(0) }
 
-    val timeMirrors by viewModel.adminTimeMirrors.collectAsState()
+    val grimFortunes by viewModel.adminGrimFortunes.collectAsState()
     val realStories by viewModel.adminRealStories.collectAsState()
     val submissions by viewModel.adminSubmissions.collectAsState()
+    val scenarios by viewModel.adminScenarios.collectAsState()
+    val currentModel by viewModel.selectedGeminiModel.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("پنل مدیریت ابدی (Admin Console)", fontWeight = FontWeight.Bold, color = BloodGlow) },
+                title = {
+                    Column {
+                        Text("پنل مدیریت ابدی عمارت وحشت", fontWeight = FontWeight.Bold, color = BloodGlow, fontSize = 16.sp)
+                        Text("مدل هوش مصنوعی: $currentModel", style = MaterialTheme.typography.bodySmall, color = MutedAsh, fontSize = 11.sp)
+                    }
+                },
                 actions = {
+                    IconButton(onClick = { viewModel.loadAdminData() }) {
+                        Icon(Icons.Default.Refresh, contentDescription = "بازنشانی اطلاعات", tint = SpectralWhite)
+                    }
                     IconButton(onClick = onExitAdmin) {
-                        Icon(Icons.Default.ExitToApp, contentDescription = null, tint = BloodGlow)
+                        Icon(Icons.Default.ExitToApp, contentDescription = "خروج از ادمین", tint = BloodGlow)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DeepCrypt)
@@ -169,35 +230,35 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                     selected = adminTab == 0,
                     onClick = { adminTab = 0 },
                     icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
-                    label = { Text("داشبورد") },
+                    label = { Text("داشبورد", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 1,
                     onClick = { adminTab = 1 },
-                    icon = { Icon(Icons.Default.HourglassEmpty, contentDescription = null) },
-                    label = { Text("آینه زمان") },
+                    icon = { Icon(Icons.Default.AutoStories, contentDescription = null) },
+                    label = { Text("داستان‌ها", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 2,
                     onClick = { adminTab = 2 },
-                    icon = { Icon(Icons.Default.MenuBook, contentDescription = null) },
-                    label = { Text("داستان واقعی") },
+                    icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                    label = { Text("طالع شوم", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 3,
                     onClick = { adminTab = 3 },
-                    icon = { Icon(Icons.Default.Inbox, contentDescription = null) },
-                    label = { Text("دریافتی‌ها") },
+                    icon = { Icon(Icons.Default.AltRoute, contentDescription = null) },
+                    label = { Text("سناریوها", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 4,
                     onClick = { adminTab = 4 },
-                    icon = { Icon(Icons.Default.BugReport, contentDescription = null) },
-                    label = { Text("دیباگ") },
+                    icon = { Icon(Icons.Default.Psychology, contentDescription = null) },
+                    label = { Text("تنظیمات AI", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
             }
@@ -210,327 +271,609 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                 .background(VoidBlack)
         ) {
             when (adminTab) {
-                0 -> AdminDashboardTab(timeMirrors.size, realStories.size, submissions.size)
-                1 -> AdminTimeMirrorTab(viewModel, timeMirrors)
-                2 -> AdminRealStoriesTab(viewModel, realStories)
-                3 -> AdminModerationTab(viewModel, submissions)
-                4 -> AdminDebugTab(viewModel)
+                0 -> AdminDashboardTab(grimFortunes.size, realStories.size, submissions.size, scenarios.size, onSwitchTab = { adminTab = it })
+                1 -> AdminStoriesManagerTab(viewModel, realStories, submissions)
+                2 -> AdminGrimFortuneTab(viewModel, grimFortunes)
+                3 -> AdminScenariosTab(viewModel, scenarios)
+                4 -> AdminAiSettingsTab(viewModel)
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------
+// TAB 0: DASHBOARD
+// ----------------------------------------------------
+@Composable
+fun AdminDashboardTab(
+    tmCount: Int,
+    rsCount: Int,
+    subCount: Int,
+    scenCount: Int,
+    onSwitchTab: (Int) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "مرکز پایش و کنترل عمارت",
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
+        )
+        Text(
+            text = "مدیریت محتوای چندرسانه‌ای، داستان‌ها با پوستر، آینه زمان و سناریوهای هوش مصنوعی.",
+            color = MutedAsh,
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            StatCard(title = "داستان‌های واقعی و پوسترها", count = rsCount.toString(), icon = Icons.Default.MenuBook, modifier = Modifier.weight(1f).clickable { onSwitchTab(1) })
+            StatCard(title = "دریافتی‌های کاربران", count = subCount.toString(), icon = Icons.Default.Inbox, modifier = Modifier.weight(1f).clickable { onSwitchTab(1) })
+        }
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            StatCard(title = "طالع‌های ۱۲ ماه", count = tmCount.toString(), icon = Icons.Default.AutoAwesome, modifier = Modifier.weight(1f).clickable { onSwitchTab(2) })
+            StatCard(title = "سناریوهای تعاملی", count = scenCount.toString(), icon = Icons.Default.AltRoute, modifier = Modifier.weight(1f).clickable { onSwitchTab(3) })
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodCrimson.copy(alpha = 0.4f), RoundedCornerShape(20.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = "دسترسی‌های سریع ادمین", fontWeight = FontWeight.Bold, color = SpectralWhite)
+                Divider(color = MutedAsh.copy(alpha = 0.2f))
+                
+                Button(
+                    onClick = { onSwitchTab(1) },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.AddPhotoAlternate, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("انتشار داستان جدید با پوستر اختصاصی")
+                }
+
+                OutlinedButton(
+                    onClick = { onSwitchTab(2) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BloodGlow)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("تولید یک‌جای طالع شوم ۱۲ ماه با هوش مصنوعی (کم‌مصرف)", color = BloodGlow)
+                }
+
+                OutlinedButton(
+                    onClick = { onSwitchTab(3) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Psychology, contentDescription = null, tint = SpectralWhite)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("تولید گروهی سناریوهای بازی با هوش مصنوعی", color = SpectralWhite)
+                }
             }
         }
     }
 }
 
 @Composable
-fun AdminDashboardTab(tmCount: Int, rsCount: Int, subCount: Int) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text(
-            text = "آمار و نظارت پایگاه داده Supabase",
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
-        )
-
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            StatCard(title = "محتوای آینه زمان", count = tmCount.toString(), modifier = Modifier.weight(1f))
-            StatCard(title = "داستان‌های واقعی", count = rsCount.toString(), modifier = Modifier.weight(1f))
-        }
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            StatCard(title = "داستان‌های در انتظار (PENDING)", count = subCount.toString(), modifier = Modifier.weight(1f))
-            StatCard(title = "وضعیت امنیت RLS", count = "فعال و ایمن", modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-fun StatCard(title: String, count: String, modifier: Modifier = Modifier) {
+fun StatCard(title: String, count: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
         colors = CardDefaults.cardColors(containerColor = CryptCard),
         shape = RoundedCornerShape(20.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(text = title, style = MaterialTheme.typography.bodyMedium, color = MutedAsh)
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = title, style = MaterialTheme.typography.bodySmall, color = MutedAsh)
+                Icon(icon, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(20.dp))
+            }
             Spacer(modifier = Modifier.height(10.dp))
             Text(text = count, style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, color = BloodGlow))
         }
     }
 }
 
+// ----------------------------------------------------
+// TAB 1: STORIES & SUBMISSIONS MANAGER (With Posters)
+// ----------------------------------------------------
 @Composable
-fun AdminTimeMirrorTab(viewModel: HorrorViewModel, items: List<com.example.data.TimeMirrorContent>) {
-    var showAddDialog by remember { mutableStateOf(false) }
+fun AdminStoriesManagerTab(
+    viewModel: HorrorViewModel,
+    realStories: List<RealStory>,
+    submissions: List<UserStorySubmission>
+) {
+    var subTab by remember { mutableIntStateOf(0) } // 0: Real Stories, 1: User Submissions
+    var showAddStoryDialog by remember { mutableStateOf(false) }
+    var storyToEdit by remember { mutableStateOf<RealStory?>(null) }
+    var submissionToPublish by remember { mutableStateOf<UserStorySubmission?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(20.dp)
+            .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // Sub-Tab Switcher
+        TabRow(
+            selectedTabIndex = subTab,
+            containerColor = CryptCardElevated,
+            contentColor = BloodGlow,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
         ) {
-            Text(text = "مدیریت آینه زمان", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = SpectralWhite))
-            Button(
-                onClick = { showAddDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("افزودن روایت")
-            }
+            Tab(
+                selected = subTab == 0,
+                onClick = { subTab = 0 },
+                text = { Text("داستان‌های واقعی و کاتبان (${realStories.size})", fontWeight = FontWeight.Bold) },
+                icon = { Icon(Icons.Default.MenuBook, contentDescription = null) }
+            )
+            Tab(
+                selected = subTab == 1,
+                onClick = { subTab = 1 },
+                text = { Text("داستان‌های ارسالی کاربران (${submissions.size})", fontWeight = FontWeight.Bold) },
+                icon = { Icon(Icons.Default.Inbox, contentDescription = null) }
+            )
         }
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (items.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("هیچ روایتی ثبت نشده است.", color = MutedAsh)
-            }
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(items) { item ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
-                        colors = CardDefaults.cardColors(containerColor = CryptCard),
-                        shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = item.title, fontWeight = FontWeight.Bold, color = BloodGlow)
-                                Badge(containerColor = if (item.status == "PUBLISHED") SuccessNeon else CryptCardElevated) {
-                                    Text(item.status, color = SpectralWhite, modifier = Modifier.padding(6.dp))
-                                }
-                            }
-                            Text(text = "تاریخ: ${item.date_key}", style = MaterialTheme.typography.bodySmall, color = MutedAsh)
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                if (item.status != "PUBLISHED") {
-                                    Button(
-                                        onClick = { viewModel.updateTimeMirrorStatus(item.id, "PUBLISHED") { } },
-                                        colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) { Text("انتشار") }
-                                } else {
-                                    Button(
-                                        onClick = { viewModel.updateTimeMirrorStatus(item.id, "DRAFT") { } },
-                                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) { Text("پیش‌نویس") }
-                                }
-                                OutlinedButton(
-                                    onClick = { viewModel.deleteTimeMirror(item.id) { } },
-                                    shape = RoundedCornerShape(10.dp)
-                                ) { Text("حذف", color = BloodGlow) }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showAddDialog) {
-        var dateKey by remember { mutableStateOf("") }
-        var title by remember { mutableStateOf("") }
-        var narrative by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            containerColor = CryptCardElevated,
-            title = { Text("افزودن روایت آینه زمان", color = BloodGlow, fontWeight = FontWeight.Bold) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(value = dateKey, onValueChange = { dateKey = it }, label = { Text("تاریخ (مثال: 1405-06-08)") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp))
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp))
-                    OutlinedTextField(value = narrative, onValueChange = { narrative = it }, label = { Text("روایت ترسناک") }, modifier = Modifier.fillMaxWidth(), minLines = 4, shape = RoundedCornerShape(14.dp))
-                }
-            },
-            confirmButton = {
+        if (subTab == 0) {
+            // REAL STORIES SECTION
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "فهرست داستان‌های منتشر شده با پوستر",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
+                )
                 Button(
-                    onClick = {
-                        if (dateKey.isNotBlank() && title.isNotBlank() && narrative.isNotBlank()) {
-                            viewModel.createTimeMirror(dateKey, title, narrative, "PUBLISHED") {
-                                showAddDialog = false
-                            }
-                        }
-                    },
+                    onClick = { showAddStoryDialog = true },
                     colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("ذخیره و انتشار")
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("داستان جدید")
                 }
-            },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("انصراف", color = MutedAsh) } }
-        )
-    }
-}
-
-@Composable
-fun AdminRealStoriesTab(viewModel: HorrorViewModel, items: List<com.example.data.RealStory>) {
-    var showAddDialog by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(text = "مدیریت داستان‌های واقعی", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = SpectralWhite))
-            Button(
-                onClick = { showAddDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("افزودن داستان")
             }
-        }
-        Spacer(modifier = Modifier.height(16.dp))
 
-        if (items.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("هیچ داستان واقعی ثبت نشده است.", color = MutedAsh)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (realStories.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("هیچ داستانی ثبت نشده است.", color = MutedAsh)
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(realStories) { story ->
+                        AdminRealStoryHorizontalCard(
+                            story = story,
+                            onEdit = { storyToEdit = story },
+                            onToggleStatus = {
+                                val next = if (story.status == "PUBLISHED") "DRAFT" else "PUBLISHED"
+                                viewModel.updateRealStoryStatus(story.id, next) {}
+                            },
+                            onDelete = { viewModel.deleteRealStory(story.id) {} }
+                        )
+                    }
+                }
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(items) { item ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
-                        colors = CardDefaults.cardColors(containerColor = CryptCard),
-                        shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = item.title, fontWeight = FontWeight.Bold, color = BloodGlow)
-                                Badge(containerColor = if (item.status == "PUBLISHED") SuccessNeon else CryptCardElevated) {
-                                    Text(item.status, color = SpectralWhite, modifier = Modifier.padding(6.dp))
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                if (item.status != "PUBLISHED") {
-                                    Button(
-                                        onClick = { viewModel.updateRealStoryStatus(item.id, "PUBLISHED") { } },
-                                        colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) { Text("انتشار") }
-                                } else {
-                                    Button(
-                                        onClick = { viewModel.updateRealStoryStatus(item.id, "DRAFT") { } },
-                                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ) { Text("پیش‌نویس") }
-                                }
-                                OutlinedButton(
-                                    onClick = { viewModel.deleteRealStory(item.id) { } },
-                                    shape = RoundedCornerShape(10.dp)
-                                ) { Text("حذف", color = BloodGlow) }
-                            }
-                        }
+            // USER SUBMISSIONS SECTION
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "رازها و داستان‌های ارسالی کاربران",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (submissions.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("هیچ داستان ارسالی در انتظار بررسی وجود ندارد.", color = MutedAsh)
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(submissions) { sub ->
+                        AdminSubmissionCard(
+                            submission = sub,
+                            onPublishWithPoster = { submissionToPublish = sub },
+                            onReject = { viewModel.updateSubmissionStatus(sub.id, "REJECTED", "رد شده توسط مدیر") {} },
+                            onDelete = { viewModel.deleteSubmission(sub.id) {} }
+                        )
                     }
                 }
             }
         }
     }
 
-    if (showAddDialog) {
+    // Dialog: Add New Real Story
+    if (showAddStoryDialog) {
         var title by remember { mutableStateOf("") }
         var content by remember { mutableStateOf("") }
         var author by remember { mutableStateOf("") }
+        var source by remember { mutableStateOf("") }
+        var coverUrl by remember { mutableStateOf("") }
+        var tags by remember { mutableStateOf("وحشت, واقعی") }
+        var isPublished by remember { mutableStateOf(true) }
+
         AlertDialog(
-            onDismissRequest = { showAddDialog = false },
+            onDismissRequest = { showAddStoryDialog = false },
             containerColor = CryptCardElevated,
-            title = { Text("افزودن داستان واقعی جدید", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            title = { Text("افزودن داستان واقعی با پوستر", color = BloodGlow, fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان داستان") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp))
-                    OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("متن داستان") }, modifier = Modifier.fillMaxWidth(), minLines = 4, shape = RoundedCornerShape(14.dp))
-                    OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("نویسنده / منبع") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("عنوان داستان") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = coverUrl,
+                        onValueChange = { coverUrl = it },
+                        label = { Text("لینک پوستر تصویر (اختیاری)") },
+                        placeholder = { Text("https://example.com/poster.jpg") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    if (coverUrl.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.Black)
+                        ) {
+                            AsyncImage(
+                                model = coverUrl,
+                                contentDescription = "پیش‌نمایش پوستر",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = { content = it },
+                        label = { Text("متن داستان") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 4,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = author,
+                        onValueChange = { author = it },
+                        label = { Text("نام نویسنده یا راوی") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = source,
+                        onValueChange = { source = it },
+                        label = { Text("منبع") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    OutlinedTextField(
+                        value = tags,
+                        onValueChange = { tags = it },
+                        label = { Text("برچسب‌ها (با ویرگول جدا کنید)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         if (title.isNotBlank() && content.isNotBlank()) {
-                            viewModel.createRealStory(title, content, author, "Supabase Admin", "", "horror", "PUBLISHED") {
-                                showAddDialog = false
+                            viewModel.createRealStory(
+                                title = title,
+                                content = content,
+                                author = author.ifBlank { "کاتب عمارت" },
+                                source = source.ifBlank { "روایات واقعی" },
+                                coverUrl = coverUrl,
+                                tags = tags,
+                                status = if (isPublished) "PUBLISHED" else "DRAFT"
+                            ) {
+                                showAddStoryDialog = false
                             }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("انتشار در دیتابیس")
+                    Text("ذخیره و انتشار")
                 }
             },
-            dismissButton = { TextButton(onClick = { showAddDialog = false }) { Text("انصراف", color = MutedAsh) } }
+            dismissButton = {
+                TextButton(onClick = { showAddStoryDialog = false }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+
+    // Dialog: Edit Story
+    if (storyToEdit != null) {
+        val s = storyToEdit!!
+        var title by remember { mutableStateOf(s.title) }
+        var content by remember { mutableStateOf(s.content) }
+        var author by remember { mutableStateOf(s.author ?: "") }
+        var source by remember { mutableStateOf(s.source ?: "") }
+        var coverUrl by remember { mutableStateOf(s.cover_image_url ?: "") }
+        var tags by remember { mutableStateOf(s.tags ?: "") }
+
+        AlertDialog(
+            onDismissRequest = { storyToEdit = null },
+            containerColor = CryptCardElevated,
+            title = { Text("ویرایش داستان و پوستر", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان داستان") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(value = coverUrl, onValueChange = { coverUrl = it }, label = { Text("آدرس پوستر (Cover URL)") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    if (coverUrl.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.Black)
+                        ) {
+                            AsyncImage(
+                                model = coverUrl,
+                                contentDescription = "پیش‌نمایش پوستر",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                    OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("متن داستان") }, modifier = Modifier.fillMaxWidth(), minLines = 5, shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(value = author, onValueChange = { author = it }, label = { Text("نویسنده") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(value = source, onValueChange = { source = it }, label = { Text("منبع") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(value = tags, onValueChange = { tags = it }, label = { Text("برچسب‌ها") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.updateRealStory(
+                            id = s.id,
+                            title = title,
+                            content = content,
+                            author = author,
+                            source = source,
+                            coverUrl = coverUrl,
+                            tags = tags,
+                            status = s.status
+                        ) {
+                            storyToEdit = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("ذخیره تغییرات")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { storyToEdit = null }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+
+    // Dialog: Publish User Submission with Poster
+    if (submissionToPublish != null) {
+        val sub = submissionToPublish!!
+        var title by remember { mutableStateOf(sub.title) }
+        var content by remember { mutableStateOf(sub.content) }
+        var coverUrl by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { submissionToPublish = null },
+            containerColor = CryptCardElevated,
+            title = { Text("تأیید و انتشار داستان کاربر با پوستر", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("نویسنده: ${sub.author_name}", color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان نهایی") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    OutlinedTextField(
+                        value = coverUrl,
+                        onValueChange = { coverUrl = it },
+                        label = { Text("آدرس پوستر داستان (Image URL)") },
+                        placeholder = { Text("https://...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    if (coverUrl.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(120.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.Black)
+                        ) {
+                            AsyncImage(
+                                model = coverUrl,
+                                contentDescription = "پیش‌نمایش پوستر",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                    OutlinedTextField(value = content, onValueChange = { content = it }, label = { Text("متن ویرایش شده داستان") }, modifier = Modifier.fillMaxWidth(), minLines = 5, shape = RoundedCornerShape(12.dp))
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.publishSubmissionAsRealStory(
+                            submission = sub,
+                            coverUrl = coverUrl,
+                            editedTitle = title,
+                            editedContent = content
+                        ) {
+                            submissionToPublish = null
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("انتشار در برنامه", color = SpectralWhite)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { submissionToPublish = null }) { Text("انصراف", color = MutedAsh) }
+            }
         )
     }
 }
 
 @Composable
-fun AdminModerationTab(viewModel: HorrorViewModel, submissions: List<com.example.data.UserStorySubmission>) {
-    Column(
+fun AdminRealStoryHorizontalCard(
+    story: RealStory,
+    onEdit: () -> Unit,
+    onToggleStatus: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp)
+            .fillMaxWidth()
+            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = CryptCard),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Text(text = "داستان‌های دریافتی کاربران (Moderation)", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = SpectralWhite))
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (submissions.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("هیچ داستان ارسالی در انتظار بررسی وجود ندارد.", color = MutedAsh)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Poster thumbnail on the side
+            Box(
+                modifier = Modifier
+                    .size(width = 90.dp, height = 110.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF130B1C))
+                    .border(1.dp, BloodGlow.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (!story.cover_image_url.isNullOrBlank()) {
+                    AsyncImage(
+                        model = story.cover_image_url,
+                        contentDescription = "پوستر داستان",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Image, contentDescription = null, tint = MutedAsh, modifier = Modifier.size(28.dp))
+                        Text("بدون پوستر", color = MutedAsh, fontSize = 9.sp)
+                    }
+                }
             }
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(submissions) { sub ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
-                        colors = CardDefaults.cardColors(containerColor = CryptCard),
-                        shape = RoundedCornerShape(20.dp)
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Details and actions
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = story.title,
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = SpectralWhite),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Badge(containerColor = if (story.status == "PUBLISHED") SuccessNeon else WarningAmber) {
+                        Text(if (story.status == "PUBLISHED") "منتشر شده" else "پیش‌نویس", color = SpectralWhite, fontSize = 9.sp, modifier = Modifier.padding(2.dp))
+                    }
+                }
+
+                Text(
+                    text = "نویسنده: ${story.author ?: "نامشخص"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = BloodGlow,
+                    fontSize = 11.sp
+                )
+
+                Text(
+                    text = story.content,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MutedAsh,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 11.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilledTonalButton(
+                        onClick = onEdit,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Column(modifier = Modifier.padding(20.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = sub.title, fontWeight = FontWeight.Bold, color = BloodGlow)
-                                Badge(containerColor = if (sub.status == "PUBLISHED") SuccessNeon else WarningAmber) {
-                                    Text(sub.status, color = SpectralWhite, modifier = Modifier.padding(6.dp))
-                                }
-                            }
-                            Text(text = "نویسنده: ${sub.author_name}", style = MaterialTheme.typography.bodySmall, color = MutedAsh)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(text = sub.content, style = MaterialTheme.typography.bodyMedium, color = SpectralWhite)
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Button(
-                                    onClick = { viewModel.updateSubmissionStatus(sub.id, "PUBLISHED", null) { } },
-                                    colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text("تأیید و انتشار")
-                                }
-                                OutlinedButton(
-                                    onClick = { viewModel.updateSubmissionStatus(sub.id, "REJECTED", null) { } },
-                                    shape = RoundedCornerShape(10.dp)
-                                ) {
-                                    Text("رد کردن", color = BloodGlow)
-                                }
-                            }
-                        }
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ویرایش", fontSize = 11.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = onToggleStatus,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(if (story.status == "PUBLISHED") "پیش‌نویس" else "انتشار", fontSize = 11.sp)
+                    }
+
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -539,137 +882,1046 @@ fun AdminModerationTab(viewModel: HorrorViewModel, submissions: List<com.example
 }
 
 @Composable
-fun AdminDebugTab(viewModel: HorrorViewModel) {
-    val email by viewModel.currentUserEmail.collectAsState()
-    val userId by viewModel.currentUserId.collectAsState()
-    val role by viewModel.currentUserRole.collectAsState()
-    val token = com.example.data.SupabaseClientProvider.currentAuthToken
-    var testResult by remember { mutableStateOf<String?>(null) }
-    var testingConnection by remember { mutableStateOf(false) }
-
-    var testSubTitle by remember { mutableStateOf("تست داستان دیباگ") }
-    var testSubContent by remember { mutableStateOf("این یک تست خودکار از سمت پنل دیباگ است.") }
-    var subResult by remember { mutableStateOf<String?>(null) }
-
-    LazyColumn(
+fun AdminSubmissionCard(
+    submission: UserStorySubmission,
+    onPublishWithPoster: () -> Unit,
+    onReject: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Card(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .fillMaxWidth()
+            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+        colors = CardDefaults.cardColors(containerColor = CryptCard),
+        shape = RoundedCornerShape(16.dp)
     ) {
-        item {
-            Text(
-                text = "حالت دیباگ و عیب‌یابی (Debug & Diagnostics)",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = BloodGlow)
-            )
-            Text(
-                text = "این بخش مخصوص مدیران سیستم جهت بررسی سلامت اتصال، احراز هویت و پایگاه داده است.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MutedAsh
-            )
-        }
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(text = submission.title, fontWeight = FontWeight.Bold, color = BloodGlow)
+                Badge(
+                    containerColor = when (submission.status) {
+                        "PUBLISHED" -> SuccessNeon
+                        "REJECTED" -> BloodCrimson
+                        else -> WarningAmber
+                    }
+                ) {
+                    Text(submission.status, color = SpectralWhite, modifier = Modifier.padding(4.dp), fontSize = 10.sp)
+                }
+            }
+            Text(text = "ارسال‌کننده: ${submission.author_name}", style = MaterialTheme.typography.bodySmall, color = MutedAsh)
+            Text(text = submission.content, style = MaterialTheme.typography.bodyMedium, color = SpectralWhite)
 
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
-                colors = CardDefaults.cardColors(containerColor = CryptCard),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(text = "وضعیت احراز هویت و نقش (Auth & Role)", fontWeight = FontWeight.Bold, color = SpectralWhite)
-                    Divider(color = MutedAsh.copy(alpha = 0.2f))
-                    Text(text = "ایمیل کاربر فعلی: ${email ?: "نامشخص"}", color = MutedAsh)
-                    Text(text = "شناسه کاربر (User ID): ${userId ?: "نامشخص"}", color = MutedAsh)
-                    Text(text = "نقش کاربر (Role): ${role ?: "ADMIN"}", color = SuccessNeon)
-                    Text(text = "توکن احراز هویت: ${if (token != null) "موجود و فعال" else "موجود نیست"}", color = if (token != null) SuccessNeon else BloodGlow)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onPublishWithPoster,
+                    colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("تأیید و انتشار با پوستر", fontSize = 12.sp)
+                }
+
+                OutlinedButton(
+                    onClick = onReject,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text("رد کردن", color = BloodGlow, fontSize = 12.sp)
+                }
+
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = null, tint = MutedAsh)
                 }
             }
         }
+    }
+}
 
-        item {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
-                colors = CardDefaults.cardColors(containerColor = CryptCard),
-                shape = RoundedCornerShape(20.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(text = "تست اتصال به Supabase (Connection Test)", fontWeight = FontWeight.Bold, color = SpectralWhite)
-                    Divider(color = MutedAsh.copy(alpha = 0.2f))
-                    Text(text = "آدرس URL: ${com.example.data.SupabaseClientProvider.supabaseUrl}", color = MutedAsh, fontSize = 12.sp)
+// ----------------------------------------------------
+// TAB 2: GRIM FORTUNES (طالع شوم ۱۲ ماه با تولید تک‌درخواستی کم‌مصرف هوش مصنوعی)
+// ----------------------------------------------------
+@Composable
+fun AdminGrimFortuneTab(
+    viewModel: HorrorViewModel,
+    grimFortunes: List<GrimFortune>
+) {
+    var savedPrompt by remember { mutableStateOf("") }
+    val currentPrompt by viewModel.grimFortunePrompt.collectAsState()
+    LaunchedEffect(currentPrompt) { savedPrompt = currentPrompt }
 
-                    Button(
-                        onClick = {
-                            testingConnection = true
-                            testResult = null
-                            viewModel.testConnection { success, msg ->
-                                testingConnection = false
-                                testResult = if (success) "موفق: $msg" else "خطا: $msg"
+    var selectedMonthIndex by remember { mutableIntStateOf(1) }
+    val monthNames = HorrorViewModel.PERSIAN_MONTHS
+    val selectedMonthName = monthNames.getOrElse(selectedMonthIndex - 1) { "فروردین" }
+
+    val matchingFortune = grimFortunes.find { it.month_index == selectedMonthIndex }
+    var isGeneratingAIBatch by remember { mutableStateOf(false) }
+    var isGeneratingAISingle by remember { mutableStateOf(false) }
+    var promptExpanded by remember { mutableStateOf(false) }
+    var showManualEditDialog by remember { mutableStateOf(false) }
+    var batchResultMessage by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // AI Prompt Config & Batch Generation Box
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodGlow.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { promptExpanded = !promptExpanded },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Psychology, contentDescription = null, tint = BloodGlow)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "تنظیم پرامپت و تولید گروهی طالع شوم ۱۲ ماه (AI)",
+                            fontWeight = FontWeight.Bold,
+                            color = SpectralWhite,
+                            fontSize = 13.sp
+                        )
+                    }
+                    Icon(
+                        if (promptExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MutedAsh
+                    )
+                }
+
+                if (promptExpanded) {
+                    Text(
+                        text = "این پرامپت در یک پیام به هوش مصنوعی فرستاده می‌شود و با فرمت عددگذاری ===1=== تا ===12=== هر ۱۲ ماه را در یک پاسخ دریافت و خودکار ذخیره می‌کند تا توکن بهینه‌سازی شود.",
+                        color = MutedAsh,
+                        fontSize = 11.sp,
+                        lineHeight = 18.sp
+                    )
+                    OutlinedTextField(
+                        value = savedPrompt,
+                        onValueChange = { savedPrompt = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 4,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BloodGlow,
+                            focusedTextColor = SpectralWhite,
+                            unfocusedTextColor = SpectralWhite
+                        )
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                viewModel.setGrimFortunePrompt(savedPrompt)
+                                batchResultMessage = "پرامپت با موفقیت ذخیره شد."
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("ذخیره پرامپت", fontSize = 12.sp)
+                        }
+                        TextButton(
+                            onClick = {
+                                savedPrompt = HorrorViewModel.DEFAULT_GRIM_FORTUNE_PROMPT
+                                viewModel.setGrimFortunePrompt(savedPrompt)
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (testingConnection) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = SpectralWhite)
-                        } else {
-                            Text("اجرای تست اتصال به پایگاه داده")
+                        ) {
+                            Text("بازنشانی به پیش‌فرض", color = MutedAsh, fontSize = 12.sp)
                         }
                     }
+                }
 
-                    if (testResult != null) {
+                Divider(color = MutedAsh.copy(alpha = 0.2f))
+
+                // BATCH TRIGGER BUTTON (SINGLE API CALL FOR ALL 12 MONTHS)
+                Button(
+                    onClick = {
+                        isGeneratingAIBatch = true
+                        batchResultMessage = null
+                        viewModel.generateGrimFortunesWithAI { success, msg, count ->
+                            isGeneratingAIBatch = false
+                            batchResultMessage = msg
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B1D8C)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isGeneratingAIBatch
+                ) {
+                    if (isGeneratingAIBatch) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = SpectralWhite)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("در حال تولید و دسته‌بندی ۱۲ ماه با AI...", fontSize = 13.sp)
+                    } else {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = SpectralWhite)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("تولید همزمان ۱۲ ماه با هوش مصنوعی (یک پیام - صرفه‌جویی توکن)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+
+                if (batchResultMessage != null) {
+                    Surface(
+                        color = Color(0xFF1E0E2B),
+                        shape = RoundedCornerShape(8.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BloodGlow.copy(alpha = 0.5f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Text(
-                            text = testResult!!,
-                            color = if (testResult!!.startsWith("موفق")) SuccessNeon else BloodGlow,
-                            style = MaterialTheme.typography.bodyMedium
+                            text = batchResultMessage!!,
+                            color = SpectralWhite,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(10.dp),
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
             }
         }
 
-        item {
+        // 12 PERSIAN MONTHS SELECTOR GRID
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "انتخاب ماه طالع (۱۲ ماه سال)",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
+                    )
+                    Badge(containerColor = BloodCrimson) {
+                        Text("ماه $selectedMonthIndex: $selectedMonthName", color = SpectralWhite, modifier = Modifier.padding(4.dp))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    items(12) { index ->
+                        val monthIdx = index + 1
+                        val name = monthNames[index]
+                        val hasContent = grimFortunes.any { it.month_index == monthIdx }
+                        val isSelected = selectedMonthIndex == monthIdx
+
+                        Box(
+                            modifier = Modifier
+                                .aspectRatio(1.2f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    when {
+                                        isSelected -> BloodCrimson
+                                        hasContent -> Color(0xFF261234)
+                                        else -> Color(0xFF0F0816)
+                                    }
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isSelected) BloodGlow else if (hasContent) BloodGlow.copy(alpha = 0.5f) else MutedAsh.copy(alpha = 0.15f),
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .clickable { selectedMonthIndex = monthIdx },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = name,
+                                    fontWeight = if (isSelected || hasContent) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) SpectralWhite else if (hasContent) BloodGlow else MutedAsh,
+                                    fontSize = 12.sp
+                                )
+                                if (hasContent) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(4.dp)
+                                            .background(if (isSelected) SpectralWhite else BloodGlow, CircleShape)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ACTIVE SELECTED MONTH DETAILS & CONTROLS
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodCrimson.copy(alpha = 0.5f), RoundedCornerShape(20.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+            shape = RoundedCornerShape(20.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "طالع ماه $selectedMonthName (ماه $selectedMonthIndex)",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = BloodGlow)
+                    )
+                    if (matchingFortune != null) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Badge(containerColor = Color(0xFF4A154B)) {
+                                Text(matchingFortune.doom_level ?: "شوم", color = SpectralWhite, modifier = Modifier.padding(4.dp))
+                            }
+                            Badge(containerColor = if (matchingFortune.status == "PUBLISHED") SuccessNeon else WarningAmber) {
+                                Text(matchingFortune.status, color = SpectralWhite, modifier = Modifier.padding(4.dp))
+                            }
+                        }
+                    }
+                }
+
+                if (matchingFortune != null) {
+                    Text(
+                        text = matchingFortune.title,
+                        fontWeight = FontWeight.Bold,
+                        color = SpectralWhite,
+                        fontSize = 16.sp
+                    )
+
+                    if (!matchingFortune.omen_poem.isNullOrBlank()) {
+                        Surface(
+                            color = Color(0xFFDEC595).copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "بیت شوم حافظ: « ${matchingFortune.omen_poem} »",
+                                color = Color(0xFFDEC595),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(10.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = matchingFortune.fortune_text,
+                        color = MutedAsh,
+                        style = MaterialTheme.typography.bodyMedium,
+                        lineHeight = 22.sp
+                    )
+
+                    Divider(color = MutedAsh.copy(alpha = 0.2f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                isGeneratingAISingle = true
+                                viewModel.generateGrimFortuneForSingleMonth(selectedMonthIndex) { success, title, poem, desc, doom ->
+                                    isGeneratingAISingle = false
+                                    if (success) {
+                                        viewModel.saveGrimFortune(selectedMonthIndex, title, poem, desc, doom, "PUBLISHED") {}
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6B1D8C)),
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isGeneratingAISingle
+                        ) {
+                            if (isGeneratingAISingle) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = SpectralWhite)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("تولید تک‌ماه AI", fontSize = 11.sp)
+                            }
+                        }
+
+                        FilledTonalButton(
+                            onClick = { showManualEditDialog = true },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("ویرایش", fontSize = 11.sp)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                val next = if (matchingFortune.status == "PUBLISHED") "DRAFT" else "PUBLISHED"
+                                viewModel.saveGrimFortune(
+                                    matchingFortune.month_index,
+                                    matchingFortune.title,
+                                    matchingFortune.omen_poem,
+                                    matchingFortune.fortune_text,
+                                    matchingFortune.doom_level,
+                                    next
+                                ) {}
+                            },
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(if (matchingFortune.status == "PUBLISHED") "پیش‌نویس" else "انتشار", fontSize = 11.sp)
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.deleteGrimFortune(matchingFortune.id) {} }
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = BloodGlow)
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "برای ماه $selectedMonthName هنوز طالعی ثبت نشده است. می‌توانید با زدن دکمه هوش مصنوعی یا نوشتن دستی طالع این ماه را ثبت کنید.",
+                        color = MutedAsh,
+                        fontSize = 12.sp
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                isGeneratingAISingle = true
+                                viewModel.generateGrimFortuneForSingleMonth(selectedMonthIndex) { success, title, poem, desc, doom ->
+                                    isGeneratingAISingle = false
+                                    if (success) {
+                                        viewModel.saveGrimFortune(selectedMonthIndex, title, poem, desc, doom, "PUBLISHED") {}
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f),
+                            enabled = !isGeneratingAISingle
+                        ) {
+                            if (isGeneratingAISingle) {
+                                CircularProgressIndicator(modifier = Modifier.size(20.dp), color = SpectralWhite)
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("در حال خلق طالع...")
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("خلق طالع با هوش مصنوعی", fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { showManualEditDialog = true },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("نوشتن دستی", color = SpectralWhite)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showManualEditDialog) {
+        var mTitle by remember { mutableStateOf(matchingFortune?.title ?: "طالع تاریک ماه $selectedMonthName") }
+        var mPoem by remember { mutableStateOf(matchingFortune?.omen_poem ?: "") }
+        var mDesc by remember { mutableStateOf(matchingFortune?.fortune_text ?: "") }
+        var mDoom by remember { mutableStateOf(matchingFortune?.doom_level ?: "بسیار شوم") }
+
+        AlertDialog(
+            onDismissRequest = { showManualEditDialog = false },
+            containerColor = CryptCardElevated,
+            title = { Text("ویرایش / ثبت طالع ماه $selectedMonthName", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = mTitle,
+                        onValueChange = { mTitle = it },
+                        label = { Text("عنوان طالع") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = mPoem,
+                        onValueChange = { mPoem = it },
+                        label = { Text("بیت شعر فال حافظ") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = mDesc,
+                        onValueChange = { mDesc = it },
+                        label = { Text("تفسیر و هشدارهای طالع شوم") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 4,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = mDoom,
+                        onValueChange = { mDoom = it },
+                        label = { Text("درجه شومی (مثلاً: شوم، بسیار شوم، نفرین ابدی)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (mTitle.isNotBlank() && mDesc.isNotBlank()) {
+                            viewModel.saveGrimFortune(
+                                monthIndex = selectedMonthIndex,
+                                title = mTitle,
+                                poem = mPoem,
+                                fortuneText = mDesc,
+                                doomLevel = mDoom,
+                                status = matchingFortune?.status ?: "PUBLISHED"
+                            ) {
+                                showManualEditDialog = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("ذخیره و ثبت")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showManualEditDialog = false }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+}
+
+// ----------------------------------------------------
+// TAB 3: WRONG CHOICE SCENARIOS (AI Batch Generation)
+// ----------------------------------------------------
+@Composable
+fun AdminScenariosTab(
+    viewModel: HorrorViewModel,
+    scenarios: List<WrongChoiceScenario>
+) {
+    var savedPrompt by remember { mutableStateOf("") }
+    val currentPrompt by viewModel.scenarioPrompt.collectAsState()
+    LaunchedEffect(currentPrompt) { savedPrompt = currentPrompt }
+
+    var scenarioCountToGenerate by remember { mutableIntStateOf(3) }
+    var isGeneratingAI by remember { mutableStateOf(false) }
+    var genResultFeedback by remember { mutableStateOf<String?>(null) }
+    var promptExpanded by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        // AI Prompt Config Box
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodGlow.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { promptExpanded = !promptExpanded },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.AltRoute, contentDescription = null, tint = BloodGlow)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("تنظیم پرامپت اصلی سناریوهای وحشت", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
+                    }
+                    Icon(
+                        if (promptExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = MutedAsh
+                    )
+                }
+
+                if (promptExpanded) {
+                    Text(
+                        text = "این پرامپت به عنوان الگوی اصلی برای خلق سناریوهای چندگزینه‌ای ذخیره می‌شود.",
+                        color = MutedAsh,
+                        fontSize = 11.sp
+                    )
+                    OutlinedTextField(
+                        value = savedPrompt,
+                        onValueChange = { savedPrompt = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 3,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BloodGlow,
+                            focusedTextColor = SpectralWhite,
+                            unfocusedTextColor = SpectralWhite
+                        )
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { viewModel.setScenarioPrompt(savedPrompt) },
+                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("ذخیره پرامپت سناریو", fontSize = 12.sp)
+                        }
+                        TextButton(
+                            onClick = {
+                                savedPrompt = HorrorViewModel.DEFAULT_SCENARIO_PROMPT
+                                viewModel.setScenarioPrompt(savedPrompt)
+                            }
+                        ) {
+                            Text("بازنشانی پیش‌فرض", color = MutedAsh, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // AI Batch Generator Action Card
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodCrimson.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(text = "تولید گروهی سناریو با هوش مصنوعی", fontWeight = FontWeight.Bold, color = SpectralWhite)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("تعداد سناریوها:", color = MutedAsh, fontSize = 13.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1, 2, 3, 5).forEach { count ->
+                            val isSel = scenarioCountToGenerate == count
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) BloodCrimson else CryptCardElevated)
+                                    .clickable { scenarioCountToGenerate = count }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("$count", color = if (isSel) SpectralWhite else MutedAsh, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        isGeneratingAI = true
+                        genResultFeedback = null
+                        viewModel.generateScenariosWithAI(scenarioCountToGenerate) { success, msg ->
+                            isGeneratingAI = false
+                            genResultFeedback = msg
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isGeneratingAI) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = SpectralWhite)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("در حال تولید $scenarioCountToGenerate سناریوی ماورایی...")
+                    } else {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("تولید و اضافه کردن به پایگاه داده")
+                    }
+                }
+
+                if (genResultFeedback != null) {
+                    Text(
+                        text = genResultFeedback!!,
+                        color = if (genResultFeedback!!.startsWith("خطا")) BloodGlow else SuccessNeon,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Scenario List Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("سناریوهای ثبت شده (${scenarios.size})", fontWeight = FontWeight.Bold, color = SpectralWhite)
+            OutlinedButton(
+                onClick = { showAddDialog = true },
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("افزودن دستی")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        if (scenarios.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("هیچ سناریویی یافت نشد.", color = MutedAsh)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(scenarios) { scen ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
+                        colors = CardDefaults.cardColors(containerColor = CryptCard),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(text = scen.title, fontWeight = FontWeight.Bold, color = BloodGlow, modifier = Modifier.weight(1f))
+                                Badge(containerColor = if (scen.status == "PUBLISHED") SuccessNeon else WarningAmber) {
+                                    Text(scen.status, color = SpectralWhite, modifier = Modifier.padding(4.dp), fontSize = 10.sp)
+                                }
+                            }
+                            Text(text = scen.description, style = MaterialTheme.typography.bodySmall, color = SpectralWhite, maxLines = 3, overflow = TextOverflow.Ellipsis)
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = {
+                                        val next = if (scen.status == "PUBLISHED") "DRAFT" else "PUBLISHED"
+                                        viewModel.updateScenarioStatus(scen.id, next) {}
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(if (scen.status == "PUBLISHED") "تبدیل به پیش‌نویس" else "انتشار", fontSize = 11.sp)
+                                }
+
+                                IconButton(onClick = { viewModel.deleteScenario(scen.id) {} }) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        var title by remember { mutableStateOf("") }
+        var description by remember { mutableStateOf("") }
+
+        AlertDialog(
+            onDismissRequest = { showAddDialog = false },
+            containerColor = CryptCardElevated,
+            title = { Text("افزودن سناریوی وحشت دستی", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان سناریو") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp))
+                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("توصیف موقعیت و گزینه‌ها") }, modifier = Modifier.fillMaxWidth(), minLines = 5, shape = RoundedCornerShape(10.dp))
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (title.isNotBlank() && description.isNotBlank()) {
+                            viewModel.createScenario(title, description, "PUBLISHED") {
+                                showAddDialog = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("ذخیره و انتشار")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddDialog = false }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+}
+
+// ----------------------------------------------------
+// TAB 4: GEMINI AI & API SETTINGS (Exclusive Models)
+// ----------------------------------------------------
+@Composable
+fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
+    val currentApiKey by viewModel.geminiApiKey.collectAsState()
+    val currentModel by viewModel.selectedGeminiModel.collectAsState()
+
+    var inputKey by remember { mutableStateOf("") }
+    LaunchedEffect(currentApiKey) { inputKey = currentApiKey }
+
+    var showKey by remember { mutableStateOf(false) }
+    var testResultText by remember { mutableStateOf<String?>(null) }
+    var isTestingModel by remember { mutableStateOf(false) }
+    var testingSpecificModel by remember { mutableStateOf<String?>(null) }
+
+    // EXACT 4 MODELS REQUESTED BY USER
+    val supportedModels = HorrorViewModel.SUPPORTED_GEMINI_MODELS
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "تنظیمات اختصاصی کلید و مدل‌های هوش مصنوعی",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = BloodGlow)
+        )
+        Text(
+            text = "شما می‌توانید کلید اختصاصی Google AI Studio خود را وارد کرده، بین ۴ مدل مشخص شده سوئیچ کرده و هر کدام را به صورت مجزا تست نمایید.",
+            color = MutedAsh,
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        // API Key Section
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodCrimson.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = "کلید اختصاصی Gemini API Key", fontWeight = FontWeight.Bold, color = SpectralWhite)
+
+                OutlinedTextField(
+                    value = inputKey,
+                    onValueChange = { inputKey = it },
+                    label = { Text("کلید API (Gemini)") },
+                    placeholder = { Text("AIzaSy...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showKey = !showKey }) {
+                            Icon(
+                                imageVector = if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = null,
+                                tint = MutedAsh
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Button(
+                        onClick = {
+                            viewModel.setGeminiApiKey(inputKey)
+                            testResultText = "کلید با موفقیت ذخیره شد."
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ذخیره کلید API")
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.setGeminiApiKey("")
+                            inputKey = ""
+                            testResultText = "کلید بازنشانی شد."
+                        },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("حذف کلید", color = MutedAsh)
+                    }
+                }
+            }
+        }
+
+        // Model Selection Section
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = "انتخاب مدل فعال هوش مصنوعی (سهمیه اختصاصی)", fontWeight = FontWeight.Bold, color = SpectralWhite)
+
+                supportedModels.forEach { model ->
+                    val isSelected = currentModel == model
+                    val isTestingThis = testingSpecificModel == model
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                1.dp,
+                                if (isSelected) BloodGlow else MutedAsh.copy(alpha = 0.2f),
+                                RoundedCornerShape(12.dp)
+                            )
+                            .clickable { viewModel.setSelectedGeminiModel(model) },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) Color(0xFF280F1E) else CryptCardElevated
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(
+                                        selected = isSelected,
+                                        onClick = { viewModel.setSelectedGeminiModel(model) },
+                                        colors = RadioButtonDefaults.colors(selectedColor = BloodGlow)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = model,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) SpectralWhite else MutedAsh,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                                Text(
+                                    text = when (model) {
+                                        "gemini-3.5-flash" -> "مدل 3.5flash - پرسرعت و متعادل برای روایات و سناریو"
+                                        "gemini-3.6-flash" -> "مدل 3.6flash - ارتقای سرعت و کیفیت ادبیات گوتیک"
+                                        "gemini-3.7-flash" -> "مدل 3.7flash - پیشرفته‌ترین مدل تحلیلی و خلاقانه"
+                                        "gemini-3.5-flash-lite" -> "مدل 3.5flashlite - سبک، فوق‌العاده سریع با کمترین تاخیر"
+                                        else -> ""
+                                    },
+                                    color = MutedAsh,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(start = 36.dp)
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    testingSpecificModel = model
+                                    testResultText = null
+                                    viewModel.testGeminiModel(inputKey, model) { success, msg ->
+                                        testingSpecificModel = null
+                                        testResultText = msg
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = if (isSelected) BloodCrimson else CryptCardElevated),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                if (isTestingThis) {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
+                                } else {
+                                    Text("تست مدل", fontSize = 11.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Live Test Response Box
+        if (testResultText != null) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
-                colors = CardDefaults.cardColors(containerColor = CryptCard),
-                shape = RoundedCornerShape(20.dp)
+                    .border(1.dp, BloodGlow.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+                colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(text = "تست ارسال داستان (Story Submission Test)", fontWeight = FontWeight.Bold, color = SpectralWhite)
-                    Divider(color = MutedAsh.copy(alpha = 0.2f))
-                    OutlinedTextField(
-                        value = testSubTitle,
-                        onValueChange = { testSubTitle = it },
-                        label = { Text("عنوان تست") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value = testSubContent,
-                        onValueChange = { testSubContent = it },
-                        label = { Text("متن تست") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    Button(
-                        onClick = {
-                            viewModel.submitUserStory(testSubTitle, testSubContent, "مدیر سیستم (دیباگ)") { success ->
-                                subResult = if (success) "ارسال داستان با موفقیت در جدول user_story_submissions ثبت شد." else "خطا در ثبت داستان."
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
-                        shape = RoundedCornerShape(12.dp)
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = "نتیجه آزمایش ارتباط با مدل:", fontWeight = FontWeight.Bold, color = SpectralWhite)
+                    Surface(
+                        color = VoidBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("ارسال تست داستان به دیتابیس")
+                        Text(
+                            text = testResultText!!,
+                            color = if (testResultText!!.contains("خطا")) BloodGlow else SuccessNeon,
+                            modifier = Modifier.padding(12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            lineHeight = 20.sp
+                        )
                     }
-                    if (subResult != null) {
-                        Text(text = subResult!!, color = SpectralWhite, style = MaterialTheme.typography.bodySmall)
-                    }
+                }
+            }
+        }
+
+        // Supabase Diagnostics
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(text = "وضعیت اتصال پایگاه داده Supabase", fontWeight = FontWeight.Bold, color = SpectralWhite)
+                Text(text = "آدرس پروژه: ${SupabaseClientProvider.supabaseUrl}", color = MutedAsh, fontSize = 11.sp)
+                Button(
+                    onClick = {
+                        viewModel.testConnection { success, msg ->
+                            testResultText = if (success) "تست اتصال Supabase: $msg" else "خطا در اتصال Supabase: $msg"
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("بررسی اتصال Supabase", color = SpectralWhite)
                 }
             }
         }

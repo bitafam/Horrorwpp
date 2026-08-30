@@ -10,12 +10,15 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
 
-@Entity(tableName = "cached_time_mirror")
-data class CachedTimeMirror(
+@Entity(tableName = "cached_grim_fortunes")
+data class CachedGrimFortune(
     @PrimaryKey val id: String,
-    val dateKey: String,
+    val monthIndex: Int,
+    val monthName: String,
     val title: String,
-    val narrative: String,
+    val omenPoem: String?,
+    val fortuneText: String,
+    val doomLevel: String?,
     val status: String
 )
 
@@ -42,11 +45,11 @@ data class CachedScenario(
 
 @Dao
 interface HorrorDao {
-    @Query("SELECT * FROM cached_time_mirror WHERE status = 'PUBLISHED'")
-    suspend fun getTimeMirrors(): List<CachedTimeMirror>
+    @Query("SELECT * FROM cached_grim_fortunes WHERE status = 'PUBLISHED' ORDER BY monthIndex ASC")
+    suspend fun getGrimFortunes(): List<CachedGrimFortune>
 
     @Upsert
-    suspend fun upsertTimeMirrors(items: List<CachedTimeMirror>)
+    suspend fun upsertGrimFortunes(items: List<CachedGrimFortune>)
 
     @Query("SELECT * FROM cached_real_stories WHERE status = 'PUBLISHED'")
     suspend fun getRealStories(): List<CachedRealStory>
@@ -61,7 +64,7 @@ interface HorrorDao {
     suspend fun upsertScenarios(items: List<CachedScenario>)
 }
 
-@Database(entities = [CachedTimeMirror::class, CachedRealStory::class, CachedScenario::class], version = 1, exportSchema = false)
+@Database(entities = [CachedGrimFortune::class, CachedRealStory::class, CachedScenario::class], version = 2, exportSchema = false)
 abstract class HorrorDatabase : RoomDatabase() {
     abstract fun horrorDao(): HorrorDao
 
@@ -75,7 +78,8 @@ abstract class HorrorDatabase : RoomDatabase() {
                     context.applicationContext,
                     HorrorDatabase::class.java,
                     "horror_offline_cache.db"
-                ).build()
+                ).fallbackToDestructiveMigration()
+                .build()
                 INSTANCE = instance
                 instance
             }

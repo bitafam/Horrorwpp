@@ -12,14 +12,17 @@ data class UserProfile(
 )
 
 @JsonClass(generateAdapter = true)
-data class TimeMirrorContent(
+data class GrimFortune(
     val id: String,
-    val date_key: String, // e.g. "1405-06-08" or "2026-08-29"
+    val month_index: Int, // 1 to 12 (Farvardin to Esfand)
+    val month_name: String, // e.g. "فروردین", "اردیبهشت", ...
     val title: String,
-    val narrative: String,
+    val omen_poem: String?, // بیت یا شعر فال شوم حافظ
+    val fortune_text: String, // تفسیر طالع و پیش‌گویی هولناک
+    val doom_level: String?, // e.g. "شوم", "بسیار شوم", "نفرین ابدی"
     val status: String, // 'DRAFT', 'PUBLISHED', 'ARCHIVED'
-    @Json(name = "created_at") val createdAt: String?,
-    @Json(name = "updated_at") val updatedAt: String?
+    @Json(name = "created_at") val createdAt: String? = null,
+    @Json(name = "updated_at") val updatedAt: String? = null
 )
 
 @JsonClass(generateAdapter = true)
