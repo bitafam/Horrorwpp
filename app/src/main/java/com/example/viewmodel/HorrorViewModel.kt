@@ -8,6 +8,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.MediaType.Companion.toMediaType
+import org.json.JSONObject
+import org.json.JSONArray
+import com.example.BuildConfig
 
 enum class AppMode {
     USER, ADMIN_LOGIN, ADMIN_PANEL
@@ -38,6 +47,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _scenariosList = MutableStateFlow<List<WrongChoiceScenario>>(emptyList())
     val scenariosList: StateFlow<List<WrongChoiceScenario>> = _scenariosList.asStateFlow()
+
+    private val _userSubmissionsList = MutableStateFlow<List<UserStorySubmission>>(emptyList())
+    val userSubmissionsList: StateFlow<List<UserStorySubmission>> = _userSubmissionsList.asStateFlow()
 
     // Admin Management States
     private val _adminTimeMirrors = MutableStateFlow<List<TimeMirrorContent>>(emptyList())
@@ -73,18 +85,167 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _loading.value = true
             try {
-                _timeMirrorList.value = repository.getTimeMirrorContent(true)
-                _realStoriesList.value = repository.getRealStories(true)
+                // Fetch Time Mirror
+                val tms = repository.getTimeMirrorContent(true)
+                _timeMirrorList.value = tms.ifEmpty { getMockTimeMirrors() }
+
+                // Fetch Real Stories
+                val rs = repository.getRealStories(true)
+                _realStoriesList.value = rs.ifEmpty { getMockRealStories() }
+
+                // Fetch Scenarios
                 val resp = api.getScenarios(status = "PUBLISHED")
                 if (resp.isSuccessful && resp.body() != null) {
-                    _scenariosList.value = resp.body()!!
+                    _scenariosList.value = resp.body()!!.ifEmpty { getMockScenarios() }
+                } else {
+                    _scenariosList.value = getMockScenarios()
+                }
+
+                // Fetch User Submissions/Confessions
+                val subResp = api.getUserSubmissions()
+                if (subResp.isSuccessful && subResp.body() != null) {
+                    _userSubmissionsList.value = subResp.body()!!.filter { it.status == "PUBLISHED" }.ifEmpty { getMockUserSubmissions() }
+                } else {
+                    _userSubmissionsList.value = getMockUserSubmissions()
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "خطا در بارگذاری اطلاعات: ${e.localizedMessage}"
+                _timeMirrorList.value = getMockTimeMirrors()
+                _realStoriesList.value = getMockRealStories()
+                _scenariosList.value = getMockScenarios()
+                _userSubmissionsList.value = getMockUserSubmissions()
             } finally {
                 _loading.value = false
             }
         }
+    }
+
+    // Static Pre-populated Persian Gothic Mock Data Fallbacks
+    private fun getMockRealStories(): List<RealStory> {
+        return listOf(
+            RealStory(
+                id = "real-1",
+                title = "فریاد خاموش در دالان شرقی",
+                content = "در سال ۱۲۸۶، یکی از کاتبان عمارت برای یافتن اسناد غیب‌گویی وارد دالان شرقی شد. صدای قدم‌های او هنوز هم پس از نیمه‌شب شنیده می‌شود در حالی که او هرگز از دالان بازنگشت...",
+                author = "میرزا کاظم کاتب",
+                source = "کتب عتیقه عمارت",
+                cover_image_url = null,
+                tags = "دالان, ارواح",
+                status = "PUBLISHED",
+                createdAt = null,
+                updatedAt = null
+            ),
+            RealStory(
+                id = "real-2",
+                title = "راز آینه مه‌آلود اتاق پذیرایی",
+                content = "آینه‌ای قدی و قدیمی با قاب نقره‌ای در اتاق پذیرایی اصلی نصب شده است. هر کس در شب‌های طوفانی به انعکاس خود نگاه کند، چهره مرگ خود را زودتر نظاره خواهد کرد...",
+                author = "سهراب جهان‌بخش",
+                source = "روایات محلی بلک‌وود",
+                cover_image_url = null,
+                tags = "آینه, طالع‌بینی",
+                status = "PUBLISHED",
+                createdAt = null,
+                updatedAt = null
+            ),
+            RealStory(
+                id = "real-3",
+                title = "کلاغ‌های معبد سوخته",
+                content = "با غروب خورشید، صدها کلاغ سیاه بر بلندای ناقوس فروریخته معبد به پرواز درمی‌آیند. اهالی معتقدند هر کلاغ، حامل یک راز مگو از گناهان شوم ساکنان گذشته است...",
+                author = "کاتب ناشناس",
+                source = "اسناد بایگانی شده",
+                cover_image_url = null,
+                tags = "معبد, کلاغ",
+                status = "PUBLISHED",
+                createdAt = null,
+                updatedAt = null
+            )
+        )
+    }
+
+    private fun getMockUserSubmissions(): List<UserStorySubmission> {
+        return listOf(
+            UserStorySubmission(
+                id = "user-sub-1",
+                title = "سایه پشت پنجره خوابگاه",
+                content = "دیشب حوالی ساعت ۳ بامداد، صدای پنجه کشیدن روی شیشه خوابگاه طبقه دوم را شنیدم. وقتی پرده را کنار زدم، هیچ‌کس آنجا نبود اما یک رد دست سرخ خیس روی شیشه مه‌آلود باقی مانده بود...",
+                author_name = "تنها در تاریکی",
+                status = "PUBLISHED",
+                admin_notes = "تایید شده و مهیج",
+                createdAt = null,
+                updatedAt = null
+            ),
+            UserStorySubmission(
+                id = "user-sub-2",
+                title = "زمزمه‌های چاه عتیق حیاط خلوت",
+                content = "ما توی باغ قدیمی حیاط خلوت یک چاه بسیار قدیمی داریم که سال‌ها پیش مسدود شده. دیشب واضح شنیدم که شخصی از اعماق چاه نام من را به آرامی و با لحنی لرزان صدا می‌زد...",
+                author_name = "آرش از تبریز",
+                status = "PUBLISHED",
+                admin_notes = "داستان بسیار گیرا و ملموس",
+                createdAt = null,
+                updatedAt = null
+            ),
+            UserStorySubmission(
+                id = "user-sub-3",
+                title = "عروسک کوکی مادربزرگ با چشم‌های شیشه‌ای",
+                content = "عروسک قدیمی که از مادربزرگم به ارث رسیده، بدون کوک شدن و در نیمه‌شب شروع به نواختن آهنگ غمگین خود می‌کند. هر بار که بیدار می‌شوم حس می‌کنم جهت نگاه چشم‌های شیشه‌ای آن تغییر کرده...",
+                author_name = "سرنا_وحشت",
+                status = "PUBLISHED",
+                admin_notes = "بسیار مخوف",
+                createdAt = null,
+                updatedAt = null
+            )
+        )
+    }
+
+    private fun getMockTimeMirrors(): List<TimeMirrorContent> {
+        return listOf(
+            TimeMirrorContent(
+                id = "tm-26",
+                date_key = "1405-06-26",
+                title = "طنین نخستین ناقوس مرگ",
+                narrative = "در این روز تاریخی از پاییز سرد، ناقوس بزرگ کلیسای نیمه ویران بدون حضور هیچ انسانی شروع به زدن کرد. این حادثه، آغازگر طاعون سیاه در منطقه بود.",
+                status = "PUBLISHED",
+                createdAt = null,
+                updatedAt = null
+            ),
+            TimeMirrorContent(
+                id = "tm-27",
+                date_key = "1405-06-27",
+                title = "مکاشفه تاریکی در آینه نقره‌ای",
+                narrative = "دختر جوانی در شب ۲۷ مهرماه با نگاه به آینه عتیقه ناپدید شد. پلیس فقط یک قاب خالی نقره‌ای مه‌آلود را در اتاق خواب او پیدا کرد.",
+                status = "PUBLISHED",
+                createdAt = null,
+                updatedAt = null
+            )
+        )
+    }
+
+    private fun getMockScenarios(): List<WrongChoiceScenario> {
+        return listOf(
+            WrongChoiceScenario(
+                id = "scen-1",
+                title = "گذرگاه دالان شرقی",
+                description = "شما در آستانه ورود به دالان شرقی عمارت هستید. دیوارهای دالان مه‌آلود و سرد است. کدام مسیر را برای زنده ماندن انتخاب می‌کنید؟",
+                status = "PUBLISHED",
+                initial_scene_id = "scene-1-1",
+                createdAt = null
+            ),
+            WrongChoiceScenario(
+                id = "scen-2",
+                title = "کلاغ‌های معبد سوخته",
+                description = "برج ناقوس قدیمی لرزان معبد پیش روی شماست. صدها کلاغ بالای سر شما پرواز می‌کنند. صدای نجوایی از بالای پله‌ها می‌آید...",
+                status = "PUBLISHED",
+                initial_scene_id = "scene-2-1",
+                createdAt = null
+            ),
+            WrongChoiceScenario(
+                id = "scen-3",
+                title = "ملاقات با کاتب ارواح",
+                description = "یک در سنگین چوبی با تزیینات عتیقه در انتهای سالن قرار دارد. دستگیره در داغ و سرخ‌رنگ است. آیا وارد می‌شوید یا عقب می‌نشینید؟",
+                status = "PUBLISHED",
+                initial_scene_id = "scene-3-1",
+                createdAt = null
+            )
+        )
     }
 
     fun loadAdminData() {
@@ -280,6 +441,79 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 onComplete()
             } catch (e: Exception) {
                 _errorMessage.value = e.localizedMessage
+            }
+        }
+    }
+
+    fun generateAILore(prompt: String, onResult: (String) -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val apiKey = BuildConfig.GEMINI_API_KEY
+            if (apiKey.isBlank()) {
+                withContext(Dispatchers.Main) {
+                    onResult("خطا: کلید واژه‌ی هوش مصنوعی یافت نشد. لطفا در فایل تنظیمات پروژه آن را بررسی کنید.")
+                }
+                return@launch
+            }
+
+            val client = OkHttpClient.Builder()
+                .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
+            val requestJson = JSONObject().apply {
+                val contentsArray = JSONArray().apply {
+                    val contentObj = JSONObject().apply {
+                        val partsArray = JSONArray().apply {
+                            val partObj = JSONObject().apply {
+                                put("text", prompt)
+                            }
+                            put(partObj)
+                        }
+                        put("parts", partsArray)
+                    }
+                    put(contentObj)
+                }
+                put("contents", contentsArray)
+
+                val systemInstructionObj = JSONObject().apply {
+                    val partsArray = JSONArray().apply {
+                        put(JSONObject().apply {
+                            put("text", "تو کاتب باستانی و نگهبان ارواح عمارت وحشت گوتیک هستی. لحن تو باید کاملاً ادبی، رازآلود، گوتیک، مهیج و فوق‌العاده ترسناک باشد. فقط به زبان فارسی روان و شکیل پاسخ بنویس.")
+                        })
+                    }
+                    put("parts", partsArray)
+                }
+                put("systemInstruction", systemInstructionObj)
+            }
+
+            val request = Request.Builder()
+                .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey")
+                .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+                .build()
+
+            try {
+                val response = client.newCall(request).execute()
+                val bodyStr = response.body?.string() ?: ""
+                if (response.isSuccessful && bodyStr.isNotEmpty()) {
+                    val responseObj = JSONObject(bodyStr)
+                    val candidates = responseObj.getJSONArray("candidates")
+                    val firstCandidate = candidates.getJSONObject(0)
+                    val content = firstCandidate.getJSONObject("content")
+                    val parts = content.getJSONArray("parts")
+                    val generatedText = parts.getJSONObject(0).getString("text")
+                    withContext(Dispatchers.Main) {
+                        onResult(generatedText)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        onResult("کاتب ارواح در سکوت فرورفته است. خطایی در برقراری ارتباط رخ داد.")
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    onResult("خطای ماوراء الطبیعه: ${e.localizedMessage}")
+                }
             }
         }
     }
