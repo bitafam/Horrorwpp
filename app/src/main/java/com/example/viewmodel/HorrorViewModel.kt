@@ -400,30 +400,40 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun rateStory(storyId: String, userRating: Float) {
         viewModelScope.launch {
-            val currentStories = _realStoriesList.value
-            val target = currentStories.find { it.id == storyId } ?: return@launch
-            val updatedCount = target.rating_count + 1
-            val calculatedRating = ((target.rating * target.rating_count) + userRating) / updatedCount
-            val updatedStory = target.copy(
-                rating = String.format(java.util.Locale.US, "%.1f", calculatedRating).toFloat(),
-                rating_count = updatedCount
-            )
+            val success = repository.submitStoryRatingRemote(storyId, userRating)
+            if (success) {
+                loadUserData()
+            } else {
+                val currentStories = _realStoriesList.value
+                val target = currentStories.find { it.id == storyId } ?: return@launch
+                val updatedCount = target.rating_count + 1
+                val calculatedRating = ((target.rating * target.rating_count) + userRating) / updatedCount
+                val updatedStory = target.copy(
+                    rating = String.format(java.util.Locale.US, "%.1f", calculatedRating).toFloat(),
+                    rating_count = updatedCount
+                )
 
-            _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
-            _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
-            repository.saveRealStory(updatedStory)
+                _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
+                _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
+                repository.saveRealStoryLocalOnly(updatedStory)
+            }
         }
     }
 
     fun incrementStoryViews(storyId: String) {
         viewModelScope.launch {
-            val currentStories = _realStoriesList.value
-            val target = currentStories.find { it.id == storyId } ?: return@launch
-            val updatedStory = target.copy(view_count = target.view_count + 1)
+            val success = repository.incrementStoryViewRemote(storyId)
+            if (success) {
+                loadUserData()
+            } else {
+                val currentStories = _realStoriesList.value
+                val target = currentStories.find { it.id == storyId } ?: return@launch
+                val updatedStory = target.copy(view_count = target.view_count + 1)
 
-            _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
-            _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
-            repository.saveRealStory(updatedStory)
+                _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
+                _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
+                repository.saveRealStoryLocalOnly(updatedStory)
+            }
         }
     }
 
@@ -545,18 +555,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loginAdmin(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
-        // Master offline credentials check
-        if (email.trim().lowercase() == "admin@gothic.com" && pass == "admin123") {
-            _currentUserEmail.value = email
-            _currentUserId.value = "master-admin"
-            _currentUserRole.value = "ADMIN"
-            setAppMode(AppMode.ADMIN_PANEL)
-            onResult(true, null)
-            return
-        }
-
         if (!SupabaseClientProvider.isConfigured) {
-            onResult(false, "اتصال Supabase تنظیم نشده است. می‌توانید با ایمیل admin@gothic.com و رمز admin123 وارد شوید یا در تنظیمات آدرس Supabase را وارد کنید.")
+            onResult(false, "اتصال Supabase تنظیم نشده است. ابتدا آدرس و کلید را وارد کنید.")
             return
         }
 
@@ -574,19 +574,39 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     val userEmail = authData.user?.email
                     if (token != null && userId != null) {
                         SupabaseClientProvider.currentAuthToken = token
-                        _currentUserEmail.value = userEmail
-                        _currentUserId.value = userId
-                        _currentUserRole.value = "ADMIN"
-                        setAppMode(AppMode.ADMIN_PANEL)
-                        onResult(true, null)
+                        
+                        // Query user profile to verify role
+                        val profileResp = api.getProfile(idEq = "eq.$userId")
+                        if (profileResp.isSuccessful && profileResp.body() != null) {
+                            val profiles = profileResp.body()!!
+                            val matchedProfile = profiles.firstOrNull()
+                            if (matchedProfile != null && matchedProfile.role == "ADMIN") {
+                                _currentUserEmail.value = userEmail
+                                _currentUserId.value = userId
+                                _currentUserRole.value = "ADMIN"
+                                setAppMode(AppMode.ADMIN_PANEL)
+                                onResult(true, null)
+                            } else {
+                                SupabaseClientProvider.currentAuthToken = null
+                                onResult(false, "خطای دسترسی: شما ادمین نیستید. نقش شما: ${matchedProfile?.role ?: "نامشخص"}")
+                            }
+                        } else {
+                            SupabaseClientProvider.currentAuthToken = null
+                            val errStr = profileResp.errorBody()?.string() ?: ""
+                            android.util.Log.e("SupabaseError", "Profile query failed: ${profileResp.code()} - $errStr")
+                            onResult(false, "خطا در استعلام مشخصات کاربری از سرور.")
+                        }
                     } else {
                         onResult(false, "توکن دریافت نشد.")
                     }
                 } else {
-                    onResult(false, "ورود ناموفق بود. ایمیل یا رمز عبور اشتباه است.")
+                    val errStr = authResp.errorBody()?.string() ?: ""
+                    android.util.Log.e("SupabaseError", "Auth login failed: ${authResp.code()} - $errStr")
+                    onResult(false, "ایمیل یا رمز عبور اشتباه است.")
                 }
             } catch (e: Exception) {
-                onResult(false, "خطای ارتباط: ${e.localizedMessage}")
+                android.util.Log.e("SupabaseError", "loginAdmin exception", e)
+                onResult(false, "خطای ارتباط با سرور: ${e.localizedMessage}")
             } finally {
                 _loading.value = false
             }
@@ -605,31 +625,17 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 createdAt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()),
                 updatedAt = null
             )
-            // Immediately persist in Room local DB
-            repository.saveUserSubmission(newSub)
-
-            // Update UI State
-            _adminSubmissions.value = listOf(newSub) + _adminSubmissions.value
-
-            // Attempt remote sync
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        val map = mapOf(
-                            "id" to newSub.id,
-                            "title" to newSub.title,
-                            "content" to newSub.content,
-                            "author_name" to newSub.author_name,
-                            "status" to "PENDING"
-                        )
-                        api.submitUserStory(map)
-                    }
-                } catch (e: Exception) {
-                    // Stored in Room
-                }
+            _loading.value = true
+            try {
+                val saved = repository.saveUserSubmission(newSub)
+                _adminSubmissions.value = listOf(saved) + _adminSubmissions.value
+                onResult(true)
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در ارسال داستان: ${e.localizedMessage}"
+                onResult(false)
+            } finally {
+                _loading.value = false
             }
-
-            onResult(true)
         }
     }
 
@@ -643,131 +649,116 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         onComplete: () -> Unit
     ) {
         viewModelScope.launch {
-            val monthName = PERSIAN_MONTHS.getOrElse(monthIndex - 1) { "ماه $monthIndex" }
-            val existing = _adminGrimFortunes.value.find { it.month_index == monthIndex }
-            val id = existing?.id ?: "gf-$monthIndex"
-            val newGf = GrimFortune(
-                id = id,
-                month_index = monthIndex,
-                month_name = monthName,
-                title = title,
-                omen_poem = poem,
-                fortune_text = fortuneText,
-                doom_level = doomLevel ?: "شوم",
-                status = status,
-                createdAt = null,
-                updatedAt = null
-            )
-
-            // Persist to Room local DB immediately
-            repository.saveGrimFortune(newGf)
-
-            _adminGrimFortunes.value = _adminGrimFortunes.value.filter { it.month_index != monthIndex } + newGf
-            if (status == "PUBLISHED") {
-                _grimFortunesList.value = _grimFortunesList.value.filter { it.month_index != monthIndex } + newGf
-            }
-
-            // Sync to Supabase in background
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        val map = mapOf(
-                            "id" to newGf.id,
-                            "month_index" to monthIndex,
-                            "month_name" to monthName,
-                            "title" to title,
-                            "omen_poem" to (poem ?: ""),
-                            "fortune_text" to fortuneText,
-                            "doom_level" to (doomLevel ?: "شوم"),
-                            "status" to status
-                        )
-                        api.createGrimFortune(map)
-                    }
-                } catch (e: Exception) {
-                    // Saved locally
+            _loading.value = true
+            try {
+                val existing = _adminGrimFortunes.value.find { it.month_index == monthIndex }
+                val id = if (existing?.id != null && !existing.id.startsWith("gf-")) existing.id else java.util.UUID.randomUUID().toString()
+                val monthName = PERSIAN_MONTHS.getOrElse(monthIndex - 1) { "ماه $monthIndex" }
+                val newGf = GrimFortune(
+                    id = id,
+                    month_index = monthIndex,
+                    month_name = monthName,
+                    title = title.trim(),
+                    omen_poem = poem?.trim(),
+                    fortune_text = fortuneText.trim(),
+                    doom_level = doomLevel ?: "شوم",
+                    status = status,
+                    createdAt = null,
+                    updatedAt = null
+                )
+                val saved = repository.saveGrimFortune(newGf)
+                _adminGrimFortunes.value = _adminGrimFortunes.value.filter { it.month_index != monthIndex } + saved
+                if (status == "PUBLISHED") {
+                    _grimFortunesList.value = _grimFortunesList.value.filter { it.month_index != monthIndex } + saved
+                } else {
+                    _grimFortunesList.value = _grimFortunesList.value.filter { it.month_index != monthIndex }
                 }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در ذخیره‌سازی طالع: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-
-            onComplete()
         }
     }
 
     fun updateGrimFortuneStatus(id: String, newStatus: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminGrimFortunes.value = _adminGrimFortunes.value.map {
-                if (it.id == id) it.copy(status = newStatus) else it
-            }
-            val item = _adminGrimFortunes.value.find { it.id == id }
-            if (item != null) {
-                repository.saveGrimFortune(item)
-            }
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        api.updateGrimFortune("eq.$id", mapOf("status" to newStatus))
+            _loading.value = true
+            try {
+                val item = _adminGrimFortunes.value.find { it.id == id }
+                if (item != null) {
+                    val updated = item.copy(status = newStatus)
+                    val saved = repository.saveGrimFortune(updated)
+                    _adminGrimFortunes.value = _adminGrimFortunes.value.map { if (it.id == id) saved else it }
+                    if (newStatus == "PUBLISHED") {
+                        _grimFortunesList.value = _grimFortunesList.value.filter { it.id != id } + saved
+                    } else {
+                        _grimFortunesList.value = _grimFortunesList.value.filter { it.id != id }
                     }
-                } catch (e: Exception) { }
+                }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در تغییر وضعیت طالع: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            onComplete()
         }
     }
 
     fun deleteGrimFortune(id: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminGrimFortunes.value = _adminGrimFortunes.value.filter { it.id != id }
-            _grimFortunesList.value = _grimFortunesList.value.filter { it.id != id }
-            repository.deleteGrimFortune(id)
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        api.deleteGrimFortune("eq.$id")
-                    }
-                } catch (e: Exception) { }
+            _loading.value = true
+            try {
+                repository.deleteGrimFortune(id)
+                _adminGrimFortunes.value = _adminGrimFortunes.value.filter { it.id != id }
+                _grimFortunesList.value = _grimFortunesList.value.filter { it.id != id }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در حذف طالع: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            onComplete()
         }
     }
 
     fun updateSubmissionStatus(id: String, newStatus: String, adminNotes: String?, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminSubmissions.value = _adminSubmissions.value.map {
-                if (it.id == id) it.copy(status = newStatus, admin_notes = adminNotes) else it
-            }
-            val sub = _adminSubmissions.value.find { it.id == id }
-            if (sub != null) {
-                repository.saveUserSubmission(sub)
-                if (newStatus == "PUBLISHED") {
-                    _userSubmissionsList.value = listOf(sub) + _userSubmissionsList.value.filter { it.id != id }
-                } else {
-                    _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != id }
-                }
-            }
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        val map = mutableMapOf<String, Any>("status" to newStatus)
-                        if (adminNotes != null) map["admin_notes"] = adminNotes
-                        api.updateUserSubmission("eq.$id", map)
+            _loading.value = true
+            try {
+                val sub = _adminSubmissions.value.find { it.id == id }
+                if (sub != null) {
+                    val updated = sub.copy(status = newStatus, admin_notes = adminNotes)
+                    val saved = repository.saveUserSubmission(updated)
+                    _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == id) saved else it }
+                    if (newStatus == "PUBLISHED") {
+                        _userSubmissionsList.value = listOf(saved) + _userSubmissionsList.value.filter { it.id != id }
+                    } else {
+                        _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != id }
                     }
-                } catch (e: Exception) { }
+                }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در تغییر وضعیت ارسالی: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            onComplete()
         }
     }
 
     fun deleteSubmission(id: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminSubmissions.value = _adminSubmissions.value.filter { it.id != id }
-            _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != id }
-            repository.deleteUserSubmission(id)
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        api.deleteUserSubmission("eq.$id")
-                    }
-                } catch (e: Exception) { }
+            _loading.value = true
+            try {
+                repository.deleteUserSubmission(id)
+                _adminSubmissions.value = _adminSubmissions.value.filter { it.id != id }
+                _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != id }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در حذف ارسالی: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            onComplete()
         }
     }
 
@@ -782,225 +773,213 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             val title = editedTitle?.ifBlank { null } ?: submission.title
             val content = editedContent?.ifBlank { null } ?: submission.content
             val author = "کاربر: ${submission.author_name}"
-            createRealStory(
-                title = title,
-                content = content,
-                author = author,
-                source = "اعترافات و رازهای دریافتی کاربران",
-                coverUrl = coverUrl,
-                tags = "اعترافات, راز کاربران",
-                status = "PUBLISHED"
-            ) {
-                updateSubmissionStatus(submission.id, "PUBLISHED", "منتشر شده به عنوان داستان واقعی") {
-                    onComplete(true)
-                }
+            _loading.value = true
+            try {
+                val newStory = RealStory(
+                    id = java.util.UUID.randomUUID().toString(),
+                    title = title,
+                    content = content,
+                    author = author,
+                    source = "اعترافات و رازهای دریافتی کاربران",
+                    cover_image_url = coverUrl.ifBlank { null },
+                    tags = "اعترافات, راز کاربران",
+                    status = "PUBLISHED",
+                    createdAt = null,
+                    updatedAt = null
+                )
+                val savedStory = repository.saveRealStory(newStory)
+                _adminRealStories.value = listOf(savedStory) + _adminRealStories.value
+                _realStoriesList.value = listOf(savedStory) + _realStoriesList.value
+                
+                // Approve submission
+                val updatedSub = submission.copy(status = "PUBLISHED", admin_notes = "منتشر شده به عنوان داستان واقعی")
+                val savedSub = repository.saveUserSubmission(updatedSub)
+                _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submission.id) savedSub else it }
+                _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != submission.id }
+                
+                onComplete(true)
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در انتشار داستان: ${e.localizedMessage}"
+                onComplete(false)
+            } finally {
+                _loading.value = false
             }
         }
     }
 
     fun createRealStory(title: String, content: String, author: String, source: String, coverUrl: String, tags: String, status: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            val newStory = RealStory(
-                id = java.util.UUID.randomUUID().toString(),
-                title = title,
-                content = content,
-                author = author,
-                source = source,
-                cover_image_url = coverUrl.ifBlank { null },
-                tags = tags,
-                status = status,
-                createdAt = null,
-                updatedAt = null
-            )
-            // Persist to Room local DB immediately
-            repository.saveRealStory(newStory)
-
-            _adminRealStories.value = listOf(newStory) + _adminRealStories.value
-            if (status == "PUBLISHED") {
-                _realStoriesList.value = listOf(newStory) + _realStoriesList.value
+            _loading.value = true
+            try {
+                val newStory = RealStory(
+                    id = java.util.UUID.randomUUID().toString(),
+                    title = title,
+                    content = content,
+                    author = author,
+                    source = source,
+                    cover_image_url = coverUrl.ifBlank { null },
+                    tags = tags,
+                    status = status,
+                    createdAt = null,
+                    updatedAt = null
+                )
+                val saved = repository.saveRealStory(newStory)
+                _adminRealStories.value = listOf(saved) + _adminRealStories.value
+                if (status == "PUBLISHED") {
+                    _realStoriesList.value = listOf(saved) + _realStoriesList.value
+                }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در ساخت داستان: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        val map = mapOf(
-                            "id" to newStory.id,
-                            "title" to title,
-                            "content" to content,
-                            "author" to author,
-                            "source" to source,
-                            "cover_image_url" to coverUrl,
-                            "tags" to tags,
-                            "status" to status
-                        )
-                        api.createRealStory(map)
-                    }
-                } catch (e: Exception) { }
-            }
-            onComplete()
         }
     }
 
     fun updateRealStory(id: String, title: String, content: String, author: String, source: String, coverUrl: String, tags: String, status: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            val updated = RealStory(
-                id = id,
-                title = title,
-                content = content,
-                author = author,
-                source = source,
-                cover_image_url = coverUrl.ifBlank { null },
-                tags = tags,
-                status = status,
-                createdAt = null,
-                updatedAt = null
-            )
-            repository.saveRealStory(updated)
-
-            _adminRealStories.value = _adminRealStories.value.map { if (it.id == id) updated else it }
-            if (status == "PUBLISHED") {
-                _realStoriesList.value = _realStoriesList.value.filter { it.id != id } + listOf(updated)
-            } else {
-                _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
+            _loading.value = true
+            try {
+                val current = _adminRealStories.value.find { it.id == id }
+                val updated = RealStory(
+                    id = id,
+                    title = title,
+                    content = content,
+                    author = author,
+                    source = source,
+                    cover_image_url = coverUrl.ifBlank { null },
+                    tags = tags,
+                    status = status,
+                    rating = current?.rating ?: 0f,
+                    rating_count = current?.rating_count ?: 0,
+                    view_count = current?.view_count ?: 0,
+                    createdAt = null,
+                    updatedAt = null
+                )
+                val saved = repository.saveRealStory(updated)
+                _adminRealStories.value = _adminRealStories.value.map { if (it.id == id) saved else it }
+                if (status == "PUBLISHED") {
+                    _realStoriesList.value = _realStoriesList.value.filter { it.id != id } + listOf(saved)
+                } else {
+                    _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
+                }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در بروزرسانی داستان: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        val map = mapOf(
-                            "title" to title,
-                            "content" to content,
-                            "author" to author,
-                            "source" to source,
-                            "cover_image_url" to coverUrl,
-                            "tags" to tags,
-                            "status" to status
-                        )
-                        api.updateRealStory("eq.$id", map)
-                    }
-                } catch (e: Exception) { }
-            }
-            onComplete()
         }
     }
 
     fun updateRealStoryStatus(id: String, newStatus: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminRealStories.value = _adminRealStories.value.map {
-                if (it.id == id) it.copy(status = newStatus) else it
-            }
-            val story = _adminRealStories.value.find { it.id == id }
-            if (story != null) {
-                repository.saveRealStory(story)
-                if (newStatus == "PUBLISHED") {
-                    if (_realStoriesList.value.none { it.id == id }) {
-                        _realStoriesList.value = listOf(story) + _realStoriesList.value
+            _loading.value = true
+            try {
+                val story = _adminRealStories.value.find { it.id == id }
+                if (story != null) {
+                    val updated = story.copy(status = newStatus)
+                    val saved = repository.saveRealStory(updated)
+                    _adminRealStories.value = _adminRealStories.value.map { if (it.id == id) saved else it }
+                    if (newStatus == "PUBLISHED") {
+                        if (_realStoriesList.value.none { it.id == id }) {
+                            _realStoriesList.value = listOf(saved) + _realStoriesList.value
+                        }
+                    } else {
+                        _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
                     }
-                } else {
-                    _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
                 }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در تغییر وضعیت داستان: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        api.updateRealStory("eq.$id", mapOf("status" to newStatus))
-                    }
-                } catch (e: Exception) { }
-            }
-            onComplete()
         }
     }
 
     fun deleteRealStory(id: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminRealStories.value = _adminRealStories.value.filter { it.id != id }
-            _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
-            repository.deleteRealStory(id)
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        api.deleteRealStory("eq.$id")
-                    }
-                } catch (e: Exception) { }
+            _loading.value = true
+            try {
+                repository.deleteRealStory(id)
+                _adminRealStories.value = _adminRealStories.value.filter { it.id != id }
+                _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در حذف داستان: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            onComplete()
         }
     }
 
     fun createScenario(title: String, description: String, status: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            val scen = WrongChoiceScenario(
-                id = java.util.UUID.randomUUID().toString(),
-                title = title,
-                description = description,
-                status = status,
-                initial_scene_id = null,
-                createdAt = null
-            )
-            repository.saveScenario(scen)
-
-            _adminScenarios.value = listOf(scen) + _adminScenarios.value
-            if (status == "PUBLISHED") {
-                _scenariosList.value = listOf(scen) + _scenariosList.value
+            _loading.value = true
+            try {
+                val scen = WrongChoiceScenario(
+                    id = java.util.UUID.randomUUID().toString(),
+                    title = title,
+                    description = description,
+                    status = status,
+                    initial_scene_id = null,
+                    createdAt = null
+                )
+                val saved = repository.saveScenario(scen)
+                _adminScenarios.value = listOf(saved) + _adminScenarios.value
+                if (status == "PUBLISHED") {
+                    _scenariosList.value = listOf(saved) + _scenariosList.value
+                }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در ساخت سناریو: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        val map = mapOf(
-                            "id" to scen.id,
-                            "title" to title,
-                            "description" to description,
-                            "status" to status
-                        )
-                        api.createScenario(map)
-                    }
-                } catch (e: Exception) { }
-            }
-            onComplete()
         }
     }
 
     fun updateScenarioStatus(id: String, newStatus: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminScenarios.value = _adminScenarios.value.map {
-                if (it.id == id) it.copy(status = newStatus) else it
-            }
-            val s = _adminScenarios.value.find { it.id == id }
-            if (s != null) {
-                repository.saveScenario(s)
-                if (newStatus == "PUBLISHED") {
-                    if (_scenariosList.value.none { it.id == id }) {
-                        _scenariosList.value = listOf(s) + _scenariosList.value
+            _loading.value = true
+            try {
+                val s = _adminScenarios.value.find { it.id == id }
+                if (s != null) {
+                    val updated = s.copy(status = newStatus)
+                    val saved = repository.saveScenario(updated)
+                    _adminScenarios.value = _adminScenarios.value.map { if (it.id == id) saved else it }
+                    if (newStatus == "PUBLISHED") {
+                        if (_scenariosList.value.none { it.id == id }) {
+                            _scenariosList.value = listOf(saved) + _scenariosList.value
+                        }
+                    } else {
+                        _scenariosList.value = _scenariosList.value.filter { it.id != id }
                     }
-                } else {
-                    _scenariosList.value = _scenariosList.value.filter { it.id != id }
                 }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در تغییر وضعیت سناریو: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        api.updateScenario("eq.$id", mapOf("status" to newStatus))
-                    }
-                } catch (e: Exception) { }
-            }
-            onComplete()
         }
     }
 
     fun deleteScenario(id: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminScenarios.value = _adminScenarios.value.filter { it.id != id }
-            _scenariosList.value = _scenariosList.value.filter { it.id != id }
-            repository.deleteScenario(id)
-            launch(Dispatchers.IO) {
-                try {
-                    if (SupabaseClientProvider.isConfigured) {
-                        api.deleteScenario("eq.$id")
-                    }
-                } catch (e: Exception) { }
+            _loading.value = true
+            try {
+                repository.deleteScenario(id)
+                _adminScenarios.value = _adminScenarios.value.filter { it.id != id }
+                _scenariosList.value = _scenariosList.value.filter { it.id != id }
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در حذف سناریو: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
-            onComplete()
         }
     }
 
@@ -1143,60 +1122,93 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun generateGrimFortunesWithAI(customPrompt: String? = null, onResult: (Boolean, String, Int) -> Unit) {
-        val basePrompt = customPrompt?.ifBlank { null } ?: _grimFortunePrompt.value
-        generateAILore(basePrompt) { responseText ->
+        val prompt = "یک طالع‌بین تاریک و باستانی گوتیک شو و دقیقاً ۱۲ طالع شوم و دلهره‌آور، یکی برای هر ماه سال شمسی تولید کن.\n" +
+                "پاسخ خود را دقیقاً و صرفاً به صورت یک ساختار معتبر JSON فارسی با ساختار زیر بازگردان. هیچ توضیح اضافی قبل یا بعد از JSON ارائه نده:\n" +
+                "{\n" +
+                "  \"fortunes\": [\n" +
+                "    {\n" +
+                "      \"month_index\": 1,\n" +
+                "      \"month_name\": \"فروردین\",\n" +
+                "      \"title\": \"یک عنوان حماسی و شوم ترسناک\",\n" +
+                "      \"fortune_text\": \"تفسیر طالع و هشدار تاریک و پیش‌گویی هولناک مخصوص متولدین این ماه\",\n" +
+                "      \"omen_poem\": \"یک تک‌بیت شعر فال تاریک ملهم از حافظ شیرازی\",\n" +
+                "      \"doom_level\": \"بسیار شوم\"\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}\n" +
+                "باید برای هر ۱۲ ماه سال (فروردین تا اسفند) یعنی month_index های ۱ تا ۱۲ دقیقاً یک آیتم وجود داشته باشد."
+
+        generateAILore(prompt) { responseText ->
             if (responseText.startsWith("خطا")) {
                 onResult(false, responseText, 0)
                 return@generateAILore
             }
 
-            var parsedCount = 0
-            val pattern = Regex("===(\\d+)===\\s*\\n?([\\s\\S]*?)(?====\\d+===|$)")
-            val matches = pattern.findAll(responseText).toList()
+            try {
+                val startIndex = responseText.indexOf("{")
+                val endIndex = responseText.lastIndexOf("}")
+                if (startIndex == -1 || endIndex == -1) {
+                    throw Exception("ساختار پاسخ هوش مصنوعی قالب معتبر JSON ندارد.")
+                }
+                val jsonStr = responseText.substring(startIndex, endIndex + 1)
+                val root = org.json.JSONObject(jsonStr)
+                val array = root.getJSONArray("fortunes")
+                val fortunesList = mutableListOf<GrimFortune>()
 
-            if (matches.isNotEmpty()) {
-                for (match in matches) {
-                    val monthNumStr = match.groupValues[1]
-                    val content = match.groupValues[2].trim()
-                    val monthIndex = monthNumStr.toIntOrNull() ?: continue
-                    if (monthIndex in 1..12) {
-                        val lines = content.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                        var title = "طالع ماه ${PERSIAN_MONTHS[monthIndex - 1]}"
-                        var poem: String? = null
-                        var fortuneText = content
-                        var doomLevel: String? = "شوم"
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+                    val mIndex = item.getInt("month_index")
+                    val mName = item.optString("month_name", PERSIAN_MONTHS.getOrElse(mIndex - 1) { "ماه $mIndex" })
+                    val title = item.optString("title", "طالع ماه $mName")
+                    val poem = item.optString("omen_poem", "")
+                    val text = item.optString("fortune_text", "")
+                    val doom = item.optString("doom_level", "شوم")
 
-                        for (line in lines) {
-                            when {
-                                line.contains("عنوان:") -> title = line.replace("عنوان:", "").replace("#", "").replace("*", "").trim()
-                                line.contains("شعر:") -> poem = line.replace("شعر:", "").replace("#", "").replace("*", "").trim()
-                                line.contains("طالع:") -> fortuneText = line.replace("طالع:", "").replace("#", "").replace("*", "").trim()
-                                line.contains("درجه:") -> doomLevel = line.replace("درجه:", "").replace("#", "").replace("*", "").trim()
-                            }
-                        }
-
-                        saveGrimFortune(
-                            monthIndex = monthIndex,
-                            title = title,
-                            poem = poem,
-                            fortuneText = fortuneText,
-                            doomLevel = doomLevel,
-                            status = "PUBLISHED"
-                        ) {}
-                        parsedCount++
+                    if (mIndex in 1..12 && text.isNotBlank()) {
+                        fortunesList.add(
+                            GrimFortune(
+                                id = java.util.UUID.randomUUID().toString(),
+                                month_index = mIndex,
+                                month_name = mName,
+                                title = title,
+                                omen_poem = poem.ifBlank { null },
+                                fortune_text = text,
+                                doom_level = doom,
+                                status = "PUBLISHED",
+                                createdAt = null,
+                                updatedAt = null
+                            )
+                        )
                     }
                 }
-                onResult(true, "تعداد $parsedCount ماه با موفقیت تولید و در پایگاه داده ذخیره شد.", parsedCount)
-            } else {
-                saveGrimFortune(
-                    monthIndex = 1,
-                    title = "طالع شوم فروردین",
-                    poem = "ز غوغای جهان فارغ نشین در خلوت ظلمات",
-                    fortuneText = responseText,
-                    doomLevel = "بسیار شوم",
-                    status = "PUBLISHED"
-                ) {}
-                onResult(true, "طالع هوش مصنوعی دریافت و ذخیره شد.", 1)
+
+                if (fortunesList.isEmpty()) {
+                    throw Exception("هیچ طالع معتبری در پاسخ یافت نشد.")
+                }
+
+                viewModelScope.launch {
+                    _loading.value = true
+                    try {
+                        val success = repository.upsertGrimFortunes(fortunesList)
+                        if (success) {
+                            val updatedAdmin = _adminGrimFortunes.value.filter { adminItem ->
+                                fortunesList.none { it.month_index == adminItem.month_index }
+                            } + fortunesList
+                            _adminGrimFortunes.value = updatedAdmin
+                            _grimFortunesList.value = fortunesList
+                            onResult(true, "تعداد ${fortunesList.size} ماه طالع با موفقیت تولید و در سرور Supabase ذخیره گردید.", fortunesList.size)
+                        } else {
+                            onResult(false, "خطا در همگام‌سازی طالع‌ها با Supabase.", 0)
+                        }
+                    } catch (e: Exception) {
+                        onResult(false, "خطای ذخیره‌سازی: ${e.localizedMessage}", 0)
+                    } finally {
+                        _loading.value = false
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "Parsing JSON batch fortunes failed", e)
+                onResult(false, "خطا در پردازش پاسخ هوش مصنوعی: ${e.localizedMessage}", 0)
             }
         }
     }

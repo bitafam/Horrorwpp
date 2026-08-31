@@ -61,6 +61,13 @@ interface SupabaseApi {
     ): Response<List<GrimFortune>>
 
     @POST("rest/v1/grim_fortunes")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertGrimFortunes(
+        @Query("on_conflict") onConflict: String = "month_index",
+        @Body items: List<Map<String, Any>>
+    ): Response<List<GrimFortune>>
+
+    @POST("rest/v1/grim_fortunes")
     @Headers("Prefer: return=representation")
     suspend fun createGrimFortune(
         @Body item: Map<String, Any>
@@ -85,6 +92,12 @@ interface SupabaseApi {
     ): Response<List<RealStory>>
 
     @POST("rest/v1/real_stories")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertRealStory(
+        @Body item: Map<String, Any>
+    ): Response<List<RealStory>>
+
+    @POST("rest/v1/real_stories")
     @Headers("Prefer: return=representation")
     suspend fun createRealStory(
         @Body item: Map<String, Any>
@@ -102,10 +115,26 @@ interface SupabaseApi {
         @Query("id") idEq: String
     ): Response<ResponseBody>
 
+    @POST("rest/v1/rpc/increment_story_view")
+    suspend fun incrementStoryView(
+        @Body body: Map<String, String>
+    ): Response<ResponseBody>
+
+    @POST("rest/v1/rpc/submit_story_rating")
+    suspend fun submitStoryRating(
+        @Body body: Map<String, Any>
+    ): Response<ResponseBody>
+
     @GET("rest/v1/user_story_submissions")
     suspend fun getUserSubmissions(
         @Query("select") select: String = "*",
         @Query("status") status: String? = null
+    ): Response<List<UserStorySubmission>>
+
+    @POST("rest/v1/user_story_submissions")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertUserSubmission(
+        @Body item: Map<String, Any>
     ): Response<List<UserStorySubmission>>
 
     @POST("rest/v1/user_story_submissions")
@@ -130,6 +159,12 @@ interface SupabaseApi {
     suspend fun getScenarios(
         @Query("select") select: String = "*",
         @Query("status") status: String? = null
+    ): Response<List<WrongChoiceScenario>>
+
+    @POST("rest/v1/wrong_choice_scenarios")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertScenario(
+        @Body item: Map<String, Any>
     ): Response<List<WrongChoiceScenario>>
 
     @POST("rest/v1/wrong_choice_scenarios")
