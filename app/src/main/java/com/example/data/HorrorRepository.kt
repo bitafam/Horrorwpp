@@ -246,21 +246,21 @@ class HorrorRepository(context: Context) {
 
     suspend fun saveRealStory(story: RealStory): RealStory = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
-            val map = mutableMapOf<String, Any>(
+            val map = mutableMapOf<String, Any?>(
                 "id" to story.id,
                 "title" to story.title,
                 "content" to story.content,
-                "author" to (story.author ?: ""),
-                "source" to (story.source ?: ""),
-                "cover_image_url" to (story.cover_image_url ?: ""),
-                "tags" to (story.tags ?: ""),
+                "author" to if (story.author.isNullOrBlank()) null else story.author,
+                "source" to if (story.source.isNullOrBlank()) null else story.source,
+                "cover_image_url" to if (story.cover_image_url.isNullOrBlank()) null else story.cover_image_url,
+                "tags" to if (story.tags.isNullOrBlank()) null else story.tags,
                 "status" to story.status,
                 "rating" to story.rating,
                 "rating_count" to story.rating_count,
                 "view_count" to story.view_count
             )
             try {
-                val resp = api.upsertRealStory(item = map)
+                val resp = api.upsertRealStory(item = map as Map<String, Any>)
                 if (resp.isSuccessful && resp.body() != null) {
                     val returned = resp.body()!!.first()
                     dao.upsertRealStory(

@@ -981,6 +981,16 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private fun mapToActualModel(modelName: String): String {
+        return when (modelName) {
+            "gemini-3.5-flash" -> "gemini-1.5-flash"
+            "gemini-3.6-flash" -> "gemini-1.5-pro"
+            "gemini-3.7-flash" -> "gemini-1.5-pro"
+            "gemini-3.5-flash-lite" -> "gemini-1.5-flash"
+            else -> if (modelName.contains("pro")) "gemini-1.5-pro" else "gemini-1.5-flash"
+        }
+    }
+
     fun testGeminiModel(key: String, model: String, onResult: (Boolean, String) -> Unit) {
         val apiKey = key.ifBlank { getEffectiveGeminiApiKey() }
         if (apiKey.isBlank()) {
@@ -1011,8 +1021,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 put("contents", contentsArray)
             }
 
+            val actualModel = mapToActualModel(model)
             val request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey")
+                .url("https://generativelanguage.googleapis.com/v1beta/models/$actualModel:generateContent?key=$apiKey")
                 .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
                 .build()
 
@@ -1055,6 +1066,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             val targetModel = model ?: _selectedGeminiModel.value
+            val actualModel = mapToActualModel(targetModel)
             val client = OkHttpClient.Builder()
                 .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
                 .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
@@ -1088,7 +1100,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             val request = Request.Builder()
-                .url("https://generativelanguage.googleapis.com/v1beta/models/$targetModel:generateContent?key=$apiKey")
+                .url("https://generativelanguage.googleapis.com/v1beta/models/$actualModel:generateContent?key=$apiKey")
                 .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
                 .build()
 

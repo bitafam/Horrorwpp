@@ -61,10 +61,9 @@ interface SupabaseApi {
         @Query("status") status: String? = null
     ): Response<List<GrimFortune>>
 
-    @POST("rest/v1/grim_fortunes")
+    @POST("rest/v1/grim_fortunes?on_conflict=month_index")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun upsertGrimFortunes(
-        @Query("on_conflict") onConflict: String = "month_index",
         @Body items: List<Map<String, Any>>
     ): Response<List<GrimFortune>>
 
@@ -92,10 +91,9 @@ interface SupabaseApi {
         @Query("status") status: String? = null
     ): Response<List<RealStory>>
 
-    @POST("rest/v1/real_stories")
+    @POST("rest/v1/real_stories?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun upsertRealStory(
-        @Query("on_conflict") onConflict: String = "id",
         @Body item: Map<String, Any>
     ): Response<List<RealStory>>
 
@@ -133,10 +131,9 @@ interface SupabaseApi {
         @Query("status") status: String? = null
     ): Response<List<UserStorySubmission>>
 
-    @POST("rest/v1/user_story_submissions")
+    @POST("rest/v1/user_story_submissions?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun upsertUserSubmission(
-        @Query("on_conflict") onConflict: String = "id",
         @Body item: Map<String, Any>
     ): Response<List<UserStorySubmission>>
 
@@ -164,10 +161,9 @@ interface SupabaseApi {
         @Query("status") status: String? = null
     ): Response<List<WrongChoiceScenario>>
 
-    @POST("rest/v1/wrong_choice_scenarios")
+    @POST("rest/v1/wrong_choice_scenarios?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun upsertScenario(
-        @Query("on_conflict") onConflict: String = "id",
         @Body item: Map<String, Any>
     ): Response<List<WrongChoiceScenario>>
 
@@ -276,12 +272,29 @@ object SupabaseClientProvider {
                 val original = chain.request()
                 val requestBuilder = original.newBuilder()
                     .header("apikey", supabaseAnonKey)
-                if (currentAuthToken != null) {
-                    requestBuilder.header("Authorization", "Bearer $currentAuthToken")
+                val token = currentAuthToken
+                if (token != null) {
+                    requestBuilder.header("Authorization", "Bearer $token")
                 } else {
                     requestBuilder.header("Authorization", "Bearer $supabaseAnonKey")
                 }
-                chain.proceed(requestBuilder.build())
+                
+                val response = chain.proceed(requestBuilder.build())
+                if (response.code == 401 && token != null) {
+                    synchronized(this) {
+                        if (currentAuthToken == token) {
+                            currentAuthToken = null
+                        }
+                    }
+                    response.close()
+                    val fallbackRequest = original.newBuilder()
+                        .header("apikey", supabaseAnonKey)
+                        .header("Authorization", "Bearer $supabaseAnonKey")
+                        .build()
+                    chain.proceed(fallbackRequest)
+                } else {
+                    response
+                }
             }
             .build()
 
