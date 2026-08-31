@@ -198,6 +198,15 @@ fun AdminLoginScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
 fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
     var adminTab by remember { mutableIntStateOf(0) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { msg ->
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.clearErrorMessage()
+        }
+    }
+
     val grimFortunes by viewModel.adminGrimFortunes.collectAsState()
     val realStories by viewModel.adminRealStories.collectAsState()
     val submissions by viewModel.adminSubmissions.collectAsState()

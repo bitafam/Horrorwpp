@@ -53,6 +53,7 @@ data class AiGenerationResponse(
     val parsedData: List<Map<String, Any>>? = null
 )
 
+@kotlin.jvm.JvmSuppressWildcards
 interface SupabaseApi {
     @GET("rest/v1/grim_fortunes")
     suspend fun getGrimFortunes(

@@ -561,6 +561,46 @@ class HorrorRepository(context: Context) {
         }
     }
 
+    suspend fun createUserSubmission(sub: UserStorySubmission): UserStorySubmission = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            val map = mutableMapOf<String, Any>(
+                "id" to sub.id,
+                "title" to sub.title,
+                "content" to sub.content,
+                "author_name" to sub.author_name,
+                "status" to sub.status
+            )
+            try {
+                val resp = api.submitUserStory(item = map)
+                if (resp.isSuccessful && resp.body() != null) {
+                    val returned = resp.body()!!.first()
+                    dao.upsertUserSubmission(
+                        CachedUserSubmission(
+                            returned.id,
+                            returned.title,
+                            returned.content,
+                            returned.author_name,
+                            returned.status,
+                            returned.admin_notes,
+                            returned.createdAt
+                        )
+                    )
+                    return@withContext returned
+                } else {
+                    val code = resp.code()
+                    val errorBody = resp.errorBody()?.string() ?: ""
+                    android.util.Log.e("SupabaseError", "createUserSubmission failed: $code - $errorBody")
+                    throw Exception("خطا در ثبت داستان در سرور: $code")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "createUserSubmission exception", e)
+                throw e
+            }
+        } else {
+            throw Exception("اتصال به Supabase تنظیم نشده است.")
+        }
+    }
+
     suspend fun saveUserSubmission(sub: UserStorySubmission): UserStorySubmission = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
             val map = mutableMapOf<String, Any>(

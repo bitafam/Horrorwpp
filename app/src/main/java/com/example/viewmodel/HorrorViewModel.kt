@@ -155,6 +155,10 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    fun clearErrorMessage() {
+        _errorMessage.value = null
+    }
+
     init {
         // Restore Supabase Config from prefs if saved
         val savedUrl = prefs.getString(PREF_SUPABASE_URL, null)
@@ -627,7 +631,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             )
             _loading.value = true
             try {
-                val saved = repository.saveUserSubmission(newSub)
+                val saved = repository.createUserSubmission(newSub)
                 _adminSubmissions.value = listOf(saved) + _adminSubmissions.value
                 onResult(true)
             } catch (e: Exception) {
@@ -1255,30 +1259,63 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 return@generateAILore
             }
 
-            val blocks = text.split("###سناریو###")
-                .map { it.trim() }
-                .filter { it.length > 20 }
+            viewModelScope.launch {
+                _loading.value = true
+                try {
+                    val blocks = text.split("###سناریو###")
+                        .map { it.trim() }
+                        .filter { it.length > 20 }
 
-            if (blocks.isNotEmpty()) {
-                blocks.take(count).forEachIndexed { idx, block ->
-                    val lines = block.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                    var title = "سناریوی تعاملی عمارت وحشت ${idx + 1}"
-                    if (lines.isNotEmpty()) {
-                        val firstLine = lines[0]
-                        if (firstLine.contains("عنوان:")) {
-                            title = firstLine.replace("عنوان:", "").replace("#", "").replace("*", "").trim()
+                    val savedList = mutableListOf<WrongChoiceScenario>()
+                    if (blocks.isNotEmpty()) {
+                        for (block in blocks.take(count)) {
+                            val lines = block.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                            var title = "سناریوی تعاملی عمارت وحشت"
+                            if (lines.isNotEmpty()) {
+                                val firstLine = lines[0]
+                                if (firstLine.contains("عنوان:")) {
+                                    title = firstLine.replace("عنوان:", "").replace("#", "").replace("*", "").trim()
+                                }
+                            }
+                            val scen = WrongChoiceScenario(
+                                id = java.util.UUID.randomUUID().toString(),
+                                title = title,
+                                description = block,
+                                status = "PUBLISHED",
+                                initial_scene_id = null,
+                                createdAt = null
+                            )
+                            val saved = repository.saveScenario(scen)
+                            savedList.add(saved)
                         }
+                        
+                        _adminScenarios.value = savedList + _adminScenarios.value
+                        _scenariosList.value = savedList + _scenariosList.value
+                        onResult(true, "$count سناریوی چندمرحله‌ای با موفقیت توسط هوش مصنوعی خلق و در پایگاه داده ذخیره شد.")
+                    } else {
+                        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                        val title = if (lines.isNotEmpty() && lines[0].contains("عنوان:")) {
+                            lines[0].replace("عنوان:", "").replace("#", "").replace("*", "").trim()
+                        } else "سناریوی تعاملی عمارت وحشت"
+                        val scen = WrongChoiceScenario(
+                            id = java.util.UUID.randomUUID().toString(),
+                            title = title,
+                            description = text,
+                            status = "PUBLISHED",
+                            initial_scene_id = null,
+                            createdAt = null
+                        )
+                        val saved = repository.saveScenario(scen)
+                        _adminScenarios.value = listOf(saved) + _adminScenarios.value
+                        _scenariosList.value = listOf(saved) + _scenariosList.value
+                        onResult(true, "۱ سناریوی چندمرحله‌ای با موفقیت در پایگاه داده ذخیره شد.")
                     }
-                    createScenario(title, block, "PUBLISHED") {}
+                } catch (e: java.lang.Exception) {
+                    _errorMessage.value = "خطا در ذخیره‌سازی سناریوها: ${e.localizedMessage}"
+                    onResult(false, "خطا در ذخیره‌سازی سناریوها: ${e.localizedMessage}")
+                } finally {
+                    _loading.value = false
                 }
-                onResult(true, "$count سناریوی چندمرحله‌ای با موفقیت توسط هوش مصنوعی خلق و در پایگاه داده ذخیره شد.")
-            } else {
-                val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                val title = if (lines.isNotEmpty() && lines[0].contains("عنوان:")) {
-                    lines[0].replace("عنوان:", "").replace("#", "").replace("*", "").trim()
-                } else "سناریوی تعاملی عمارت وحشت"
-                createScenario(title, text, "PUBLISHED") {}
-                onResult(true, "۱ سناریوی چندمرحله‌ای با موفقیت در پایگاه داده ذخیره شد.")
             }
         }
     }
