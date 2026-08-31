@@ -226,6 +226,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
                             val refreshedSubs = repository.getUserSubmissions(true)
                             if (refreshedSubs.isNotEmpty()) _userSubmissionsList.value = refreshedSubs
+
+                            val promptResp = api.getAiPrompts()
+                            if (promptResp.isSuccessful && promptResp.body() != null) {
+                                syncAndSeedPrompts(promptResp.body()!!)
+                            } else if (promptResp.code() == 404 || (promptResp.isSuccessful && promptResp.body().isNullOrEmpty())) {
+                                syncAndSeedPrompts(emptyList())
+                            }
                         } catch (e: Exception) {
                             // Offline fallback silently retained
                         }
@@ -445,14 +452,78 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         prefs.edit().putString(PREF_GEMINI_MODEL, model).apply()
     }
 
+    private fun syncAndSeedPrompts(prompts: List<AiPrompt>) {
+        _aiPrompts.value = prompts
+        
+        // Sync local settings from fetched prompts
+        val gfPrompt = prompts.find { it.prompt_key == "GRIM_FORTUNE_PROMPT" }?.prompt_text
+        if (gfPrompt != null) {
+            _grimFortunePrompt.value = gfPrompt
+            prefs.edit().putString(PREF_GRIM_FORTUNE_PROMPT, gfPrompt).apply()
+        }
+        val scPrompt = prompts.find { it.prompt_key == "WRONG_CHOICE_PROMPT" }?.prompt_text
+        if (scPrompt != null) {
+            _scenarioPrompt.value = scPrompt
+            prefs.edit().putString(PREF_SCENARIO_PROMPT, scPrompt).apply()
+        }
+
+        // Seeding logic if missing on remote
+        if (SupabaseClientProvider.isConfigured) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val hasGf = prompts.any { it.prompt_key == "GRIM_FORTUNE_PROMPT" }
+                    if (!hasGf) {
+                        api.upsertAiPrompt(mapOf(
+                            "prompt_key" to "GRIM_FORTUNE_PROMPT",
+                            "prompt_text" to DEFAULT_GRIM_FORTUNE_PROMPT
+                        ))
+                    }
+                    val hasSc = prompts.any { it.prompt_key == "WRONG_CHOICE_PROMPT" }
+                    if (!hasSc) {
+                        api.upsertAiPrompt(mapOf(
+                            "prompt_key" to "WRONG_CHOICE_PROMPT",
+                            "prompt_text" to DEFAULT_SCENARIO_PROMPT
+                        ))
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("SupabaseError", "Error seeding default prompts", e)
+                }
+            }
+        }
+    }
+
     fun setGrimFortunePrompt(prompt: String) {
         _grimFortunePrompt.value = prompt
         prefs.edit().putString(PREF_GRIM_FORTUNE_PROMPT, prompt).apply()
+        if (SupabaseClientProvider.isConfigured) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    api.updateAiPrompt(
+                        keyEq = "eq.GRIM_FORTUNE_PROMPT",
+                        item = mapOf("prompt_text" to prompt)
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.e("SupabaseError", "Error updating GRIM_FORTUNE_PROMPT", e)
+                }
+            }
+        }
     }
 
     fun setScenarioPrompt(prompt: String) {
         _scenarioPrompt.value = prompt
         prefs.edit().putString(PREF_SCENARIO_PROMPT, prompt).apply()
+        if (SupabaseClientProvider.isConfigured) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    api.updateAiPrompt(
+                        keyEq = "eq.WRONG_CHOICE_PROMPT",
+                        item = mapOf("prompt_text" to prompt)
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.e("SupabaseError", "Error updating WRONG_CHOICE_PROMPT", e)
+                }
+            }
+        }
     }
 
     fun saveSupabaseConfig(url: String, key: String, onResult: (Boolean, String) -> Unit) {
@@ -541,7 +612,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
                     val promptResp = api.getAiPrompts()
                     if (promptResp.isSuccessful && promptResp.body() != null) {
-                        _aiPrompts.value = promptResp.body()!!
+                        syncAndSeedPrompts(promptResp.body()!!)
+                    } else if (promptResp.code() == 404 || (promptResp.isSuccessful && promptResp.body().isNullOrEmpty())) {
+                        syncAndSeedPrompts(emptyList())
                     }
                 }
             } catch (e: Exception) {
@@ -1132,7 +1205,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun generateGrimFortunesWithAI(customPrompt: String? = null, onResult: (Boolean, String, Int) -> Unit) {
-        val prompt = "یک طالع‌بین تاریک و باستانی گوتیک شو و دقیقاً ۱۲ طالع شوم و دلهره‌آور، یکی برای هر ماه سال شمسی تولید کن.\n" +
+        val basePrompt = customPrompt?.ifBlank { null } ?: _grimFortunePrompt.value
+        val prompt = "$basePrompt\n\n" +
                 "پاسخ خود را دقیقاً و صرفاً به صورت یک ساختار معتبر JSON فارسی با ساختار زیر بازگردان. هیچ توضیح اضافی قبل یا بعد از JSON ارائه نده:\n" +
                 "{\n" +
                 "  \"fortunes\": [\n" +

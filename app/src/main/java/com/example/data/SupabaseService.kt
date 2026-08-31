@@ -195,6 +195,12 @@ interface SupabaseApi {
         @Body item: Map<String, Any>
     ): Response<List<AiPrompt>>
 
+    @POST("rest/v1/ai_prompts?on_conflict=prompt_key")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertAiPrompt(
+        @Body item: Map<String, Any>
+    ): Response<List<AiPrompt>>
+
     @GET("rest/v1/ai_providers")
     suspend fun getAiProviders(): Response<List<AiProviderSetting>>
 
