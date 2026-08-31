@@ -1914,7 +1914,7 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
                 Text(text = "آدرس پروژه: ${SupabaseClientProvider.supabaseUrl}", color = MutedAsh, fontSize = 11.sp)
                 Button(
                     onClick = {
-                        viewModel.testConnection { success, msg ->
+                        viewModel.testSupabaseConnection { success, msg ->
                             testResultText = if (success) "تست اتصال Supabase: $msg" else "خطا در اتصال Supabase: $msg"
                         }
                     },

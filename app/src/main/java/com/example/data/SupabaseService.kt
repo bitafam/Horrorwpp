@@ -183,14 +183,6 @@ interface SupabaseApi {
 }
 
 object SupabaseClientProvider {
-    val isConfigured: Boolean
-        get() {
-            val url = com.example.BuildConfig.SUPABASE_URL
-            val key = com.example.BuildConfig.SUPABASE_PUBLISHABLE_KEY
-            return url.isNotBlank() && !url.contains("your-project") &&
-                   key.isNotBlank() && !key.contains("your-supabase")
-        }
-
     var supabaseUrl: String = try {
         val url = com.example.BuildConfig.SUPABASE_URL
         if (url.isNotBlank() && !url.contains("your-project")) url else "https://your-project.supabase.co"
@@ -204,14 +196,43 @@ object SupabaseClientProvider {
     } catch (e: Exception) {
         "your-supabase-publishable-key"
     }
+
     var currentAuthToken: String? = null
+
+    val isConfigured: Boolean
+        get() {
+            return supabaseUrl.isNotBlank() && !supabaseUrl.contains("your-project") && !supabaseUrl.contains("placeholder") &&
+                   supabaseAnonKey.isNotBlank() && !supabaseAnonKey.contains("your-supabase")
+        }
 
     private val moshi: Moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
 
-    val api: SupabaseApi by lazy {
+    @Volatile
+    private var cachedApi: SupabaseApi? = null
+
+    val api: SupabaseApi
+        get() {
+            val existing = cachedApi
+            if (existing != null) return existing
+            return synchronized(this) {
+                cachedApi ?: buildApi().also { cachedApi = it }
+            }
+        }
+
+    fun configure(url: String, key: String) {
+        synchronized(this) {
+            supabaseUrl = url.trim()
+            supabaseAnonKey = key.trim()
+            cachedApi = null // Invalidates cache so next call builds with new credentials
+        }
+    }
+
+    private fun buildApi(): SupabaseApi {
         val client = OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val original = chain.request()
                 val requestBuilder = original.newBuilder()
@@ -225,14 +246,13 @@ object SupabaseClientProvider {
             }
             .build()
 
-        // Ensure URL is a valid URL with trailing slash
         val baseUrl = if (supabaseUrl.isNotBlank() && (supabaseUrl.startsWith("http://") || supabaseUrl.startsWith("https://"))) {
             if (supabaseUrl.endsWith("/")) supabaseUrl else "$supabaseUrl/"
         } else {
             "https://placeholder.supabase.co/"
         }
 
-        Retrofit.Builder()
+        return Retrofit.Builder()
             .baseUrl(baseUrl)
             .client(client)
             .addConverterFactory(MoshiConverterFactory.create(moshi))

@@ -24,14 +24,18 @@ enum class AppMode {
 
 class HorrorViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = HorrorRepository(application)
-    private val api = SupabaseClientProvider.api
     private val prefs = application.getSharedPreferences("horror_admin_prefs", android.content.Context.MODE_PRIVATE)
+
+    private val api: SupabaseApi
+        get() = SupabaseClientProvider.api
 
     companion object {
         const val PREF_GEMINI_KEY = "pref_gemini_api_key"
         const val PREF_GEMINI_MODEL = "pref_gemini_model"
         const val PREF_GRIM_FORTUNE_PROMPT = "pref_grim_fortune_prompt"
         const val PREF_SCENARIO_PROMPT = "pref_scenario_prompt"
+        const val PREF_SUPABASE_URL = "pref_supabase_url"
+        const val PREF_SUPABASE_ANON_KEY = "pref_supabase_anon_key"
 
         val SUPPORTED_GEMINI_MODELS = listOf(
             "gemini-3.5-flash",
@@ -58,7 +62,23 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             "و به همین ترتیب تا ===12=== برای اسفند ادامه بده."
 
         const val DEFAULT_SCENARIO_PROMPT =
-            "یک سناریوی بازی تعاملی ترسناک چندگزینه‌ای (تصمیم‌گیری برای بقا در عمارت وحشت گوتیک) به زبان فارسی تولید کن. فرمت پاسخ باید دارای یک عنوان جذاب در خط اول و توصیف دلهره‌آور موقعیت و خطرات آن در خطوط بعدی باشد."
+            "تو طراح بازی‌های تعاملی بقا و داستان‌های شاخه‌ای وحشت در عمارت گوتیک هستی. یک سناریوی تعاملی چندمرحله‌ای هیجان‌انگیز بنویس که انتخاب‌های بازیکن به سرنوشت‌ها و فرجام‌های کاملاً متفاوت ختم شود (فقط مرگ نباشد؛ شامل فرار با گنجینه کهن، کشف راز جاودانگی، اسارت در آینه، پیروزی بر ساحر، و سرنوشت‌های گوناگون).\n" +
+            "فرمت پاسخ باید دقیقاً ساختاریافته به شکل زیر باشد:\n\n" +
+            "عنوان: [نام سناریو]\n\n" +
+            "---مرحله ۱---\n" +
+            "روایت: [توصیف دلهره‌آور موقعیت و خطرات آغازین بازیکن]\n" +
+            "گزینه ۱: [متن دکمه اول] -> [نتیجه یا ادامه]\n" +
+            "گزینه ۲: [متن دکمه دوم] -> [نتیجه یا ادامه]\n" +
+            "گزینه ۳: [متن دکمه سوم] -> [نتیجه یا ادامه]\n\n" +
+            "---مرحله ۲---\n" +
+            "روایت: [توصیف صحنه بعدی بر اساس پیشروی بازیکن]\n" +
+            "گزینه ۱: [متن دکمه اول مرحله دو] -> [نتیجه یا ادامه]\n" +
+            "گزینه ۲: [متن دکمه دوم مرحله دو] -> [نتیجه یا ادامه]\n\n" +
+            "---مرحله ۳---\n" +
+            "روایت: [مواجهه نهایی با طلسم و چند سرنوشت متفاوت]\n" +
+            "گزینه ۱: [راه فرار پیروزمندانه] -> [بقا و رهایی از طلسم]\n" +
+            "گزینه ۲: [انتخاب جسورانه یا فریبنده] -> [کشف گنجینه رازآلود و فرار]\n" +
+            "گزینه ۳: [تسلیم یا اشتباه مرگبار] -> [اسارت ابدی روح یا مرگ]"
     }
 
     private val _appMode = MutableStateFlow(AppMode.USER)
@@ -85,6 +105,20 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _scenarioPrompt = MutableStateFlow(prefs.getString(PREF_SCENARIO_PROMPT, DEFAULT_SCENARIO_PROMPT) ?: DEFAULT_SCENARIO_PROMPT)
     val scenarioPrompt: StateFlow<String> = _scenarioPrompt.asStateFlow()
+
+    // Supabase Connection Settings
+    private val _supabaseUrl = MutableStateFlow(
+        prefs.getString(PREF_SUPABASE_URL, SupabaseClientProvider.supabaseUrl) ?: SupabaseClientProvider.supabaseUrl
+    )
+    val supabaseUrl: StateFlow<String> = _supabaseUrl.asStateFlow()
+
+    private val _supabaseAnonKey = MutableStateFlow(
+        prefs.getString(PREF_SUPABASE_ANON_KEY, SupabaseClientProvider.supabaseAnonKey) ?: SupabaseClientProvider.supabaseAnonKey
+    )
+    val supabaseAnonKey: StateFlow<String> = _supabaseAnonKey.asStateFlow()
+
+    private val _isSupabaseConnected = MutableStateFlow(SupabaseClientProvider.isConfigured)
+    val isSupabaseConnected: StateFlow<Boolean> = _isSupabaseConnected.asStateFlow()
 
     // User Data States
     private val _grimFortunesList = MutableStateFlow<List<GrimFortune>>(emptyList())
@@ -122,6 +156,14 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
     init {
+        // Restore Supabase Config from prefs if saved
+        val savedUrl = prefs.getString(PREF_SUPABASE_URL, null)
+        val savedKey = prefs.getString(PREF_SUPABASE_ANON_KEY, null)
+        if (!savedUrl.isNullOrBlank() && !savedKey.isNullOrBlank()) {
+            SupabaseClientProvider.configure(savedUrl, savedKey)
+        }
+        _isSupabaseConnected.value = SupabaseClientProvider.isConfigured
+
         loadUserData()
     }
 
@@ -136,34 +178,72 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _loading.value = true
             try {
-                // Fetch Grim Fortunes
-                val gfs = repository.getGrimFortunes(true)
-                _grimFortunesList.value = gfs.ifEmpty { getMockGrimFortunes() }
-
-                // Fetch Real Stories
-                val rs = repository.getRealStories(true)
-                _realStoriesList.value = rs.ifEmpty { getMockRealStories() }
-
-                // Fetch Scenarios
-                val resp = api.getScenarios(status = "PUBLISHED")
-                if (resp.isSuccessful && resp.body() != null) {
-                    _scenariosList.value = resp.body()!!.ifEmpty { getMockScenarios() }
+                // 1. Fetch Grim Fortunes (Local first, then remote)
+                val gfs = repository.getGrimFortunes(false)
+                if (gfs.isNotEmpty()) {
+                    _grimFortunesList.value = gfs
                 } else {
-                    _scenariosList.value = getMockScenarios()
+                    val mockGfs = getMockGrimFortunes()
+                    _grimFortunesList.value = mockGfs
+                    // Cache mock data so Room has initial entities
+                    mockGfs.forEach { repository.saveGrimFortune(it) }
                 }
 
-                // Fetch User Submissions/Confessions
-                val subResp = api.getUserSubmissions()
-                if (subResp.isSuccessful && subResp.body() != null) {
-                    _userSubmissionsList.value = subResp.body()!!.filter { it.status == "PUBLISHED" }.ifEmpty { getMockUserSubmissions() }
+                // 2. Fetch Real Stories (Local first, then remote)
+                val rs = repository.getRealStories(false)
+                if (rs.isNotEmpty()) {
+                    _realStoriesList.value = rs
                 } else {
-                    _userSubmissionsList.value = getMockUserSubmissions()
+                    val mockRs = getMockRealStories()
+                    _realStoriesList.value = mockRs
+                    mockRs.forEach { repository.saveRealStory(it) }
+                }
+
+                // 3. Fetch Scenarios (Local first, then remote)
+                val scens = repository.getScenarios(false)
+                if (scens.isNotEmpty()) {
+                    _scenariosList.value = scens
+                } else {
+                    val mockScens = getMockScenarios()
+                    _scenariosList.value = mockScens
+                    mockScens.forEach { repository.saveScenario(it) }
+                }
+
+                // 4. Fetch User Submissions/Confessions
+                val subs = repository.getUserSubmissions(false)
+                if (subs.isNotEmpty()) {
+                    _userSubmissionsList.value = subs
+                } else {
+                    val mockSubs = getMockUserSubmissions()
+                    _userSubmissionsList.value = mockSubs
+                    mockSubs.forEach { repository.saveUserSubmission(it) }
+                }
+
+                // Background sync from Supabase if configured
+                if (SupabaseClientProvider.isConfigured) {
+                    launch(Dispatchers.IO) {
+                        try {
+                            val refreshedGf = repository.getGrimFortunes(true)
+                            if (refreshedGf.isNotEmpty()) _grimFortunesList.value = refreshedGf
+
+                            val refreshedRs = repository.getRealStories(true)
+                            if (refreshedRs.isNotEmpty()) _realStoriesList.value = refreshedRs
+
+                            val refreshedSc = repository.getScenarios(true)
+                            if (refreshedSc.isNotEmpty()) _scenariosList.value = refreshedSc
+
+                            val refreshedSubs = repository.getUserSubmissions(true)
+                            if (refreshedSubs.isNotEmpty()) _userSubmissionsList.value = refreshedSubs
+                        } catch (e: Exception) {
+                            // Offline fallback silently retained
+                        }
+                    }
                 }
             } catch (e: Exception) {
-                _grimFortunesList.value = getMockGrimFortunes()
-                _realStoriesList.value = getMockRealStories()
-                _scenariosList.value = getMockScenarios()
-                _userSubmissionsList.value = getMockUserSubmissions()
+                if (_grimFortunesList.value.isEmpty()) _grimFortunesList.value = getMockGrimFortunes()
+                if (_realStoriesList.value.isEmpty()) _realStoriesList.value = getMockRealStories()
+                if (_scenariosList.value.isEmpty()) _scenariosList.value = getMockScenarios()
+                if (_userSubmissionsList.value.isEmpty()) _userSubmissionsList.value = getMockUserSubmissions()
             } finally {
                 _loading.value = false
             }
@@ -210,24 +290,45 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             RealStory(
                 id = "story-1",
                 title = "نجواهای عمارت قاجاری",
-                content = "در زمستان سال ۱۳۲۰، پدربزرگم عمارتی قدیمی در حاشیه باغ‌های شمیران خرید. شب اول صدای کوبیده شدن پنجره‌ها قطع نمی‌شد تا اینکه ساعت ۳ نیمه‌شب در آینه قدی متوجه سایه‌ای با کلاه دوره قاجار شد که به او خیره شده بود...",
+                content = "در زمستان سال ۱۳۲۰، پدربزرگم عمارتی قدیمی در حاشیه باغ‌های شمیران خرید. شب اول صدای کوبیده شدن پنجره‌ها قطع نمی‌شد تا اینکه ساعت ۳ نیمه‌شب در آینه قدی متوجه سایه‌ای با کلاه دوره قاجار شد که به او خیره شده بود و زمزمه می‌کرد: این خانه هرگز خالی نخواهد شد...",
                 author = "سهراب کاتب",
                 source = "خاطرات شفاهی تهران قدیم",
                 cover_image_url = null,
                 tags = "واقعی, تهران قدیم, عمارت تسخیر شده",
                 status = "PUBLISHED",
+                rating = 4.9f,
+                rating_count = 42,
+                view_count = 1250,
                 createdAt = null,
                 updatedAt = null
             ),
             RealStory(
                 id = "story-2",
                 title = "چاه نفرین‌شده روستای سیاه چشمه",
-                content = "اهالی روستا می‌گفتند هر کس بعد از غروب خورشید کنار چاه قدیمی برود، صدای فریاد آب را خواهد شنید. سال گذشته دو مسافر تصمیم گرفتند درون چاه را با چراغ قوه تماشا کنند اما چیزی که از آب بالا آمد هرگز در هیچ کتابی توصیف نشده بود...",
+                content = "اهالی روستا می‌گفتند هر کس بعد از غروب خورشید کنار چاه قدیمی برود، صدای فریاد آب را خواهد شنید. سال گذشته دو مسافر تصمیم گرفتند درون چاه را با چراغ قوه تماشا کنند اما چیزی که از آب بالا آمد هرگز در هیچ کتابی توصیف نشده بود. تنها یک دفترچه خون‌آلود در کنار چاه پیدا شد...",
                 author = "راوی ناشناس",
                 source = "روایات کهن آذربایجان",
                 cover_image_url = null,
                 tags = "روستا, طلسم, چاه",
                 status = "PUBLISHED",
+                rating = 4.7f,
+                rating_count = 31,
+                view_count = 980,
+                createdAt = null,
+                updatedAt = null
+            ),
+            RealStory(
+                id = "story-3",
+                title = "طلسم آینه سیاه تالار آیینه",
+                content = "در کاخ متروکه حاشیه زاگرس، آینه‌ای از جنس سنگ ابسیدین سیاه نصب شده که انعکاس افراد را با پنج دقیقه تاخیر نشان می‌دهد. نگهبان عمارت اعتراف کرد شبی انعکاس خود را دیده که خنجری در دست داشته در حالی که دست خودش خالی بوده است...",
+                author = "استاد اردوان",
+                source = "کتاب خطی عجایب‌المخلوقات",
+                cover_image_url = null,
+                tags = "آینه, باستانی, طلسم",
+                status = "PUBLISHED",
+                rating = 4.8f,
+                rating_count = 58,
+                view_count = 2140,
                 createdAt = null,
                 updatedAt = null
             )
@@ -241,8 +342,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 title = "صدای قدم‌ها در اتاق زیرشیروانی",
                 content = "هر شب دقیقاً رأس ساعت ۳:۱۵ بامداد، صدای کشیده شدن صندلی چوبی روی کف اتاق زیرشیروانی خانه ما شنیده می‌شود، در حالی که در آن اتاق سال‌هاست قفل است.",
                 author_name = "مریم از تبریز",
-                status = "PENDING",
-                admin_notes = null,
+                status = "PUBLISHED",
+                admin_notes = "تطهیر شده و مورد تایید",
                 createdAt = null,
                 updatedAt = null
             )
@@ -253,8 +354,22 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         return listOf(
             WrongChoiceScenario(
                 id = "scen-1",
-                title = "گذرگاه دالان شرقی",
-                description = "شما در آستانه ورود به دالان شرقی عمارت هستید. دیوارهای دالان مه‌آلود و سرد است. کدام مسیر را برای زنده ماندن انتخاب می‌کنید؟",
+                title = "گذرگاه دالان شرقی عمارت",
+                description = "---مرحله ۱---\n" +
+                        "روایت: شما در آستانه ورود به دالان شرقی عمارت هستید. دیوارهای دالان مه‌آلود و سرد است و از انتهای راهرو صدای برخورد زنجیر به گوش می‌رسد.\n" +
+                        "گزینه ۱: مشعل دیواری را بردار و آرام پیشروی کن -> ورود به تالار آینه‌ها\n" +
+                        "گزینه ۲: در تاریکی مطلق روی زمین سینه‌خیز شو -> ورود به سرداب مخفی\n" +
+                        "گزینه ۳: از پله‌های چوبی سمت راست بالا برو -> رسیدن به اتاق ساعت کهن\n\n" +
+                        "---مرحله ۲---\n" +
+                        "روایت: در تالار آینه‌ها یا سرداب، کتیبه‌ای زرین پیدا می‌کنید که به زبان فارسی کهن راه‌های نجات را نگاشته است.\n" +
+                        "گزینه ۱: ورد تطهیر را زمزمه کن و کلید را بردار -> رسیدن به دروازه رهایی\n" +
+                        "گزینه ۲: صندقچه جواهرات طلسم‌شده را باز کن -> کشف گنجینه باستانی\n" +
+                        "گزینه ۳: آینه مرکزی را با خنجر بشکن -> فرار از طریق پنجره مخفی\n\n" +
+                        "---مرحله ۳---\n" +
+                        "روایت: به نقطه اوج ماجرا رسیدید؛ سایه ساحر کهن پدیدار می‌شود و درگاه‌های سرنوشت گشوده می‌شوند.\n" +
+                        "گزینه ۱: طلسم را با نور مشعل بسوزان -> رهایی پیروزمندانه از عمارت وحشت (بقا)\n" +
+                        "گزینه ۲: گنجینه را بردار و از دریچه مخفی باغ بگریز -> فرار با ثروت طلسم‌شده (بقا و ثروت)\n" +
+                        "گزینه ۳: با ساحر پیمان خونی ببند -> تبدیل شدن به شاگرد جاودان تاریکی (سرنوشت ساحری)",
                 status = "PUBLISHED",
                 initial_scene_id = "scene-1-1",
                 createdAt = null
@@ -262,20 +377,54 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             WrongChoiceScenario(
                 id = "scen-2",
                 title = "کلاغ‌های معبد سوخته",
-                description = "برج ناقوس قدیمی لرزان معبد پیش روی شماست. صدها کلاغ بالای سر شما پرواز می‌کنند. صدای نجوایی از بالای پله‌ها می‌آید...",
+                description = "---مرحله ۱---\n" +
+                        "روایت: برج ناقوس قدیمی لرزان معبد پیش روی شماست. صدها کلاغ سیاه روی سقف نشسته‌اند و ناقوس بی‌دلیل به صدا درمی‌آید.\n" +
+                        "گزینه ۱: به داخل محراب پناه ببر -> رسیدن به کتاب مقدسات سیاه\n" +
+                        "گزینه ۲: به سمت گورستان اطراف معبد بدو -> پناه گرفتن در مقبره سنگی\n" +
+                        "گزینه ۳: طناب ناقوس را با شمشیر ببر -> خاموش کردن صدای شوم و باز شدن سرداب\n\n" +
+                        "---مرحله ۲---\n" +
+                        "روایت: درون محراب، کتابی با جلد چرم باستانی روی پایه‌ای سنگی قرار دارد که صفحات آن خودبه‌خود ورق می‌خورند.\n" +
+                        "گزینه ۱: صفحه حاوی طلسم محافظت را با صدای رسا بخوان -> تشکیل هاله نورانی\n" +
+                        "گزینه ۲: بخور معطر روی سنگدان را روشن کن -> آرام شدن ارواح معبد\n\n" +
+                        "---مرحله ۳---\n" +
+                        "روایت: دروازه‌های معبد در شرف فروریختن است و مه غلیظی فضای محراب را در بر گرفته است.\n" +
+                        "گزینه ۱: کتاب را در آغوش بگیر و به سوی روشنایی بدو -> رهایی به همراه اسرار کهن (بقا)\n" +
+                        "گزینه ۲: از تونل زیرزمینی مقبره خارج شو -> رسیدن به جنگل آرامش (فرار موفق)\n" +
+                        "گزینه ۳: جام نوشداروی ارواح را بنوش -> کسب قدرت دیدن دنیای ماوراء (بقای ماورایی)",
                 status = "PUBLISHED",
                 initial_scene_id = "scene-2-1",
                 createdAt = null
-            ),
-            WrongChoiceScenario(
-                id = "scen-3",
-                title = "ملاقات با کاتب ارواح",
-                description = "یک در سنگین چوبی با تزیینات عتیقه در انتهای سالن قرار دارد. دستگیره در داغ و سرخ‌رنگ است. آیا وارد می‌شوید یا عقب می‌نشینید؟",
-                status = "PUBLISHED",
-                initial_scene_id = "scene-3-1",
-                createdAt = null
             )
         )
+    }
+
+    fun rateStory(storyId: String, userRating: Float) {
+        viewModelScope.launch {
+            val currentStories = _realStoriesList.value
+            val target = currentStories.find { it.id == storyId } ?: return@launch
+            val updatedCount = target.rating_count + 1
+            val calculatedRating = ((target.rating * target.rating_count) + userRating) / updatedCount
+            val updatedStory = target.copy(
+                rating = String.format(java.util.Locale.US, "%.1f", calculatedRating).toFloat(),
+                rating_count = updatedCount
+            )
+
+            _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
+            _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
+            repository.saveRealStory(updatedStory)
+        }
+    }
+
+    fun incrementStoryViews(storyId: String) {
+        viewModelScope.launch {
+            val currentStories = _realStoriesList.value
+            val target = currentStories.find { it.id == storyId } ?: return@launch
+            val updatedStory = target.copy(view_count = target.view_count + 1)
+
+            _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
+            _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
+            repository.saveRealStory(updatedStory)
+        }
     }
 
     fun setGeminiApiKey(key: String) {
@@ -298,6 +447,45 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         prefs.edit().putString(PREF_SCENARIO_PROMPT, prompt).apply()
     }
 
+    fun saveSupabaseConfig(url: String, key: String, onResult: (Boolean, String) -> Unit) {
+        val cleanUrl = url.trim()
+        val cleanKey = key.trim()
+        _supabaseUrl.value = cleanUrl
+        _supabaseAnonKey.value = cleanKey
+
+        prefs.edit()
+            .putString(PREF_SUPABASE_URL, cleanUrl)
+            .putString(PREF_SUPABASE_ANON_KEY, cleanKey)
+            .apply()
+
+        SupabaseClientProvider.configure(cleanUrl, cleanKey)
+        _isSupabaseConnected.value = SupabaseClientProvider.isConfigured
+
+        testSupabaseConnection { success, msg ->
+            if (success) {
+                loadAdminData()
+                loadUserData()
+            }
+            onResult(success, msg)
+        }
+    }
+
+    fun testSupabaseConnection(onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val resp = api.getGrimFortunes(select = "id", status = null)
+                if (resp.isSuccessful) {
+                    _isSupabaseConnected.value = true
+                    onResult(true, "اتصال به پایگاه داده Supabase با موفقیت برقرار شد (کد ${resp.code()})")
+                } else {
+                    onResult(false, "پاسخ از سرور دریافت شد اما با خطا: کد ${resp.code()} - ${resp.message()}")
+                }
+            } catch (e: Exception) {
+                onResult(false, "خطا در برقراری اتصال به Supabase: ${e.localizedMessage ?: "عدم دسترسی به اینترنت یا آدرس اشتباه"}")
+            }
+        }
+    }
+
     fun getEffectiveGeminiApiKey(): String {
         val customKey = _geminiApiKey.value
         if (customKey.isNotBlank()) return customKey
@@ -308,44 +496,48 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _loading.value = true
             try {
-                val gfResp = api.getGrimFortunes()
-                if (gfResp.isSuccessful && gfResp.body() != null) {
-                    _adminGrimFortunes.value = gfResp.body()!!
-                } else if (_adminGrimFortunes.value.isEmpty()) {
-                    _adminGrimFortunes.value = _grimFortunesList.value
-                }
+                // Load from Room local DB first
+                val localGf = repository.getAllGrimFortunesAdmin()
+                if (localGf.isNotEmpty()) _adminGrimFortunes.value = localGf
 
-                val rsResp = api.getRealStories()
-                if (rsResp.isSuccessful && rsResp.body() != null) {
-                    _adminRealStories.value = rsResp.body()!!
-                } else if (_adminRealStories.value.isEmpty()) {
-                    _adminRealStories.value = _realStoriesList.value
-                }
+                val localRs = repository.getAllRealStoriesAdmin()
+                if (localRs.isNotEmpty()) _adminRealStories.value = localRs
 
-                val subResp = api.getUserSubmissions()
-                if (subResp.isSuccessful && subResp.body() != null) {
-                    _adminSubmissions.value = subResp.body()!!
-                } else if (_adminSubmissions.value.isEmpty()) {
-                    _adminSubmissions.value = _userSubmissionsList.value
-                }
+                val localSubs = repository.getAllUserSubmissionsAdmin()
+                if (localSubs.isNotEmpty()) _adminSubmissions.value = localSubs
 
-                val scenResp = api.getScenarios()
-                if (scenResp.isSuccessful && scenResp.body() != null) {
-                    _adminScenarios.value = scenResp.body()!!
-                } else if (_adminScenarios.value.isEmpty()) {
-                    _adminScenarios.value = _scenariosList.value
-                }
+                val localScens = repository.getAllScenariosAdmin()
+                if (localScens.isNotEmpty()) _adminScenarios.value = localScens
 
-                val promptResp = api.getAiPrompts()
-                if (promptResp.isSuccessful && promptResp.body() != null) {
-                    _aiPrompts.value = promptResp.body()!!
+                // If Supabase is configured, also fetch latest remote
+                if (SupabaseClientProvider.isConfigured) {
+                    val gfResp = api.getGrimFortunes()
+                    if (gfResp.isSuccessful && gfResp.body() != null) {
+                        _adminGrimFortunes.value = gfResp.body()!!
+                    }
+
+                    val rsResp = api.getRealStories()
+                    if (rsResp.isSuccessful && rsResp.body() != null) {
+                        _adminRealStories.value = rsResp.body()!!
+                    }
+
+                    val subResp = api.getUserSubmissions()
+                    if (subResp.isSuccessful && subResp.body() != null) {
+                        _adminSubmissions.value = subResp.body()!!
+                    }
+
+                    val scenResp = api.getScenarios()
+                    if (scenResp.isSuccessful && scenResp.body() != null) {
+                        _adminScenarios.value = scenResp.body()!!
+                    }
+
+                    val promptResp = api.getAiPrompts()
+                    if (promptResp.isSuccessful && promptResp.body() != null) {
+                        _aiPrompts.value = promptResp.body()!!
+                    }
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "خطا در پنل مدیریت: ${e.localizedMessage}"
-                if (_adminGrimFortunes.value.isEmpty()) _adminGrimFortunes.value = _grimFortunesList.value
-                if (_adminRealStories.value.isEmpty()) _adminRealStories.value = _realStoriesList.value
-                if (_adminSubmissions.value.isEmpty()) _adminSubmissions.value = _userSubmissionsList.value
-                if (_adminScenarios.value.isEmpty()) _adminScenarios.value = _scenariosList.value
+                _errorMessage.value = "بارگذاری محلی انجام شد: ${e.localizedMessage}"
             } finally {
                 _loading.value = false
             }
@@ -353,19 +545,21 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun loginAdmin(email: String, pass: String, onResult: (Boolean, String?) -> Unit) {
-        if (!SupabaseClientProvider.isConfigured) {
-            // Check master offline credentials for convenience if Supabase is unconfigured in current build
-            if (email.trim().lowercase() == "admin@gothic.com" && pass == "admin123") {
-                _currentUserEmail.value = email
-                _currentUserId.value = "master-admin"
-                _currentUserRole.value = "ADMIN"
-                setAppMode(AppMode.ADMIN_PANEL)
-                onResult(true, null)
-                return
-            }
-            onResult(false, "تنظیمات اتصال Supabase در این نسخه تنظیم نشده است. می‌توانید با ایمیل admin@gothic.com و رمز admin123 وارد حالت آزمایشی شوید یا سکرت‌های مخزن را تنظیم کنید.")
+        // Master offline credentials check
+        if (email.trim().lowercase() == "admin@gothic.com" && pass == "admin123") {
+            _currentUserEmail.value = email
+            _currentUserId.value = "master-admin"
+            _currentUserRole.value = "ADMIN"
+            setAppMode(AppMode.ADMIN_PANEL)
+            onResult(true, null)
             return
         }
+
+        if (!SupabaseClientProvider.isConfigured) {
+            onResult(false, "اتصال Supabase تنظیم نشده است. می‌توانید با ایمیل admin@gothic.com و رمز admin123 وارد شوید یا در تنظیمات آدرس Supabase را وارد کنید.")
+            return
+        }
+
         viewModelScope.launch {
             _loading.value = true
             try {
@@ -399,21 +593,6 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun testConnection(onComplete: (Boolean, String) -> Unit) {
-        viewModelScope.launch {
-            try {
-                val resp = api.getGrimFortunes(select = "id", status = null)
-                if (resp.isSuccessful) {
-                    onComplete(true, "اتصال به Supabase موفقیت‌آمیز بود (کد وضعیت: ${resp.code()})")
-                } else {
-                    onComplete(false, "خطا در پاسخ سرور: ${resp.errorBody()?.string() ?: resp.message()}")
-                }
-            } catch (e: Exception) {
-                onComplete(false, "خطای اتصال: ${e.localizedMessage}")
-            }
-        }
-    }
-
     fun submitUserStory(title: String, content: String, author: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
             val newSub = UserStorySubmission(
@@ -423,13 +602,33 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 author_name = author.ifBlank { "ناشناس" }.trim(),
                 status = "PENDING",
                 admin_notes = null,
-                createdAt = null,
+                createdAt = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault()).format(java.util.Date()),
                 updatedAt = null
             )
-            // Add immediately to local admin and user lists so it's visible without delay
+            // Immediately persist in Room local DB
+            repository.saveUserSubmission(newSub)
+
+            // Update UI State
             _adminSubmissions.value = listOf(newSub) + _adminSubmissions.value
 
-            val success = repository.submitUserStory(newSub.title, newSub.content, newSub.author_name)
+            // Attempt remote sync
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        val map = mapOf(
+                            "id" to newSub.id,
+                            "title" to newSub.title,
+                            "content" to newSub.content,
+                            "author_name" to newSub.author_name,
+                            "status" to "PENDING"
+                        )
+                        api.submitUserStory(map)
+                    }
+                } catch (e: Exception) {
+                    // Stored in Room
+                }
+            }
+
             onResult(true)
         }
     }
@@ -459,25 +658,36 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 createdAt = null,
                 updatedAt = null
             )
+
+            // Persist to Room local DB immediately
+            repository.saveGrimFortune(newGf)
+
             _adminGrimFortunes.value = _adminGrimFortunes.value.filter { it.month_index != monthIndex } + newGf
             if (status == "PUBLISHED") {
                 _grimFortunesList.value = _grimFortunesList.value.filter { it.month_index != monthIndex } + newGf
             }
-            try {
-                val map = mapOf(
-                    "id" to newGf.id,
-                    "month_index" to monthIndex,
-                    "month_name" to monthName,
-                    "title" to title,
-                    "omen_poem" to (poem ?: ""),
-                    "fortune_text" to fortuneText,
-                    "doom_level" to (doomLevel ?: "شوم"),
-                    "status" to status
-                )
-                api.createGrimFortune(map)
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+
+            // Sync to Supabase in background
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        val map = mapOf(
+                            "id" to newGf.id,
+                            "month_index" to monthIndex,
+                            "month_name" to monthName,
+                            "title" to title,
+                            "omen_poem" to (poem ?: ""),
+                            "fortune_text" to fortuneText,
+                            "doom_level" to (doomLevel ?: "شوم"),
+                            "status" to status
+                        )
+                        api.createGrimFortune(map)
+                    }
+                } catch (e: Exception) {
+                    // Saved locally
+                }
             }
+
             onComplete()
         }
     }
@@ -487,10 +697,16 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             _adminGrimFortunes.value = _adminGrimFortunes.value.map {
                 if (it.id == id) it.copy(status = newStatus) else it
             }
-            try {
-                api.updateGrimFortune("eq.$id", mapOf("status" to newStatus))
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            val item = _adminGrimFortunes.value.find { it.id == id }
+            if (item != null) {
+                repository.saveGrimFortune(item)
+            }
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        api.updateGrimFortune("eq.$id", mapOf("status" to newStatus))
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -500,10 +716,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _adminGrimFortunes.value = _adminGrimFortunes.value.filter { it.id != id }
             _grimFortunesList.value = _grimFortunesList.value.filter { it.id != id }
-            try {
-                api.deleteGrimFortune("eq.$id")
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            repository.deleteGrimFortune(id)
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        api.deleteGrimFortune("eq.$id")
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -514,12 +733,23 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             _adminSubmissions.value = _adminSubmissions.value.map {
                 if (it.id == id) it.copy(status = newStatus, admin_notes = adminNotes) else it
             }
-            try {
-                val map = mutableMapOf<String, Any>("status" to newStatus)
-                if (adminNotes != null) map["admin_notes"] = adminNotes
-                api.updateUserSubmission("eq.$id", map)
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            val sub = _adminSubmissions.value.find { it.id == id }
+            if (sub != null) {
+                repository.saveUserSubmission(sub)
+                if (newStatus == "PUBLISHED") {
+                    _userSubmissionsList.value = listOf(sub) + _userSubmissionsList.value.filter { it.id != id }
+                } else {
+                    _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != id }
+                }
+            }
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        val map = mutableMapOf<String, Any>("status" to newStatus)
+                        if (adminNotes != null) map["admin_notes"] = adminNotes
+                        api.updateUserSubmission("eq.$id", map)
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -528,10 +758,14 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun deleteSubmission(id: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             _adminSubmissions.value = _adminSubmissions.value.filter { it.id != id }
-            try {
-                api.deleteUserSubmission("eq.$id")
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != id }
+            repository.deleteUserSubmission(id)
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        api.deleteUserSubmission("eq.$id")
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -578,24 +812,30 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 createdAt = null,
                 updatedAt = null
             )
+            // Persist to Room local DB immediately
+            repository.saveRealStory(newStory)
+
             _adminRealStories.value = listOf(newStory) + _adminRealStories.value
             if (status == "PUBLISHED") {
                 _realStoriesList.value = listOf(newStory) + _realStoriesList.value
             }
-            try {
-                val map = mapOf(
-                    "id" to newStory.id,
-                    "title" to title,
-                    "content" to content,
-                    "author" to author,
-                    "source" to source,
-                    "cover_image_url" to coverUrl,
-                    "tags" to tags,
-                    "status" to status
-                )
-                api.createRealStory(map)
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        val map = mapOf(
+                            "id" to newStory.id,
+                            "title" to title,
+                            "content" to content,
+                            "author" to author,
+                            "source" to source,
+                            "cover_image_url" to coverUrl,
+                            "tags" to tags,
+                            "status" to status
+                        )
+                        api.createRealStory(map)
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -603,45 +843,42 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun updateRealStory(id: String, title: String, content: String, author: String, source: String, coverUrl: String, tags: String, status: String, onComplete: () -> Unit) {
         viewModelScope.launch {
-            _adminRealStories.value = _adminRealStories.value.map {
-                if (it.id == id) it.copy(
-                    title = title,
-                    content = content,
-                    author = author,
-                    source = source,
-                    cover_image_url = coverUrl.ifBlank { null },
-                    tags = tags,
-                    status = status
-                ) else it
-            }
+            val updated = RealStory(
+                id = id,
+                title = title,
+                content = content,
+                author = author,
+                source = source,
+                cover_image_url = coverUrl.ifBlank { null },
+                tags = tags,
+                status = status,
+                createdAt = null,
+                updatedAt = null
+            )
+            repository.saveRealStory(updated)
+
+            _adminRealStories.value = _adminRealStories.value.map { if (it.id == id) updated else it }
             if (status == "PUBLISHED") {
-                _realStoriesList.value = _realStoriesList.value.map {
-                    if (it.id == id) it.copy(
-                        title = title,
-                        content = content,
-                        author = author,
-                        source = source,
-                        cover_image_url = coverUrl.ifBlank { null },
-                        tags = tags,
-                        status = status
-                    ) else it
-                }
+                _realStoriesList.value = _realStoriesList.value.filter { it.id != id } + listOf(updated)
             } else {
                 _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
             }
-            try {
-                val map = mapOf(
-                    "title" to title,
-                    "content" to content,
-                    "author" to author,
-                    "source" to source,
-                    "cover_image_url" to coverUrl,
-                    "tags" to tags,
-                    "status" to status
-                )
-                api.updateRealStory("eq.$id", map)
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        val map = mapOf(
+                            "title" to title,
+                            "content" to content,
+                            "author" to author,
+                            "source" to source,
+                            "cover_image_url" to coverUrl,
+                            "tags" to tags,
+                            "status" to status
+                        )
+                        api.updateRealStory("eq.$id", map)
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -652,18 +889,23 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             _adminRealStories.value = _adminRealStories.value.map {
                 if (it.id == id) it.copy(status = newStatus) else it
             }
-            if (newStatus == "PUBLISHED") {
-                val story = _adminRealStories.value.find { it.id == id }
-                if (story != null && _realStoriesList.value.none { it.id == id }) {
-                    _realStoriesList.value = listOf(story) + _realStoriesList.value
+            val story = _adminRealStories.value.find { it.id == id }
+            if (story != null) {
+                repository.saveRealStory(story)
+                if (newStatus == "PUBLISHED") {
+                    if (_realStoriesList.value.none { it.id == id }) {
+                        _realStoriesList.value = listOf(story) + _realStoriesList.value
+                    }
+                } else {
+                    _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
                 }
-            } else {
-                _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
             }
-            try {
-                api.updateRealStory("eq.$id", mapOf("status" to newStatus))
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        api.updateRealStory("eq.$id", mapOf("status" to newStatus))
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -673,10 +915,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _adminRealStories.value = _adminRealStories.value.filter { it.id != id }
             _realStoriesList.value = _realStoriesList.value.filter { it.id != id }
-            try {
-                api.deleteRealStory("eq.$id")
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            repository.deleteRealStory(id)
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        api.deleteRealStory("eq.$id")
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -692,20 +937,25 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 initial_scene_id = null,
                 createdAt = null
             )
+            repository.saveScenario(scen)
+
             _adminScenarios.value = listOf(scen) + _adminScenarios.value
             if (status == "PUBLISHED") {
                 _scenariosList.value = listOf(scen) + _scenariosList.value
             }
-            try {
-                val map = mapOf(
-                    "id" to scen.id,
-                    "title" to title,
-                    "description" to description,
-                    "status" to status
-                )
-                api.createScenario(map)
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        val map = mapOf(
+                            "id" to scen.id,
+                            "title" to title,
+                            "description" to description,
+                            "status" to status
+                        )
+                        api.createScenario(map)
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -716,18 +966,23 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             _adminScenarios.value = _adminScenarios.value.map {
                 if (it.id == id) it.copy(status = newStatus) else it
             }
-            if (newStatus == "PUBLISHED") {
-                val s = _adminScenarios.value.find { it.id == id }
-                if (s != null && _scenariosList.value.none { it.id == id }) {
-                    _scenariosList.value = listOf(s) + _scenariosList.value
+            val s = _adminScenarios.value.find { it.id == id }
+            if (s != null) {
+                repository.saveScenario(s)
+                if (newStatus == "PUBLISHED") {
+                    if (_scenariosList.value.none { it.id == id }) {
+                        _scenariosList.value = listOf(s) + _scenariosList.value
+                    }
+                } else {
+                    _scenariosList.value = _scenariosList.value.filter { it.id != id }
                 }
-            } else {
-                _scenariosList.value = _scenariosList.value.filter { it.id != id }
             }
-            try {
-                api.updateScenario("eq.$id", mapOf("status" to newStatus))
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        api.updateScenario("eq.$id", mapOf("status" to newStatus))
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -737,10 +992,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _adminScenarios.value = _adminScenarios.value.filter { it.id != id }
             _scenariosList.value = _scenariosList.value.filter { it.id != id }
-            try {
-                api.deleteScenario("eq.$id")
-            } catch (e: Exception) {
-                _errorMessage.value = e.localizedMessage
+            repository.deleteScenario(id)
+            launch(Dispatchers.IO) {
+                try {
+                    if (SupabaseClientProvider.isConfigured) {
+                        api.deleteScenario("eq.$id")
+                    }
+                } catch (e: Exception) { }
             }
             onComplete()
         }
@@ -749,15 +1007,15 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun testGeminiModel(key: String, model: String, onResult: (Boolean, String) -> Unit) {
         val apiKey = key.ifBlank { getEffectiveGeminiApiKey() }
         if (apiKey.isBlank()) {
-            onResult(false, "کلید API یافت نشد. لطفاً کلید معتبر خود را وارد کنید.")
+            onResult(false, "کلید API معتبر نیست یا خالی است.")
             return
         }
 
         viewModelScope.launch(Dispatchers.IO) {
             val startTime = System.currentTimeMillis()
             val client = OkHttpClient.Builder()
-                .connectTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(25, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(20, java.util.concurrent.TimeUnit.SECONDS)
                 .build()
 
             val requestJson = JSONObject().apply {
@@ -765,7 +1023,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     val contentObj = JSONObject().apply {
                         val partsArray = JSONArray().apply {
                             val partObj = JSONObject().apply {
-                                put("text", "یک پیام کوتاه تأیید اتصال به زبان فارسی بگو.")
+                                put("text", "پاسخ بسیار کوتاه دو کلمه‌ای در زمینه وحشت بده.")
                             }
                             put(partObj)
                         }
@@ -785,7 +1043,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 val response = client.newCall(request).execute()
                 val latency = System.currentTimeMillis() - startTime
                 val bodyStr = response.body?.string() ?: ""
-                if (response.isSuccessful && bodyStr.isNotEmpty()) {
+
+                if (response.isSuccessful) {
                     val responseObj = JSONObject(bodyStr)
                     val candidates = responseObj.getJSONArray("candidates")
                     val firstCandidate = candidates.getJSONObject(0)
@@ -859,7 +1118,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val response = client.newCall(request).execute()
                 val bodyStr = response.body?.string() ?: ""
-                if (response.isSuccessful && bodyStr.isNotEmpty()) {
+
+                if (response.isSuccessful) {
                     val responseObj = JSONObject(bodyStr)
                     val candidates = responseObj.getJSONArray("candidates")
                     val firstCandidate = candidates.getJSONObject(0)
@@ -867,16 +1127,16 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     val parts = content.getJSONArray("parts")
                     val generatedText = parts.getJSONObject(0).getString("text")
                     withContext(Dispatchers.Main) {
-                        onResult(generatedText)
+                        onResult(generatedText.trim())
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        onResult("کاتب ارواح در سکوت فرورفته است. خطا: ${response.code}")
+                        onResult("خطا در پاسخ هوش مصنوعی (${response.code}): $bodyStr")
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onResult("خطای ماوراء الطبیعه: ${e.localizedMessage}")
+                    onResult("خطا در اتصال به هوش مصنوعی: ${e.localizedMessage}")
                 }
             }
         }
@@ -890,82 +1150,44 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 return@generateAILore
             }
 
-            var generatedCount = 0
-            // Parse response for ===1=== to ===12=== or 1. to 12.
-            for (monthIdx in 1..12) {
-                val marker = "===$monthIdx==="
-                val nextMarker = "===${monthIdx + 1}==="
-                
-                var block = ""
-                if (responseText.contains(marker)) {
-                    val start = responseText.indexOf(marker) + marker.length
-                    val end = if (monthIdx < 12 && responseText.contains(nextMarker)) {
-                        responseText.indexOf(nextMarker, start)
-                    } else {
-                        responseText.length
-                    }
-                    if (start in 0 until end) {
-                        block = responseText.substring(start, end).trim()
-                    }
-                }
+            var parsedCount = 0
+            val pattern = Regex("===(\\d+)===\\s*\\n?([\\s\\S]*?)(?====\\d+===|$)")
+            val matches = pattern.findAll(responseText).toList()
 
-                if (block.isBlank()) {
-                    // Alternative parsing pattern: e.g. "ماه 1" or "[1]" or numbered list
-                    val altMarker = "ماه $monthIdx"
-                    val nextAltMarker = "ماه ${monthIdx + 1}"
-                    if (responseText.contains(altMarker)) {
-                        val start = responseText.indexOf(altMarker) + altMarker.length
-                        val end = if (monthIdx < 12 && responseText.contains(nextAltMarker)) {
-                            responseText.indexOf(nextAltMarker, start)
-                        } else {
-                            responseText.length
-                        }
-                        if (start in 0 until end) {
-                            block = responseText.substring(start, end).trim()
-                        }
-                    }
-                }
+            if (matches.isNotEmpty()) {
+                for (match in matches) {
+                    val monthNumStr = match.groupValues[1]
+                    val content = match.groupValues[2].trim()
+                    val monthIndex = monthNumStr.toIntOrNull() ?: continue
+                    if (monthIndex in 1..12) {
+                        val lines = content.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                        var title = "طالع ماه ${PERSIAN_MONTHS[monthIndex - 1]}"
+                        var poem: String? = null
+                        var fortuneText = content
+                        var doomLevel: String? = "شوم"
 
-                if (block.isNotBlank()) {
-                    val lines = block.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                    var title = "طالع شوم ماه ${PERSIAN_MONTHS[monthIdx - 1]}"
-                    var poem: String? = null
-                    var fortuneText = block
-                    var doomLevel: String? = "شوم"
-
-                    for (line in lines) {
-                        when {
-                            line.contains("عنوان:") || line.startsWith("عنوان") -> {
-                                title = line.replace("عنوان:", "").replace("عنوان", "").replace("#", "").replace("*", "").trim()
-                            }
-                            line.contains("شعر:") || line.startsWith("شعر") -> {
-                                poem = line.replace("شعر:", "").replace("شعر", "").replace("#", "").replace("*", "").trim()
-                            }
-                            line.contains("طالع:") || line.contains("تفسیر:") || line.startsWith("طالع") -> {
-                                fortuneText = line.replace("طالع:", "").replace("طالع", "").replace("تفسیر:", "").replace("#", "").replace("*", "").trim()
-                            }
-                            line.contains("درجه:") || line.contains("سطح:") -> {
-                                doomLevel = line.replace("درجه:", "").replace("سطح:", "").replace("#", "").replace("*", "").trim()
+                        for (line in lines) {
+                            when {
+                                line.contains("عنوان:") -> title = line.replace("عنوان:", "").replace("#", "").replace("*", "").trim()
+                                line.contains("شعر:") -> poem = line.replace("شعر:", "").replace("#", "").replace("*", "").trim()
+                                line.contains("طالع:") -> fortuneText = line.replace("طالع:", "").replace("#", "").replace("*", "").trim()
+                                line.contains("درجه:") -> doomLevel = line.replace("درجه:", "").replace("#", "").replace("*", "").trim()
                             }
                         }
+
+                        saveGrimFortune(
+                            monthIndex = monthIndex,
+                            title = title,
+                            poem = poem,
+                            fortuneText = fortuneText,
+                            doomLevel = doomLevel,
+                            status = "PUBLISHED"
+                        ) {}
+                        parsedCount++
                     }
-
-                    saveGrimFortune(
-                        monthIndex = monthIdx,
-                        title = title.ifBlank { "طالع ماه ${PERSIAN_MONTHS[monthIdx - 1]}" },
-                        poem = poem,
-                        fortuneText = fortuneText.ifBlank { block },
-                        doomLevel = doomLevel,
-                        status = "PUBLISHED"
-                    ) {}
-                    generatedCount++
                 }
-            }
-
-            if (generatedCount > 0) {
-                onResult(true, "تعداد $generatedCount طالع شوم برای ماه‌های سال با موفقیت با یک درخواست AI تولید و ذخیره شدند.", generatedCount)
+                onResult(true, "تعداد $parsedCount ماه با موفقیت تولید و در پایگاه داده ذخیره شد.", parsedCount)
             } else {
-                // If structured delimiters weren't strictly matched, save whole text into month 1 or distribute
                 saveGrimFortune(
                     monthIndex = 1,
                     title = "طالع شوم فروردین",
@@ -1013,34 +1235,38 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun generateScenariosWithAI(count: Int, customPrompt: String? = null, onResult: (Boolean, String) -> Unit) {
         val basePrompt = customPrompt?.ifBlank { null } ?: _scenarioPrompt.value
-        val fullPrompt = "$basePrompt\nلطفاً تعداد $count سناریوی جداگانه تولید کن. برای هر سناریو، دقیقاً با پیشوند '---' سناریوها را از هم جدا کن. در خط اول هر سناریو عبارت 'عنوان: [نام سناریو]' و در خطوط بعدی توصیف کامل و گزینه‌ها را قرار بده."
+        val fullPrompt = "$basePrompt\n\nلطفاً تعداد $count سناریوی جداگانه با مراحل کامل تولید کن. برای هر سناریو، دقیقاً با پیشوند '###سناریو###' سناریوها را از هم جدا کن."
 
         generateAILore(fullPrompt) { text ->
             if (text.startsWith("خطا")) {
                 onResult(false, text)
                 return@generateAILore
             }
-            val blocks = text.split("---").map { it.trim() }.filter { it.length > 20 }
+
+            val blocks = text.split("###سناریو###")
+                .map { it.trim() }
+                .filter { it.length > 20 }
+
             if (blocks.isNotEmpty()) {
-                blocks.take(count).forEach { block ->
+                blocks.take(count).forEachIndexed { idx, block ->
                     val lines = block.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                    var title = "سناریوی عمارت وحشت"
-                    var desc = block
+                    var title = "سناریوی تعاملی عمارت وحشت ${idx + 1}"
                     if (lines.isNotEmpty()) {
                         val firstLine = lines[0]
-                        title = firstLine.replace("عنوان:", "").replace("عنوان", "").replace("#", "").replace("*", "").trim()
-                        desc = lines.drop(1).joinToString("\n")
+                        if (firstLine.contains("عنوان:")) {
+                            title = firstLine.replace("عنوان:", "").replace("#", "").replace("*", "").trim()
+                        }
                     }
-                    createScenario(title, desc.ifBlank { block }, "PUBLISHED") {}
+                    createScenario(title, block, "PUBLISHED") {}
                 }
-                onResult(true, "$count سناریوی جدید با موفقیت توسط هوش مصنوعی خلق و به پایگاه اضافه شد.")
+                onResult(true, "$count سناریوی چندمرحله‌ای با موفقیت توسط هوش مصنوعی خلق و در پایگاه داده ذخیره شد.")
             } else {
-                // Single block
                 val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                val title = if (lines.isNotEmpty()) lines[0].replace("عنوان:", "").replace("#", "").replace("*", "").trim() else "سناریوی عمارت وحشت"
-                val desc = if (lines.size > 1) lines.drop(1).joinToString("\n") else text
-                createScenario(title, desc, "PUBLISHED") {}
-                onResult(true, "۱ سناریوی جدید با موفقیت اضافه شد.")
+                val title = if (lines.isNotEmpty() && lines[0].contains("عنوان:")) {
+                    lines[0].replace("عنوان:", "").replace("#", "").replace("*", "").trim()
+                } else "سناریوی تعاملی عمارت وحشت"
+                createScenario(title, text, "PUBLISHED") {}
+                onResult(true, "۱ سناریوی چندمرحله‌ای با موفقیت در پایگاه داده ذخیره شد.")
             }
         }
     }

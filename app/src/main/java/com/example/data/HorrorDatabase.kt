@@ -31,7 +31,10 @@ data class CachedRealStory(
     val source: String?,
     val coverImageUrl: String?,
     val tags: String?,
-    val status: String
+    val status: String,
+    val rating: Float = 4.8f,
+    val ratingCount: Int = 18,
+    val viewCount: Int = 340
 )
 
 @Entity(tableName = "cached_scenarios")
@@ -43,28 +46,94 @@ data class CachedScenario(
     val initialSceneId: String?
 )
 
+@Entity(tableName = "cached_user_submissions")
+data class CachedUserSubmission(
+    @PrimaryKey val id: String,
+    val title: String,
+    val content: String,
+    val authorName: String,
+    val status: String,
+    val adminNotes: String? = null,
+    val createdAt: String? = null
+)
+
 @Dao
 interface HorrorDao {
+    // Grim Fortunes
+    @Query("SELECT * FROM cached_grim_fortunes ORDER BY monthIndex ASC")
+    suspend fun getAllGrimFortunes(): List<CachedGrimFortune>
+
     @Query("SELECT * FROM cached_grim_fortunes WHERE status = 'PUBLISHED' ORDER BY monthIndex ASC")
-    suspend fun getGrimFortunes(): List<CachedGrimFortune>
+    suspend fun getPublishedGrimFortunes(): List<CachedGrimFortune>
 
     @Upsert
     suspend fun upsertGrimFortunes(items: List<CachedGrimFortune>)
 
+    @Upsert
+    suspend fun upsertGrimFortune(item: CachedGrimFortune)
+
+    @Query("DELETE FROM cached_grim_fortunes WHERE id = :id")
+    suspend fun deleteGrimFortune(id: String)
+
+    // Real Stories
+    @Query("SELECT * FROM cached_real_stories")
+    suspend fun getAllRealStories(): List<CachedRealStory>
+
     @Query("SELECT * FROM cached_real_stories WHERE status = 'PUBLISHED'")
-    suspend fun getRealStories(): List<CachedRealStory>
+    suspend fun getPublishedRealStories(): List<CachedRealStory>
 
     @Upsert
     suspend fun upsertRealStories(items: List<CachedRealStory>)
 
+    @Upsert
+    suspend fun upsertRealStory(item: CachedRealStory)
+
+    @Query("DELETE FROM cached_real_stories WHERE id = :id")
+    suspend fun deleteRealStory(id: String)
+
+    // Scenarios
+    @Query("SELECT * FROM cached_scenarios")
+    suspend fun getAllScenarios(): List<CachedScenario>
+
     @Query("SELECT * FROM cached_scenarios WHERE status = 'PUBLISHED'")
-    suspend fun getScenarios(): List<CachedScenario>
+    suspend fun getPublishedScenarios(): List<CachedScenario>
 
     @Upsert
     suspend fun upsertScenarios(items: List<CachedScenario>)
+
+    @Upsert
+    suspend fun upsertScenario(item: CachedScenario)
+
+    @Query("DELETE FROM cached_scenarios WHERE id = :id")
+    suspend fun deleteScenario(id: String)
+
+    // User Submissions
+    @Query("SELECT * FROM cached_user_submissions ORDER BY id DESC")
+    suspend fun getAllUserSubmissions(): List<CachedUserSubmission>
+
+    @Query("SELECT * FROM cached_user_submissions WHERE status = 'PUBLISHED' ORDER BY id DESC")
+    suspend fun getPublishedUserSubmissions(): List<CachedUserSubmission>
+
+    @Upsert
+    suspend fun upsertUserSubmissions(items: List<CachedUserSubmission>)
+
+    @Upsert
+    suspend fun upsertUserSubmission(item: CachedUserSubmission)
+
+    @Query("DELETE FROM cached_user_submissions WHERE id = :id")
+    suspend fun deleteUserSubmission(id: String)
 }
 
-@Database(entities = [CachedGrimFortune::class, CachedRealStory::class, CachedScenario::class], version = 2, exportSchema = false)
+@Database(
+    entities = [
+        CachedGrimFortune::class,
+        CachedRealStory::class,
+        CachedScenario::class,
+        CachedUserSubmission::class
+    ],
+    version = 4,
+    exportSchema = false
+)
 abstract class HorrorDatabase : RoomDatabase() {
     abstract fun horrorDao(): HorrorDao
 
