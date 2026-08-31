@@ -156,6 +156,18 @@ class HorrorRepository(context: Context) {
                 story.view_count
             )
         )
+        try {
+            if (SupabaseClientProvider.isConfigured) {
+                val map = mapOf(
+                    "rating" to story.rating,
+                    "rating_count" to story.rating_count,
+                    "view_count" to story.view_count
+                )
+                api.updateRealStory(idEq = "eq.${story.id}", item = map)
+            }
+        } catch (e: Exception) {
+            // Log or ignore network sync issues
+        }
     }
 
     suspend fun deleteRealStory(id: String) = withContext(Dispatchers.IO) {
