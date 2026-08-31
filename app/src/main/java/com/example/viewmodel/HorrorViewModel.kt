@@ -195,23 +195,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
                 // 2. Fetch Real Stories (Local first, then remote)
                 val rs = repository.getRealStories(false)
-                if (rs.isNotEmpty()) {
-                    _realStoriesList.value = rs
-                } else {
-                    val mockRs = getMockRealStories()
-                    _realStoriesList.value = mockRs
-                    mockRs.forEach { repository.saveRealStory(it) }
-                }
+                _realStoriesList.value = rs
 
                 // 3. Fetch Scenarios (Local first, then remote)
                 val scens = repository.getScenarios(false)
-                if (scens.isNotEmpty()) {
-                    _scenariosList.value = scens
-                } else {
-                    val mockScens = getMockScenarios()
-                    _scenariosList.value = mockScens
-                    mockScens.forEach { repository.saveScenario(it) }
-                }
+                _scenariosList.value = scens
 
                 // 4. Fetch User Submissions/Confessions
                 val subs = repository.getUserSubmissions(false)
@@ -245,8 +233,6 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 }
             } catch (e: Exception) {
                 if (_grimFortunesList.value.isEmpty()) _grimFortunesList.value = getMockGrimFortunes()
-                if (_realStoriesList.value.isEmpty()) _realStoriesList.value = getMockRealStories()
-                if (_scenariosList.value.isEmpty()) _scenariosList.value = getMockScenarios()
                 if (_userSubmissionsList.value.isEmpty()) _userSubmissionsList.value = getMockUserSubmissions()
             } finally {
                 _loading.value = false
@@ -404,12 +390,16 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun rateStory(storyId: String, userRating: Float) {
         viewModelScope.launch {
-            val success = repository.submitStoryRatingRemote(storyId, userRating)
+            val currentStories = _realStoriesList.value
+            val target = currentStories.find { it.id == storyId }
+            if (target == null) {
+                repository.submitStoryRatingRemote(storyId, userRating, 4.8f, 18)
+                return@launch
+            }
+            val success = repository.submitStoryRatingRemote(storyId, userRating, target.rating, target.rating_count)
             if (success) {
                 loadUserData()
             } else {
-                val currentStories = _realStoriesList.value
-                val target = currentStories.find { it.id == storyId } ?: return@launch
                 val updatedCount = target.rating_count + 1
                 val calculatedRating = ((target.rating * target.rating_count) + userRating) / updatedCount
                 val updatedStory = target.copy(
@@ -426,12 +416,16 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun incrementStoryViews(storyId: String) {
         viewModelScope.launch {
-            val success = repository.incrementStoryViewRemote(storyId)
+            val currentStories = _realStoriesList.value
+            val target = currentStories.find { it.id == storyId }
+            if (target == null) {
+                repository.incrementStoryViewRemote(storyId, 340)
+                return@launch
+            }
+            val success = repository.incrementStoryViewRemote(storyId, target.view_count)
             if (success) {
                 loadUserData()
             } else {
-                val currentStories = _realStoriesList.value
-                val target = currentStories.find { it.id == storyId } ?: return@launch
                 val updatedStory = target.copy(view_count = target.view_count + 1)
 
                 _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
@@ -487,7 +481,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun testSupabaseConnection(onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             try {
-                val resp = api.getGrimFortunes(select = "id", status = null)
+                val resp = api.getGrimFortunes(status = null)
                 if (resp.isSuccessful) {
                     _isSupabaseConnected.value = true
                     onResult(true, "اتصال به پایگاه داده Supabase با موفقیت برقرار شد (کد ${resp.code()})")

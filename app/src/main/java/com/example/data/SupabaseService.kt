@@ -95,6 +95,7 @@ interface SupabaseApi {
     @POST("rest/v1/real_stories")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun upsertRealStory(
+        @Query("on_conflict") onConflict: String = "id",
         @Body item: Map<String, Any>
     ): Response<List<RealStory>>
 
@@ -135,6 +136,7 @@ interface SupabaseApi {
     @POST("rest/v1/user_story_submissions")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun upsertUserSubmission(
+        @Query("on_conflict") onConflict: String = "id",
         @Body item: Map<String, Any>
     ): Response<List<UserStorySubmission>>
 
@@ -165,6 +167,7 @@ interface SupabaseApi {
     @POST("rest/v1/wrong_choice_scenarios")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun upsertScenario(
+        @Query("on_conflict") onConflict: String = "id",
         @Body item: Map<String, Any>
     ): Response<List<WrongChoiceScenario>>
 

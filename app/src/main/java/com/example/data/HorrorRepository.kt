@@ -333,38 +333,70 @@ class HorrorRepository(context: Context) {
         }
     }
 
-    // ATOMIC RATING & VIEWS RPC
-    suspend fun incrementStoryViewRemote(storyId: String): Boolean = withContext(Dispatchers.IO) {
+    // ATOMIC RATING & VIEWS RPC (With robust REST PATCH fallbacks)
+    suspend fun incrementStoryViewRemote(storyId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
             try {
+                // Try RPC first
                 val resp = api.incrementStoryView(mapOf("story_id" to storyId))
                 if (resp.isSuccessful) {
                     return@withContext true
                 } else {
                     val code = resp.code()
                     val err = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "incrementStoryView RPC failed: $code - $err")
+                    android.util.Log.e("SupabaseError", "incrementStoryView RPC failed: $code - $err. Falling back to direct PATCH.")
+                    // Fallback to direct PATCH
+                    val newCount = currentCount + 1
+                    val patchResp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("view_count" to newCount))
+                    return@withContext patchResp.isSuccessful
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "incrementStoryView exception", e)
+                android.util.Log.e("SupabaseError", "incrementStoryView exception. Falling back to direct PATCH.", e)
+                try {
+                    val newCount = currentCount + 1
+                    val patchResp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("view_count" to newCount))
+                    return@withContext patchResp.isSuccessful
+                } catch (ex: Exception) {
+                    android.util.Log.e("SupabaseError", "incrementStoryView direct PATCH failed", ex)
+                }
             }
         }
         false
     }
 
-    suspend fun submitStoryRatingRemote(storyId: String, rating: Float): Boolean = withContext(Dispatchers.IO) {
+    suspend fun submitStoryRatingRemote(storyId: String, rating: Float, currentRating: Float, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
             try {
+                // Try RPC first
                 val resp = api.submitStoryRating(mapOf("story_id" to storyId, "new_rating" to rating))
                 if (resp.isSuccessful) {
                     return@withContext true
                 } else {
                     val code = resp.code()
                     val err = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "submitStoryRating RPC failed: $code - $err")
+                    android.util.Log.e("SupabaseError", "submitStoryRating RPC failed: $code - $err. Falling back to direct PATCH.")
+                    // Fallback to direct PATCH
+                    val newCount = currentCount + 1
+                    val newRating = ((currentRating * currentCount) + rating) / newCount
+                    val patchResp = api.updateRealStory(
+                        idEq = "eq.$storyId",
+                        item = mapOf("rating" to newRating, "rating_count" to newCount)
+                    )
+                    return@withContext patchResp.isSuccessful
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "submitStoryRating exception", e)
+                android.util.Log.e("SupabaseError", "submitStoryRating exception. Falling back to direct PATCH.", e)
+                try {
+                    val newCount = currentCount + 1
+                    val newRating = ((currentRating * currentCount) + rating) / newCount
+                    val patchResp = api.updateRealStory(
+                        idEq = "eq.$storyId",
+                        item = mapOf("rating" to newRating, "rating_count" to newCount)
+                    )
+                    return@withContext patchResp.isSuccessful
+                } catch (ex: Exception) {
+                    android.util.Log.e("SupabaseError", "submitStoryRating direct PATCH failed", ex)
+                }
             }
         }
         false

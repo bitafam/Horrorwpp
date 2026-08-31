@@ -1699,11 +1699,21 @@ fun AdminScenariosTab(
 fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
     val currentApiKey by viewModel.geminiApiKey.collectAsState()
     val currentModel by viewModel.selectedGeminiModel.collectAsState()
+    val currentSupUrl by viewModel.supabaseUrl.collectAsState()
+    val currentSupKey by viewModel.supabaseAnonKey.collectAsState()
 
     var inputKey by remember { mutableStateOf("") }
     LaunchedEffect(currentApiKey) { inputKey = currentApiKey }
 
+    var supUrl by remember { mutableStateOf("") }
+    var supKey by remember { mutableStateOf("") }
+    LaunchedEffect(currentSupUrl, currentSupKey) {
+        supUrl = currentSupUrl
+        supKey = currentSupKey
+    }
+
     var showKey by remember { mutableStateOf(false) }
+    var showSupKey by remember { mutableStateOf(false) }
     var testResultText by remember { mutableStateOf<String?>(null) }
     var isTestingModel by remember { mutableStateOf(false) }
     var testingSpecificModel by remember { mutableStateOf<String?>(null) }
@@ -1910,27 +1920,92 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
             }
         }
 
-        // Supabase Diagnostics
+        // Supabase Settings & Diagnostics
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+                .border(1.dp, BloodCrimson.copy(alpha = 0.4f), RoundedCornerShape(16.dp)),
             colors = CardDefaults.cardColors(containerColor = CryptCard),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(text = "وضعیت اتصال پایگاه داده Supabase", fontWeight = FontWeight.Bold, color = SpectralWhite)
-                Text(text = "آدرس پروژه: ${SupabaseClientProvider.supabaseUrl}", color = MutedAsh, fontSize = 11.sp)
-                Button(
-                    onClick = {
-                        viewModel.testSupabaseConnection { success, msg ->
-                            testResultText = if (success) "تست اتصال Supabase: $msg" else "خطا در اتصال Supabase: $msg"
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(text = "تنظیمات اتصال پایگاه داده Supabase", fontWeight = FontWeight.Bold, color = SpectralWhite)
+                Text(
+                    text = "شما می‌توانید تنظیمات دیتابیس Supabase خود را در این بخش تغییر داده و به صورت محلی در دستگاه ذخیره کنید.",
+                    color = MutedAsh,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                OutlinedTextField(
+                    value = supUrl,
+                    onValueChange = { supUrl = it },
+                    label = { Text("آدرس پروژه Supabase (URL)") },
+                    placeholder = { Text("https://your-project.supabase.co") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
+                OutlinedTextField(
+                    value = supKey,
+                    onValueChange = { supKey = it },
+                    label = { Text("کلید عمومی (Anon Key)") },
+                    placeholder = { Text("your-anon-key-here...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    visualTransformation = if (showSupKey) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showSupKey = !showSupKey }) {
+                            Icon(
+                                imageVector = if (showSupKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = null,
+                                tint = MutedAsh
+                            )
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("بررسی اتصال Supabase", color = SpectralWhite)
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            viewModel.saveSupabaseConfig(supUrl, supKey) { success, msg ->
+                                testResultText = if (success) "تنظیمات ذخیره شد و متصل شد: $msg" else "خطا در تنظیمات: $msg"
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ذخیره محلی", fontSize = 11.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            viewModel.testSupabaseConnection { success, msg ->
+                                testResultText = if (success) "تست اتصال Supabase: $msg" else "خطا در اتصال Supabase: $msg"
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.CloudQueue, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("تست اتصال", fontSize = 11.sp, color = SpectralWhite)
+                    }
                 }
             }
         }
