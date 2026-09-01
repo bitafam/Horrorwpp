@@ -1536,17 +1536,24 @@ fun StoryItemCard(
             if (!story.cover_image_url.isNullOrBlank()) {
                 AsyncImage(
                     model = story.cover_image_url,
+                    placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
+                    error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
                     contentDescription = story.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                when (index % 4) {
-                    0 -> SpookyBellTowerCanvas(modifier = Modifier.fillMaxSize())
-                    1 -> SpookyWindowCanvas(modifier = Modifier.fillMaxSize())
-                    2 -> SpookyCorridorCanvas(modifier = Modifier.fillMaxSize())
-                    else -> SpookySilhouettedPathCanvas(modifier = Modifier.fillMaxSize())
+                val defaultRes = when (index % 3) {
+                    0 -> R.drawable.img_poster_1_1788266550537
+                    1 -> R.drawable.img_poster_2_1788266563762
+                    else -> R.drawable.img_poster_3_1788266577786
                 }
+                androidx.compose.foundation.Image(
+                    painter = painterResource(id = defaultRes),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             // Dark transparent gradient overlay covering whole card
@@ -1556,9 +1563,9 @@ fun StoryItemCard(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xB3050209),
-                                Color(0xD9080414),
-                                Color(0xF2030107)
+                                Color(0x33000000),
+                                Color(0x66000000),
+                                Color(0xB3000000)
                             )
                         )
                     )
@@ -3080,24 +3087,36 @@ fun StoryReaderScreen(
                 if (!story.cover_image_url.isNullOrBlank()) {
                     AsyncImage(
                         model = story.cover_image_url,
+                        placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
+                        error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
                         contentDescription = story.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    SpookyCorridorCanvas(modifier = Modifier.fillMaxSize())
+                    val defaultRes = when (story.id.hashCode() % 3) {
+                        0 -> R.drawable.img_poster_1_1788266550537
+                        1 -> R.drawable.img_poster_2_1788266563762
+                        else -> R.drawable.img_poster_3_1788266577786
+                    }
+                    androidx.compose.foundation.Image(
+                        painter = painterResource(id = defaultRes),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
 
-                // Blurred/Faded Translucent Overlay (85% Opacity)
+                // Blurred/Faded Translucent Overlay (Lighter opacity)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color(0xEE0B0615),
-                                    Color(0xD90C0714),
-                                    Color(0xFA050209)
+                                    Color(0x33000000),
+                                    Color(0x66000000),
+                                    Color(0xB3000000)
                                 )
                             )
                         )
@@ -3581,6 +3600,7 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
     var submitted by remember { mutableStateOf(false) }
     var isSubmitting by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var showSuccessDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -3742,7 +3762,7 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
                                 isSubmitting = false
                                 if (success) {
                                     submitted = true
-                                    onSubmissionComplete()
+                                    showSuccessDialog = true
                                 } else {
                                     errorMessage = "خطا در ثبت داستان، لطفاً اتصال اینترنت را بررسی کنید."
                                 }
@@ -3771,6 +3791,45 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
                 }
             }
         }
+    }
+
+    if (showSuccessDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showSuccessDialog = false
+                onSubmissionComplete()
+            },
+            containerColor = Color(0xFF0F0918),
+            title = {
+                Text(
+                    text = "ارسال موفقیت‌آمیز داستان",
+                    color = Color(0xFFDEC595),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    fontFamily = FontFamily.Serif
+                )
+            },
+            text = {
+                Text(
+                    text = "داستان شما با موفقیت به عمارت ارسال شد. ادمین پس از بررسی و تایید، داستان شما را منتشر خواهد کرد تا دیگران نیز بخوانند.",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    lineHeight = 22.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSuccessDialog = false
+                        onSubmissionComplete()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("فهمیدم", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 }
 
@@ -4020,17 +4079,24 @@ fun UserStoryItemCard(
             if (!submission.cover_image_url.isNullOrBlank()) {
                 AsyncImage(
                     model = submission.cover_image_url,
+                    placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
+                    error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
                     contentDescription = submission.title,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
             } else {
-                when (index % 4) {
-                    0 -> SpookyBellTowerCanvas(modifier = Modifier.fillMaxSize())
-                    1 -> SpookyWindowCanvas(modifier = Modifier.fillMaxSize())
-                    2 -> SpookyCorridorCanvas(modifier = Modifier.fillMaxSize())
-                    else -> SpookySilhouettedPathCanvas(modifier = Modifier.fillMaxSize())
+                val defaultRes = when (index % 3) {
+                    0 -> R.drawable.img_poster_1_1788266550537
+                    1 -> R.drawable.img_poster_2_1788266563762
+                    else -> R.drawable.img_poster_3_1788266577786
                 }
+                androidx.compose.foundation.Image(
+                    painter = painterResource(id = defaultRes),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
 
             // Dark transparent gradient overlay covering whole card
@@ -4040,9 +4106,9 @@ fun UserStoryItemCard(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color(0xB3050209),
-                                Color(0xD9080414),
-                                Color(0xF2030107)
+                                Color(0x33000000),
+                                Color(0x66000000),
+                                Color(0xB3000000)
                             )
                         )
                     )
