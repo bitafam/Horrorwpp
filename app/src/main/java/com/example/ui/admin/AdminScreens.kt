@@ -270,6 +270,13 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                     label = { Text("تنظیمات AI", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
+                NavigationBarItem(
+                    selected = adminTab == 5,
+                    onClick = { adminTab = 5 },
+                    icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                    label = { Text("اعلان‌ها", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
+                )
             }
         }
     ) { padding ->
@@ -285,14 +292,82 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                 2 -> AdminGrimFortuneTab(viewModel, grimFortunes)
                 3 -> AdminScenariosTab(viewModel, scenarios)
                 4 -> AdminAiSettingsTab(viewModel)
+                5 -> AdminNotificationsTab(viewModel)
             }
         }
     }
 }
 
 // ----------------------------------------------------
-// TAB 0: DASHBOARD
+// TAB 5: NOTIFICATIONS MANAGER
 // ----------------------------------------------------
+@Composable
+fun AdminNotificationsTab(viewModel: HorrorViewModel) {
+    val notifications by viewModel.notificationsList.collectAsState()
+    
+    var title by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var imageUrl by remember { mutableStateOf("") }
+    
+    LaunchedEffect(Unit) {
+        viewModel.loadNotifications()
+    }
+    
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
+        Text("ارسال اعلان جدید", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان") }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = message, onValueChange = { message = it }, label = { Text("پیام") }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("لینک تصویر (اختیاری)") }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Button(
+            onClick = {
+                if (title.isBlank() || message.isBlank()) return@Button
+                val notification = CachedAppNotification(
+                    id = java.util.UUID.randomUUID().toString(),
+                    title = title,
+                    message = message,
+                    imageUrl = imageUrl.ifBlank { null },
+                    timestamp = System.currentTimeMillis()
+                )
+                viewModel.upsertNotification(notification)
+                title = ""
+                message = ""
+                imageUrl = ""
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("ارسال اعلان")
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        Text("اعلان‌های ارسالی", color = MutedAsh, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        notifications.forEach { notification ->
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                colors = CardDefaults.cardColors(containerColor = CryptCardElevated)
+            ) {
+                Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(notification.title, color = SpectralWhite, fontWeight = FontWeight.Bold)
+                        Text(notification.message, color = MutedAsh, fontSize = 12.sp)
+                    }
+                    IconButton(onClick = { viewModel.deleteNotification(notification.id) }) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun AdminDashboardTab(
     tmCount: Int,

@@ -3811,7 +3811,7 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
             },
             text = {
                 Text(
-                    text = "داستان شما با موفقیت به عمارت ارسال شد. ادمین پس از بررسی و تایید، داستان شما را منتشر خواهد کرد تا دیگران نیز بخوانند.",
+                    text = "داستان شما با موفقیت به عمارت ارسال شد. ادمین پس از بررسی و تایید، داستان شما را منتشر خواهد کرد. زمان انتشار معمولاً بین ۱۵ دقیقه تا ۱۲ ساعت متغیر است.",
                     color = Color.White,
                     fontSize = 13.sp,
                     lineHeight = 22.sp
@@ -3830,6 +3830,67 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
                 }
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NotificationsScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
+    val notifications by viewModel.notificationsList.collectAsState()
+    
+    LaunchedEffect(Unit) {
+        viewModel.loadNotifications()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("اعلان‌های عمارت", color = Color.White) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F0918))
+            )
+        },
+        containerColor = Color(0xFF050209)
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(notifications) { notification ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1224))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = notification.title,
+                            color = Color(0xFFDEC595),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = notification.message,
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(notification.timestamp)),
+                            color = Color.Gray,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -531,6 +531,19 @@ class HorrorRepository(context: Context) {
         }
     }
 
+    // NOTIFICATIONS
+    suspend fun getAllNotifications(): List<CachedAppNotification> = withContext(Dispatchers.IO) {
+        dao.getAllNotifications()
+    }
+
+    suspend fun upsertNotification(notification: CachedAppNotification) = withContext(Dispatchers.IO) {
+        dao.upsertNotification(notification)
+    }
+
+    suspend fun deleteNotification(id: String) = withContext(Dispatchers.IO) {
+        dao.deleteNotification(id)
+    }
+
     // ATOMIC RATING & VIEWS RPC (With robust REST PATCH fallbacks)
     suspend fun incrementStoryViewRemote(storyId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         val newCount = currentCount + 1
@@ -1106,27 +1119,28 @@ class HorrorRepository(context: Context) {
     suspend fun incrementSubmissionViewRemote(submissionId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
             try {
+                // Fetch latest to get current tags and other stats
+                val cached = dao.getUserSubmissionById(submissionId)
+                val currentRating = cached?.rating ?: 5.0f
+                val currentRatingCount = cached?.ratingCount ?: 1
+                val cleanTags = cached?.tags ?: "وحشت, واقعی"
+                val newCount = currentCount + 1
+                val encodedTags = encodeTagsWithStats(cleanTags, currentRating, currentRatingCount, newCount)
+
                 // Try RPC first
                 val resp = api.incrementSubmissionView(mapOf("submission_id" to submissionId))
                 if (resp.isSuccessful) {
+                    api.updateUserSubmissionMinimal(idEq = "eq.$submissionId", item = mapOf("tags" to encodedTags))
                     return@withContext true
                 } else {
                     val code = resp.code()
                     val err = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "incrementSubmissionView RPC failed: $code - $err. Falling back to direct PATCH.")
-                    val newCount = currentCount + 1
-                    val patchResp = api.updateUserSubmissionMinimal(idEq = "eq.$submissionId", item = mapOf("view_count" to newCount))
+                    val patchResp = api.updateUserSubmissionMinimal(idEq = "eq.$submissionId", item = mapOf("tags" to encodedTags))
                     return@withContext patchResp.isSuccessful
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "incrementSubmissionView exception. Falling back to direct PATCH.", e)
-                try {
-                    val newCount = currentCount + 1
-                    val patchResp = api.updateUserSubmissionMinimal(idEq = "eq.$submissionId", item = mapOf("view_count" to newCount))
-                    return@withContext patchResp.isSuccessful
-                } catch (ex: Exception) {
-                    android.util.Log.e("SupabaseError", "incrementSubmissionView direct PATCH failed", ex)
-                }
+                android.util.Log.e("SupabaseError", "incrementSubmissionView exception. Falling back.", e)
             }
         }
         false
@@ -1135,35 +1149,30 @@ class HorrorRepository(context: Context) {
     suspend fun submitSubmissionRatingRemote(submissionId: String, rating: Float, currentRating: Float, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
             try {
+                val cached = dao.getUserSubmissionById(submissionId)
+                val cleanTags = cached?.tags ?: "وحشت, واقعی"
+                val currentViewCount = cached?.viewCount ?: 0
+                val newCount = currentCount + 1
+                val newRating = ((currentRating * currentCount) + rating) / newCount
+                val encodedTags = encodeTagsWithStats(cleanTags, newRating, newCount, currentViewCount)
+
                 // Try RPC first
                 val resp = api.submitSubmissionRating(mapOf("submission_id" to submissionId, "new_rating" to rating))
                 if (resp.isSuccessful) {
+                    api.updateUserSubmissionMinimal(idEq = "eq.$submissionId", item = mapOf("tags" to encodedTags))
                     return@withContext true
                 } else {
                     val code = resp.code()
                     val err = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "submitSubmissionRating RPC failed: $code - $err. Falling back to direct PATCH.")
-                    val newCount = currentCount + 1
-                    val newRating = ((currentRating * currentCount) + rating) / newCount
                     val patchResp = api.updateUserSubmissionMinimal(
                         idEq = "eq.$submissionId",
-                        item = mapOf("rating" to newRating, "rating_count" to newCount)
+                        item = mapOf("tags" to encodedTags)
                     )
                     return@withContext patchResp.isSuccessful
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "submitSubmissionRating exception. Falling back to direct PATCH.", e)
-                try {
-                    val newCount = currentCount + 1
-                    val newRating = ((currentRating * currentCount) + rating) / newCount
-                    val patchResp = api.updateUserSubmissionMinimal(
-                        idEq = "eq.$submissionId",
-                        item = mapOf("rating" to newRating, "rating_count" to newCount)
-                    )
-                    return@withContext patchResp.isSuccessful
-                } catch (ex: Exception) {
-                    android.util.Log.e("SupabaseError", "submitSubmissionRating direct PATCH failed", ex)
-                }
+                android.util.Log.e("SupabaseError", "submitSubmissionRating exception. Falling back.", e)
             }
         }
         false
@@ -1196,6 +1205,8 @@ class HorrorRepository(context: Context) {
 }
 
 // Helper function to encode story stats in the tags field for Supabase compatibility
+
+
 fun encodeTagsWithStats(tags: String?, rating: Float, ratingCount: Int, viewCount: Int): String {
     val cleanTags = if (tags.isNullOrBlank()) "وحشت, واقعی" else tags.split("| STATS_v1:")[0].trim()
     return "$cleanTags | STATS_v1:[r=$rating,rc=$ratingCount,v=$viewCount]"

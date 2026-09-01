@@ -151,6 +151,30 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _adminScenarios = MutableStateFlow<List<WrongChoiceScenario>>(emptyList())
     val adminScenarios: StateFlow<List<WrongChoiceScenario>> = _adminScenarios.asStateFlow()
 
+    // Notification States
+    private val _notificationsList = MutableStateFlow<List<CachedAppNotification>>(emptyList())
+    val notificationsList: StateFlow<List<CachedAppNotification>> = _notificationsList.asStateFlow()
+
+    fun loadNotifications() {
+        viewModelScope.launch {
+            _notificationsList.value = repository.getAllNotifications()
+        }
+    }
+
+    fun upsertNotification(notification: CachedAppNotification) {
+        viewModelScope.launch {
+            repository.upsertNotification(notification)
+            loadNotifications()
+        }
+    }
+
+    fun deleteNotification(id: String) {
+        viewModelScope.launch {
+            repository.deleteNotification(id)
+            loadNotifications()
+        }
+    }
+
     private val _aiPrompts = MutableStateFlow<List<AiPrompt>>(emptyList())
     val aiPrompts: StateFlow<List<AiPrompt>> = _aiPrompts.asStateFlow()
 
