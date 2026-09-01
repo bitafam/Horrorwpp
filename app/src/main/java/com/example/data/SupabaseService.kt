@@ -138,10 +138,10 @@ interface SupabaseApi {
     ): Response<List<UserStorySubmission>>
 
     @POST("rest/v1/user_story_submissions")
-    @Headers("Prefer: return=representation")
+    @Headers("Prefer: return=minimal")
     suspend fun submitUserStory(
         @Body item: Map<String, Any>
-    ): Response<List<UserStorySubmission>>
+    ): Response<ResponseBody>
 
     @PATCH("rest/v1/user_story_submissions")
     @Headers("Prefer: return=representation")

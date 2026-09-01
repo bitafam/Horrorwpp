@@ -189,17 +189,28 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     val mockGfs = getMockGrimFortunes()
                     _grimFortunesList.value = mockGfs
-                    // Cache mock data so Room has initial entities
-                    mockGfs.forEach { repository.saveGrimFortune(it) }
+                    repository.saveGrimFortunesLocalOnly(mockGfs)
                 }
 
                 // 2. Fetch Real Stories (Local first, then remote)
                 val rs = repository.getRealStories(false)
-                _realStoriesList.value = rs
+                if (rs.isNotEmpty()) {
+                    _realStoriesList.value = rs
+                } else {
+                    val mockRs = getMockRealStories()
+                    _realStoriesList.value = mockRs
+                    repository.saveRealStoriesLocalOnly(mockRs)
+                }
 
                 // 3. Fetch Scenarios (Local first, then remote)
                 val scens = repository.getScenarios(false)
-                _scenariosList.value = scens
+                if (scens.isNotEmpty()) {
+                    _scenariosList.value = scens
+                } else {
+                    val mockScens = getMockScenarios()
+                    _scenariosList.value = mockScens
+                    repository.saveScenariosLocalOnly(mockScens)
+                }
 
                 // 4. Fetch User Submissions/Confessions
                 val subs = repository.getUserSubmissions(false)
@@ -208,7 +219,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     val mockSubs = getMockUserSubmissions()
                     _userSubmissionsList.value = mockSubs
-                    mockSubs.forEach { repository.saveUserSubmission(it) }
+                    repository.saveUserSubmissionsLocalOnly(mockSubs)
                 }
 
                 // Background sync from Supabase if configured
@@ -268,7 +279,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         return (1..12).map { index ->
             val data = mockData[index - 1]
             GrimFortune(
-                id = "gf-$index",
+                id = java.util.UUID.nameUUIDFromBytes("gf-$index".toByteArray()).toString(),
                 month_index = index,
                 month_name = monthNames[index - 1],
                 title = data.first,
@@ -285,7 +296,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private fun getMockRealStories(): List<RealStory> {
         return listOf(
             RealStory(
-                id = "story-1",
+                id = java.util.UUID.nameUUIDFromBytes("story-1".toByteArray()).toString(),
                 title = "نجواهای عمارت قاجاری",
                 content = "در زمستان سال ۱۳۲۰، پدربزرگم عمارتی قدیمی در حاشیه باغ‌های شمیران خرید. شب اول صدای کوبیده شدن پنجره‌ها قطع نمی‌شد تا اینکه ساعت ۳ نیمه‌شب در آینه قدی متوجه سایه‌ای با کلاه دوره قاجار شد که به او خیره شده بود و زمزمه می‌کرد: این خانه هرگز خالی نخواهد شد...",
                 author = "سهراب کاتب",
@@ -300,7 +311,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 updatedAt = null
             ),
             RealStory(
-                id = "story-2",
+                id = java.util.UUID.nameUUIDFromBytes("story-2".toByteArray()).toString(),
                 title = "چاه نفرین‌شده روستای سیاه چشمه",
                 content = "اهالی روستا می‌گفتند هر کس بعد از غروب خورشید کنار چاه قدیمی برود، صدای فریاد آب را خواهد شنید. سال گذشته دو مسافر تصمیم گرفتند درون چاه را با چراغ قوه تماشا کنند اما چیزی که از آب بالا آمد هرگز در هیچ کتابی توصیف نشده بود. تنها یک دفترچه خون‌آلود در کنار چاه پیدا شد...",
                 author = "راوی ناشناس",
@@ -315,7 +326,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 updatedAt = null
             ),
             RealStory(
-                id = "story-3",
+                id = java.util.UUID.nameUUIDFromBytes("story-3".toByteArray()).toString(),
                 title = "طلسم آینه سیاه تالار آیینه",
                 content = "در کاخ متروکه حاشیه زاگرس، آینه‌ای از جنس سنگ ابسیدین سیاه نصب شده که انعکاس افراد را با پنج دقیقه تاخیر نشان می‌دهد. نگهبان عمارت اعتراف کرد شبی انعکاس خود را دیده که خنجری در دست داشته در حالی که دست خودش خالی بوده است...",
                 author = "استاد اردوان",
@@ -335,7 +346,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private fun getMockUserSubmissions(): List<UserStorySubmission> {
         return listOf(
             UserStorySubmission(
-                id = "sub-1",
+                id = java.util.UUID.nameUUIDFromBytes("sub-1".toByteArray()).toString(),
                 title = "صدای قدم‌ها در اتاق زیرشیروانی",
                 content = "هر شب دقیقاً رأس ساعت ۳:۱۵ بامداد، صدای کشیده شدن صندلی چوبی روی کف اتاق زیرشیروانی خانه ما شنیده می‌شود، در حالی که در آن اتاق سال‌هاست قفل است.",
                 author_name = "مریم از تبریز",
@@ -350,7 +361,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private fun getMockScenarios(): List<WrongChoiceScenario> {
         return listOf(
             WrongChoiceScenario(
-                id = "scen-1",
+                id = java.util.UUID.nameUUIDFromBytes("scen-1".toByteArray()).toString(),
                 title = "گذرگاه دالان شرقی عمارت",
                 description = "---مرحله ۱---\n" +
                         "روایت: شما در آستانه ورود به دالان شرقی عمارت هستید. دیوارهای دالان مه‌آلود و سرد است و از انتهای راهرو صدای برخورد زنجیر به گوش می‌رسد.\n" +
@@ -368,11 +379,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                         "گزینه ۲: گنجینه را بردار و از دریچه مخفی باغ بگریز -> فرار با ثروت طلسم‌شده (بقا و ثروت)\n" +
                         "گزینه ۳: با ساحر پیمان خونی ببند -> تبدیل شدن به شاگرد جاودان تاریکی (سرنوشت ساحری)",
                 status = "PUBLISHED",
-                initial_scene_id = "scene-1-1",
+                initial_scene_id = null,
                 createdAt = null
             ),
             WrongChoiceScenario(
-                id = "scen-2",
+                id = java.util.UUID.nameUUIDFromBytes("scen-2".toByteArray()).toString(),
                 title = "کلاغ‌های معبد سوخته",
                 description = "---مرحله ۱---\n" +
                         "روایت: برج ناقوس قدیمی لرزان معبد پیش روی شماست. صدها کلاغ سیاه روی سقف نشسته‌اند و ناقوس بی‌دلیل به صدا درمی‌آید.\n" +
@@ -389,7 +400,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                         "گزینه ۲: از تونل زیرزمینی مقبره خارج شو -> رسیدن به جنگل آرامش (فرار موفق)\n" +
                         "گزینه ۳: جام نوشداروی ارواح را بنوش -> کسب قدرت دیدن دنیای ماوراء (بقای ماورایی)",
                 status = "PUBLISHED",
-                initial_scene_id = "scene-2-1",
+                initial_scene_id = null,
                 createdAt = null
             )
         )

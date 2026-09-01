@@ -76,23 +76,58 @@ class HorrorRepository(context: Context) {
         }
     }
 
+    private fun isValidUuid(id: String?): Boolean {
+        if (id.isNullOrBlank()) return false
+        return try {
+            java.util.UUID.fromString(id)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun saveGrimFortunesLocalOnly(fortunes: List<GrimFortune>) = withContext(Dispatchers.IO) {
+        dao.upsertGrimFortunes(fortunes.map {
+            CachedGrimFortune(it.id, it.month_index, it.month_name, it.title, it.omen_poem, it.fortune_text, it.doom_level, it.status)
+        })
+    }
+
+    suspend fun saveRealStoriesLocalOnly(stories: List<RealStory>) = withContext(Dispatchers.IO) {
+        dao.upsertRealStories(stories.map {
+            CachedRealStory(it.id, it.title, it.content, it.author, it.source, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count)
+        })
+    }
+
+    suspend fun saveScenariosLocalOnly(scenarios: List<WrongChoiceScenario>) = withContext(Dispatchers.IO) {
+        dao.upsertScenarios(scenarios.map {
+            CachedScenario(it.id, it.title, it.description, it.status, it.initial_scene_id)
+        })
+    }
+
+    suspend fun saveUserSubmissionsLocalOnly(submissions: List<UserStorySubmission>) = withContext(Dispatchers.IO) {
+        dao.upsertUserSubmissions(submissions.map {
+            CachedUserSubmission(it.id, it.title, it.content, it.author_name, it.status, it.admin_notes, it.createdAt)
+        })
+    }
+
     suspend fun saveGrimFortune(fortune: GrimFortune): GrimFortune = withContext(Dispatchers.IO) {
+        val validId = if (isValidUuid(fortune.id)) fortune.id else java.util.UUID.randomUUID().toString()
+        val preparedFortune = fortune.copy(id = validId)
+
         if (SupabaseClientProvider.isConfigured) {
             val map = mutableMapOf<String, Any>(
-                "month_index" to fortune.month_index,
-                "month_name" to fortune.month_name,
-                "title" to fortune.title,
-                "fortune_text" to fortune.fortune_text,
-                "status" to fortune.status
+                "id" to validId,
+                "month_index" to preparedFortune.month_index,
+                "month_name" to preparedFortune.month_name,
+                "title" to preparedFortune.title,
+                "fortune_text" to preparedFortune.fortune_text,
+                "status" to preparedFortune.status
             )
-            if (fortune.id.isNotBlank() && !fortune.id.startsWith("gf-")) {
-                map["id"] = fortune.id
-            }
-            if (fortune.omen_poem != null) map["omen_poem"] = fortune.omen_poem
-            if (fortune.doom_level != null) map["doom_level"] = fortune.doom_level
+            if (preparedFortune.omen_poem != null) map["omen_poem"] = preparedFortune.omen_poem
+            if (preparedFortune.doom_level != null) map["doom_level"] = preparedFortune.doom_level
 
             val resp = api.upsertGrimFortunes(items = listOf(map))
-            if (resp.isSuccessful && resp.body() != null) {
+            if (resp.isSuccessful && !resp.body().isNullOrEmpty()) {
                 val returned = resp.body()!!.first()
                 dao.upsertGrimFortune(
                     CachedGrimFortune(
@@ -121,16 +156,15 @@ class HorrorRepository(context: Context) {
     suspend fun upsertGrimFortunes(fortunes: List<GrimFortune>): Boolean = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
             val list = fortunes.map {
+                val validId = if (isValidUuid(it.id)) it.id else java.util.UUID.randomUUID().toString()
                 val map = mutableMapOf<String, Any>(
+                    "id" to validId,
                     "month_index" to it.month_index,
                     "month_name" to it.month_name,
                     "title" to it.title,
                     "fortune_text" to it.fortune_text,
                     "status" to it.status
                 )
-                if (it.id.isNotBlank() && !it.id.startsWith("gf-")) {
-                    map["id"] = it.id
-                }
                 if (it.omen_poem != null) map["omen_poem"] = it.omen_poem
                 if (it.doom_level != null) map["doom_level"] = it.doom_level
                 map
@@ -159,6 +193,10 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun deleteGrimFortune(id: String) = withContext(Dispatchers.IO) {
+        if (!isValidUuid(id)) {
+            dao.deleteGrimFortune(id)
+            return@withContext
+        }
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.deleteGrimFortune(idEq = "eq.$id")
@@ -245,23 +283,28 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun saveRealStory(story: RealStory): RealStory = withContext(Dispatchers.IO) {
+        val validId = if (isValidUuid(story.id)) story.id else java.util.UUID.randomUUID().toString()
+        val safeRating = kotlin.math.round((story.rating.coerceIn(0f, 5f)) * 10f) / 10.0
+        val preparedStory = story.copy(id = validId, rating = safeRating.toFloat())
+
         if (SupabaseClientProvider.isConfigured) {
-            val map = mutableMapOf<String, Any?>(
-                "id" to story.id,
-                "title" to story.title,
-                "content" to story.content,
-                "author" to if (story.author.isNullOrBlank()) null else story.author,
-                "source" to if (story.source.isNullOrBlank()) null else story.source,
-                "cover_image_url" to if (story.cover_image_url.isNullOrBlank()) null else story.cover_image_url,
-                "tags" to if (story.tags.isNullOrBlank()) null else story.tags,
-                "status" to story.status,
-                "rating" to story.rating,
-                "rating_count" to story.rating_count,
-                "view_count" to story.view_count
+            val map = mutableMapOf<String, Any>(
+                "id" to validId,
+                "title" to preparedStory.title,
+                "content" to preparedStory.content,
+                "status" to preparedStory.status,
+                "rating" to safeRating,
+                "rating_count" to preparedStory.rating_count,
+                "view_count" to preparedStory.view_count
             )
+            if (!preparedStory.author.isNullOrBlank()) map["author"] = preparedStory.author
+            if (!preparedStory.source.isNullOrBlank()) map["source"] = preparedStory.source
+            if (!preparedStory.cover_image_url.isNullOrBlank()) map["cover_image_url"] = preparedStory.cover_image_url
+            if (!preparedStory.tags.isNullOrBlank()) map["tags"] = preparedStory.tags
+
             try {
-                val resp = api.upsertRealStory(item = map as Map<String, Any>)
-                if (resp.isSuccessful && resp.body() != null) {
+                val resp = api.upsertRealStory(item = map)
+                if (resp.isSuccessful && !resp.body().isNullOrEmpty()) {
                     val returned = resp.body()!!.first()
                     dao.upsertRealStory(
                         CachedRealStory(
@@ -280,6 +323,26 @@ class HorrorRepository(context: Context) {
                     )
                     return@withContext returned
                 } else {
+                    val updateResp = api.updateRealStory(idEq = "eq.$validId", item = map)
+                    if (updateResp.isSuccessful && !updateResp.body().isNullOrEmpty()) {
+                        val returned = updateResp.body()!!.first()
+                        dao.upsertRealStory(
+                            CachedRealStory(
+                                returned.id,
+                                returned.title,
+                                returned.content,
+                                returned.author,
+                                returned.source,
+                                returned.cover_image_url,
+                                returned.tags,
+                                returned.status,
+                                returned.rating,
+                                returned.rating_count,
+                                returned.view_count
+                            )
+                        )
+                        return@withContext returned
+                    }
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "saveRealStory failed: $code - $errorBody")
@@ -313,6 +376,10 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun deleteRealStory(id: String) = withContext(Dispatchers.IO) {
+        if (!isValidUuid(id)) {
+            dao.deleteRealStory(id)
+            return@withContext
+        }
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.deleteRealStory(idEq = "eq.$id")
@@ -468,19 +535,23 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun saveScenario(scenario: WrongChoiceScenario): WrongChoiceScenario = withContext(Dispatchers.IO) {
+        val validId = if (isValidUuid(scenario.id)) scenario.id else java.util.UUID.randomUUID().toString()
+        val validInitialSceneId = if (isValidUuid(scenario.initial_scene_id)) scenario.initial_scene_id else null
+        val preparedScenario = scenario.copy(id = validId, initial_scene_id = validInitialSceneId)
+
         if (SupabaseClientProvider.isConfigured) {
             val map = mutableMapOf<String, Any>(
-                "id" to scenario.id,
-                "title" to scenario.title,
-                "description" to scenario.description,
-                "status" to scenario.status
+                "id" to validId,
+                "title" to preparedScenario.title,
+                "description" to preparedScenario.description,
+                "status" to preparedScenario.status
             )
-            if (scenario.initial_scene_id != null) {
-                map["initial_scene_id"] = scenario.initial_scene_id
+            if (validInitialSceneId != null) {
+                map["initial_scene_id"] = validInitialSceneId
             }
             try {
                 val resp = api.upsertScenario(item = map)
-                if (resp.isSuccessful && resp.body() != null) {
+                if (resp.isSuccessful && !resp.body().isNullOrEmpty()) {
                     val returned = resp.body()!!.first()
                     dao.upsertScenario(
                         CachedScenario(
@@ -493,6 +564,20 @@ class HorrorRepository(context: Context) {
                     )
                     return@withContext returned
                 } else {
+                    val updateResp = api.updateScenario(idEq = "eq.$validId", item = map)
+                    if (updateResp.isSuccessful && !updateResp.body().isNullOrEmpty()) {
+                        val returned = updateResp.body()!!.first()
+                        dao.upsertScenario(
+                            CachedScenario(
+                                returned.id,
+                                returned.title,
+                                returned.description,
+                                returned.status,
+                                returned.initial_scene_id
+                            )
+                        )
+                        return@withContext returned
+                    }
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "saveScenario failed: $code - $errorBody")
@@ -508,6 +593,10 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun deleteScenario(id: String) = withContext(Dispatchers.IO) {
+        if (!isValidUuid(id)) {
+            dao.deleteScenario(id)
+            return@withContext
+        }
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.deleteScenario(idEq = "eq.$id")
@@ -594,30 +683,32 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun createUserSubmission(sub: UserStorySubmission): UserStorySubmission = withContext(Dispatchers.IO) {
+        val validId = if (isValidUuid(sub.id)) sub.id else java.util.UUID.randomUUID().toString()
+        val preparedSub = sub.copy(id = validId, status = "PENDING")
+
         if (SupabaseClientProvider.isConfigured) {
             val map = mutableMapOf<String, Any>(
-                "id" to sub.id,
-                "title" to sub.title,
-                "content" to sub.content,
-                "author_name" to sub.author_name,
-                "status" to sub.status
+                "id" to validId,
+                "title" to preparedSub.title,
+                "content" to preparedSub.content,
+                "author_name" to preparedSub.author_name,
+                "status" to "PENDING"
             )
             try {
                 val resp = api.submitUserStory(item = map)
-                if (resp.isSuccessful && resp.body() != null) {
-                    val returned = resp.body()!!.first()
+                if (resp.isSuccessful) {
                     dao.upsertUserSubmission(
                         CachedUserSubmission(
-                            returned.id,
-                            returned.title,
-                            returned.content,
-                            returned.author_name,
-                            returned.status,
-                            returned.admin_notes,
-                            returned.createdAt
+                            preparedSub.id,
+                            preparedSub.title,
+                            preparedSub.content,
+                            preparedSub.author_name,
+                            preparedSub.status,
+                            preparedSub.admin_notes,
+                            preparedSub.createdAt
                         )
                     )
-                    return@withContext returned
+                    return@withContext preparedSub
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
@@ -634,18 +725,21 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun saveUserSubmission(sub: UserStorySubmission): UserStorySubmission = withContext(Dispatchers.IO) {
+        val validId = if (isValidUuid(sub.id)) sub.id else java.util.UUID.randomUUID().toString()
+        val preparedSub = sub.copy(id = validId)
+
         if (SupabaseClientProvider.isConfigured) {
             val map = mutableMapOf<String, Any>(
-                "id" to sub.id,
-                "title" to sub.title,
-                "content" to sub.content,
-                "author_name" to sub.author_name,
-                "status" to sub.status
+                "id" to validId,
+                "title" to preparedSub.title,
+                "content" to preparedSub.content,
+                "author_name" to preparedSub.author_name,
+                "status" to preparedSub.status
             )
-            if (sub.admin_notes != null) map["admin_notes"] = sub.admin_notes
+            if (preparedSub.admin_notes != null) map["admin_notes"] = preparedSub.admin_notes
             try {
                 val resp = api.upsertUserSubmission(item = map)
-                if (resp.isSuccessful && resp.body() != null) {
+                if (resp.isSuccessful && !resp.body().isNullOrEmpty()) {
                     val returned = resp.body()!!.first()
                     dao.upsertUserSubmission(
                         CachedUserSubmission(
@@ -660,6 +754,22 @@ class HorrorRepository(context: Context) {
                     )
                     return@withContext returned
                 } else {
+                    val updateResp = api.updateUserSubmission(idEq = "eq.$validId", item = map)
+                    if (updateResp.isSuccessful && !updateResp.body().isNullOrEmpty()) {
+                        val returned = updateResp.body()!!.first()
+                        dao.upsertUserSubmission(
+                            CachedUserSubmission(
+                                returned.id,
+                                returned.title,
+                                returned.content,
+                                returned.author_name,
+                                returned.status,
+                                returned.admin_notes,
+                                returned.createdAt
+                            )
+                        )
+                        return@withContext returned
+                    }
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "saveUserSubmission failed: $code - $errorBody")
@@ -675,6 +785,10 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun deleteUserSubmission(id: String) = withContext(Dispatchers.IO) {
+        if (!isValidUuid(id)) {
+            dao.deleteUserSubmission(id)
+            return@withContext
+        }
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.deleteUserSubmission(idEq = "eq.$id")
