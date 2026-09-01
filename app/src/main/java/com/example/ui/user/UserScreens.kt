@@ -959,11 +959,11 @@ fun BeautifulStoriesDashboard(
     var storyTab by remember { mutableIntStateOf(0) } // 0 = داستان‌های واقعی, 1 = داستان‌های شما
     var showSubmitDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = بالاترین امتیاز, 2 = حروف الفبا
+    var selectedFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = داغ‌ترین‌ها, 2 = محبوب‌ترین‌ها ♥️
     
     // User Stories tab state
     var userSearchQuery by remember { mutableStateOf("") }
-    var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = بالاترین امتیاز, 2 = حروف الفبا
+    var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = داغ‌ترین‌ها, 2 = محبوب‌ترین‌ها ♥️
     
     var isAmbientPlaying by remember { mutableStateOf(false) }
 
@@ -982,8 +982,8 @@ fun BeautifulStoriesDashboard(
 
         when (selectedFilterIndex) {
             0 -> list.sortedByDescending { it.createdAt ?: it.id } // جدیدترین‌ها ⏳
-            1 -> list.sortedByDescending { it.rating }             // مقدار رای (بالاترین امتیاز) ⭐
-            2 -> list.sortedBy { it.title }                        // حروف الفبا 🔠
+            1 -> list.sortedByDescending { it.view_count }          // داغ‌ترین‌ها 🔥
+            2 -> list.sortedByDescending { it.rating }              // محبوب‌ترین‌ها ♥️
             else -> list
         }
     }
@@ -1005,8 +1005,8 @@ fun BeautifulStoriesDashboard(
 
         when (userFilterIndex) {
             0 -> list.sortedByDescending { it.createdAt ?: it.id } // جدیدترین‌ها ⏳
-            1 -> list.sortedByDescending { it.rating }             // مقدار رای ⭐
-            2 -> list.sortedBy { it.title }                        // حروف الفبا 🔠
+            1 -> list.sortedByDescending { it.view_count }          // داغ‌ترین‌ها 🔥
+            2 -> list.sortedByDescending { it.rating }              // محبوب‌ترین‌ها ♥️
             else -> list
         }
     }
@@ -1237,7 +1237,7 @@ fun BeautifulStoriesDashboard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val filterLabels = listOf("جدیدترین‌ها ⏳", "بالاترین امتیاز ⭐", "حروف الفبا 🔠")
+                    val filterLabels = listOf("جدیدترین‌ها ⏳", "داغ‌ترین‌ها 🔥", "محبوب‌ترین‌ها ♥️")
                     items(filterLabels.size) { idx ->
                         val isSelected = selectedFilterIndex == idx
                         Box(
@@ -1403,7 +1403,7 @@ fun BeautifulStoriesDashboard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val userFilterLabels = listOf("جدیدترین‌ها ⏳", "بالاترین امتیاز ⭐", "حروف الفبا 🔠")
+                        val userFilterLabels = listOf("جدیدترین‌ها ⏳", "داغ‌ترین‌ها 🔥", "محبوب‌ترین‌ها ♥️")
                         items(userFilterLabels.size) { idx ->
                             val isSelected = userFilterIndex == idx
                             Box(
@@ -3014,8 +3014,25 @@ fun StoryReaderScreen(
     }
     var fontSizeMultiplier by remember { mutableFloatStateOf(18f) }
 
-    var userRatingGiven by remember { mutableIntStateOf(0) }
-    var ratingSubmitted by remember { mutableStateOf(false) }
+    val realStoriesState by viewModel.realStoriesList.collectAsState()
+    val userSubmissionsState by viewModel.userSubmissionsList.collectAsState()
+    
+    val liveStory = remember(story, realStoriesState, userSubmissionsState) {
+        val isUserSub = story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true
+        if (isUserSub) {
+            userSubmissionsState.find { it.id == story.id }?.toRealStory() ?: story
+        } else {
+            realStoriesState.find { it.id == story.id } ?: story
+        }
+    }
+
+    val sharedPrefs = remember(context) { context.getSharedPreferences("horror_house_user_ratings", android.content.Context.MODE_PRIVATE) }
+    var userRatingGiven by remember(story.id) {
+        mutableIntStateOf(sharedPrefs.getFloat("rating_${story.id}", 0f).toInt())
+    }
+    var ratingSubmitted by remember(story.id) {
+        mutableStateOf(sharedPrefs.contains("rating_${story.id}"))
+    }
     
     var showFontMenu by remember { mutableStateOf(false) }
     var showSizeMenu by remember { mutableStateOf(false) }
@@ -3290,17 +3307,65 @@ fun StoryReaderScreen(
                             )
                         }
 
-                        // Star stat
+                        // Star stat (displays live average rating)
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(14.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("${story.rating} (${story.rating_count} رأی)", color = Color(0xFFDEC595), fontSize = 11.sp)
+                            Text(String.format(java.util.Locale.US, "%.1f (%d رأی)", liveStory.rating, liveStory.rating_count), color = Color(0xFFDEC595), fontSize = 11.sp)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // INTERACTIVE 5-STAR RATING SYSTEM (Saves to Room DB & Supabase Remote DB)
+                    // 1. AVERAGE RATING STATS (Filled Stars visually showing average)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF0F0B18))
+                            .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.15f), RoundedCornerShape(10.dp))
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "میانگین امتیاز کل کتیبه",
+                                color = Color(0xFF8B8496),
+                                fontSize = 11.sp,
+                                fontFamily = selectedFont.second
+                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                (1..5).forEach { star ->
+                                    // Calculate if filled
+                                    val isFilled = star <= liveStory.rating
+                                    Icon(
+                                        imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
+                                        contentDescription = null,
+                                        tint = if (isFilled) Color(0xFFFFD700) else Color(0xFF4C4556),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = String.format(java.util.Locale.US, "%.1f از ۵ (%d رأی)", liveStory.rating, liveStory.rating_count),
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = selectedFont.second
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // 2. INTERACTIVE USER RATING SYSTEM (Saves to Room DB & Supabase Remote DB)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -3315,7 +3380,7 @@ fun StoryReaderScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = if (ratingSubmitted) "رأی شما با موفقیت در کتیبه‌ها ثبت شد!" else "میزان وحشت و گیرایی این داستان چگونه بود؟",
+                                text = if (ratingSubmitted) "رأی شما با موفقیت ثبت شد!" else "میزان وحشت و گیرایی این داستان از نظر شما چطور بود؟",
                                 color = if (ratingSubmitted) Color(0xFFDEC595) else Color(0xFFEDE8F5),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
@@ -3333,10 +3398,11 @@ fun StoryReaderScreen(
                                                 if (!NetworkUtils.isOnline(context)) {
                                                     android.widget.Toast.makeText(
                                                         context,
-                                                        "❌ اتصال اینترنت برقرار نیست! ثبت رأی در دیتابیس نیازمند اینترنت است.",
+                                                        "❌ اتصال اینترنت برقرار نیست! ثبت رأی نیازمند اینترنت است.",
                                                         android.widget.Toast.LENGTH_LONG
                                                     ).show()
                                                 } else {
+                                                    sharedPrefs.edit().putFloat("rating_${story.id}", star.toFloat()).apply()
                                                     userRatingGiven = star
                                                     ratingSubmitted = true
                                                     HorrorSoundManager.playStarRatingSound(star)
@@ -3359,6 +3425,25 @@ fun StoryReaderScreen(
                                         )
                                     }
                                 }
+                            }
+                            
+                            if (ratingSubmitted) {
+                                Text(
+                                    text = "امتیاز ثبت‌شده شما: $userRatingGiven ستاره از ۵ (حق رأی شما محفوظ است)",
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 11.sp,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    fontFamily = selectedFont.second
+                                )
+                            } else {
+                                Text(
+                                    text = "💡 راهنما: امتیازدهی از راست به چپ افزایش می‌یابد؛ ستاره اول از راست = ۱ (کمترین) 🌟 چپ‌ترین ستاره = ۵ (بیشترین وحشت)",
+                                    color = Color(0xFF8B8496),
+                                    fontSize = 10.sp,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    fontFamily = selectedFont.second,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
                             }
                         }
                     }
