@@ -972,8 +972,36 @@ class HorrorRepository(context: Context) {
                     return@withContext preparedSub
                 }
 
-                val code = if (updateResp.code() != 0) updateResp.code() else resp.code()
-                val errorBody = updateResp.errorBody()?.string() ?: resp.errorBody()?.string() ?: ""
+                // 4. Ultimate Fallback: Try with only the 4 guaranteed core fields (title, content, author_name, status)
+                val safePatchMap = mapOf(
+                    "title" to preparedSub.title,
+                    "content" to preparedSub.content,
+                    "author_name" to preparedSub.author_name,
+                    "status" to preparedSub.status
+                )
+                val updateSafeResp = api.updateUserSubmissionMinimal(idEq = "eq.$validId", item = safePatchMap)
+                if (updateSafeResp.isSuccessful) {
+                    dao.upsertUserSubmission(
+                        CachedUserSubmission(
+                            preparedSub.id,
+                            preparedSub.title,
+                            preparedSub.content,
+                            preparedSub.author_name,
+                            null, // coverImageUrl (since it couldn't be saved on remote)
+                            null, // tags (since it couldn't be saved on remote)
+                            preparedSub.status,
+                            null, // adminNotes
+                            preparedSub.rating,
+                            preparedSub.rating_count,
+                            preparedSub.view_count,
+                            preparedSub.createdAt
+                        )
+                    )
+                    return@withContext preparedSub.copy(cover_image_url = null, tags = null, admin_notes = null)
+                }
+
+                val code = if (updateSafeResp.code() != 0) updateSafeResp.code() else (if (updateResp.code() != 0) updateResp.code() else resp.code())
+                val errorBody = updateSafeResp.errorBody()?.string() ?: updateResp.errorBody()?.string() ?: resp.errorBody()?.string() ?: ""
                 android.util.Log.e("SupabaseError", "saveUserSubmission failed: $code - $errorBody")
                 throw Exception("خطا در ذخیره‌سازی ارسالی در سرور ($code): $errorBody")
             } catch (e: Exception) {

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.*
+import com.example.util.NetworkUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +29,10 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     private val api: SupabaseApi
         get() = SupabaseClientProvider.api
+
+    // Network connectivity monitoring
+    private val _isNetworkOnline = MutableStateFlow(NetworkUtils.isOnline(application))
+    val isNetworkOnline: StateFlow<Boolean> = _isNetworkOnline.asStateFlow()
 
     companion object {
         const val PREF_GEMINI_KEY = "pref_gemini_api_key"
@@ -160,6 +165,16 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     init {
+        // Observe network state continuously
+        viewModelScope.launch {
+            NetworkUtils.observeNetworkState(application).collect { isConnected ->
+                _isNetworkOnline.value = isConnected
+                if (isConnected && (_realStoriesList.value.isEmpty() || _grimFortunesList.value.isEmpty())) {
+                    loadUserData()
+                }
+            }
+        }
+
         // Restore Supabase Config from prefs if saved
         val savedUrl = prefs.getString(PREF_SUPABASE_URL, null)
         val savedKey = prefs.getString(PREF_SUPABASE_ANON_KEY, null)
@@ -180,78 +195,67 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun loadUserData() {
         viewModelScope.launch {
+            if (!NetworkUtils.isOnline(getApplication())) {
+                _errorMessage.value = "⚠️ اتصال اینترنت برقرار نیست. لطفاً اتصال خود را بررسی کنید."
+                // Load previously confirmed local data only if available, without mock fallback mutations
+                val gfs = repository.getGrimFortunes(false)
+                if (gfs.isNotEmpty()) _grimFortunesList.value = gfs
+                val rs = repository.getRealStories(false)
+                if (rs.isNotEmpty()) _realStoriesList.value = rs
+                val scens = repository.getScenarios(false)
+                if (scens.isNotEmpty()) _scenariosList.value = scens
+                val subs = repository.getUserSubmissions(false)
+                if (subs.isNotEmpty()) _userSubmissionsList.value = subs
+                _loading.value = false
+                return@launch
+            }
+
             _loading.value = true
             try {
-                // 1. Fetch Grim Fortunes (Local first, then remote)
-                val gfs = repository.getGrimFortunes(false)
-                if (gfs.isNotEmpty()) {
-                    _grimFortunesList.value = gfs
-                } else {
+                // Fetch strictly from remote database (Supabase)
+                var gfs = repository.getGrimFortunes(true)
+                if (gfs.isEmpty() && SupabaseClientProvider.isConfigured) {
                     val mockGfs = getMockGrimFortunes()
-                    _grimFortunesList.value = mockGfs
-                    repository.saveGrimFortunesLocalOnly(mockGfs)
+                    repository.upsertGrimFortunes(mockGfs)
+                    gfs = repository.getGrimFortunes(true)
                 }
+                _grimFortunesList.value = gfs
 
-                // 2. Fetch Real Stories (Local first, then remote)
-                val rs = repository.getRealStories(false)
-                if (rs.isNotEmpty()) {
-                    _realStoriesList.value = rs
-                } else {
+                var rs = repository.getRealStories(true)
+                if (rs.isEmpty() && SupabaseClientProvider.isConfigured) {
                     val mockRs = getMockRealStories()
-                    _realStoriesList.value = mockRs
-                    repository.saveRealStoriesLocalOnly(mockRs)
-                }
-
-                // 3. Fetch Scenarios (Local first, then remote)
-                val scens = repository.getScenarios(false)
-                if (scens.isNotEmpty()) {
-                    _scenariosList.value = scens
-                } else {
-                    val mockScens = getMockScenarios()
-                    _scenariosList.value = mockScens
-                    repository.saveScenariosLocalOnly(mockScens)
-                }
-
-                // 4. Fetch User Submissions/Confessions
-                val subs = repository.getUserSubmissions(false)
-                if (subs.isNotEmpty()) {
-                    _userSubmissionsList.value = subs
-                } else {
-                    val mockSubs = getMockUserSubmissions()
-                    _userSubmissionsList.value = mockSubs
-                    repository.saveUserSubmissionsLocalOnly(mockSubs)
-                }
-
-                // Background sync from Supabase if configured
-                if (SupabaseClientProvider.isConfigured) {
-                    launch(Dispatchers.IO) {
-                        try {
-                            val refreshedGf = repository.getGrimFortunes(true)
-                            if (refreshedGf.isNotEmpty()) _grimFortunesList.value = refreshedGf
-
-                            val refreshedRs = repository.getRealStories(true)
-                            if (refreshedRs.isNotEmpty()) _realStoriesList.value = refreshedRs
-
-                            val refreshedSc = repository.getScenarios(true)
-                            if (refreshedSc.isNotEmpty()) _scenariosList.value = refreshedSc
-
-                            val refreshedSubs = repository.getUserSubmissions(true)
-                            if (refreshedSubs.isNotEmpty()) _userSubmissionsList.value = refreshedSubs
-
-                            val promptResp = api.getAiPrompts()
-                            if (promptResp.isSuccessful && promptResp.body() != null) {
-                                syncAndSeedPrompts(promptResp.body()!!)
-                            } else if (promptResp.code() == 404 || (promptResp.isSuccessful && promptResp.body().isNullOrEmpty())) {
-                                syncAndSeedPrompts(emptyList())
-                            }
-                        } catch (e: Exception) {
-                            // Offline fallback silently retained
-                        }
+                    mockRs.forEach { story ->
+                        try { repository.saveRealStory(story) } catch (_: Exception) {}
                     }
+                    rs = repository.getRealStories(true)
+                }
+                _realStoriesList.value = rs
+
+                var scens = repository.getScenarios(true)
+                if (scens.isEmpty() && SupabaseClientProvider.isConfigured) {
+                    val mockScens = getMockScenarios()
+                    mockScens.forEach { scen ->
+                        try { repository.saveScenario(scen) } catch (_: Exception) {}
+                    }
+                    scens = repository.getScenarios(true)
+                }
+                _scenariosList.value = scens
+
+                var subs = repository.getUserSubmissions(true)
+                _userSubmissionsList.value = subs
+
+                if (SupabaseClientProvider.isConfigured) {
+                    try {
+                        val promptResp = api.getAiPrompts()
+                        if (promptResp.isSuccessful && promptResp.body() != null) {
+                            syncAndSeedPrompts(promptResp.body()!!)
+                        } else if (promptResp.code() == 404 || (promptResp.isSuccessful && promptResp.body().isNullOrEmpty())) {
+                            syncAndSeedPrompts(emptyList())
+                        }
+                    } catch (_: Exception) {}
                 }
             } catch (e: Exception) {
-                if (_grimFortunesList.value.isEmpty()) _grimFortunesList.value = getMockGrimFortunes()
-                if (_userSubmissionsList.value.isEmpty()) _userSubmissionsList.value = getMockUserSubmissions()
+                _errorMessage.value = "خطا در دریافت داده‌ها از سرور: ${e.localizedMessage}"
             } finally {
                 _loading.value = false
             }
@@ -344,18 +348,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun getMockUserSubmissions(): List<UserStorySubmission> {
-        return listOf(
-            UserStorySubmission(
-                id = java.util.UUID.nameUUIDFromBytes("sub-1".toByteArray()).toString(),
-                title = "صدای قدم‌ها در اتاق زیرشیروانی",
-                content = "هر شب دقیقاً رأس ساعت ۳:۱۵ بامداد، صدای کشیده شدن صندلی چوبی روی کف اتاق زیرشیروانی خانه ما شنیده می‌شود، در حالی که در آن اتاق سال‌هاست قفل است.",
-                author_name = "مریم از تبریز",
-                status = "PUBLISHED",
-                admin_notes = "تطهیر شده و مورد تایید",
-                createdAt = null,
-                updatedAt = null
-            )
-        )
+        return emptyList()
     }
 
     private fun getMockScenarios(): List<WrongChoiceScenario> {
@@ -408,95 +401,89 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun rateStory(storyId: String, userRating: Float) {
         viewModelScope.launch {
-            val currentStories = _realStoriesList.value
-            val target = currentStories.find { it.id == storyId }
-            if (target == null) {
-                repository.submitStoryRatingRemote(storyId, userRating, 4.8f, 18)
+            if (!NetworkUtils.isOnline(getApplication())) {
+                _errorMessage.value = "❌ خطای شبکه: برای ثبت امتیاز، اتصال به اینترنت الزامی است."
                 return@launch
             }
-            val success = repository.submitStoryRatingRemote(storyId, userRating, target.rating, target.rating_count)
-            if (success) {
-                loadUserData()
-            } else {
-                val updatedCount = target.rating_count + 1
-                val calculatedRating = ((target.rating * target.rating_count) + userRating) / updatedCount
-                val updatedStory = target.copy(
-                    rating = String.format(java.util.Locale.US, "%.1f", calculatedRating).toFloat(),
-                    rating_count = updatedCount
-                )
-
-                _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
-                _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
-                repository.saveRealStoryLocalOnly(updatedStory)
+            val currentStories = _realStoriesList.value
+            val target = currentStories.find { it.id == storyId } ?: return@launch
+            _loading.value = true
+            try {
+                val success = repository.submitStoryRatingRemote(storyId, userRating, target.rating, target.rating_count)
+                if (success) {
+                    val refreshed = repository.getRealStories(true)
+                    _realStoriesList.value = refreshed
+                    _adminRealStories.value = refreshed
+                } else {
+                    _errorMessage.value = "خطا در ثبت رأی در سرور دیتابیس. امتیاز ثبت نشد."
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "خطای اتصال به سرور: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
         }
     }
 
     fun incrementStoryViews(storyId: String) {
         viewModelScope.launch {
-            val currentStories = _realStoriesList.value
-            val target = currentStories.find { it.id == storyId }
-            if (target == null) {
-                repository.incrementStoryViewRemote(storyId, 340)
+            if (!NetworkUtils.isOnline(getApplication())) {
                 return@launch
             }
-            val success = repository.incrementStoryViewRemote(storyId, target.view_count)
-            if (success) {
-                loadUserData()
-            } else {
-                val updatedStory = target.copy(view_count = target.view_count + 1)
-
-                _realStoriesList.value = _realStoriesList.value.map { if (it.id == storyId) updatedStory else it }
-                _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedStory else it }
-                repository.saveRealStoryLocalOnly(updatedStory)
-            }
+            val currentStories = _realStoriesList.value
+            val target = currentStories.find { it.id == storyId } ?: return@launch
+            try {
+                val success = repository.incrementStoryViewRemote(storyId, target.view_count)
+                if (success) {
+                    val refreshed = repository.getRealStories(true)
+                    _realStoriesList.value = refreshed
+                    _adminRealStories.value = refreshed
+                }
+            } catch (_: Exception) {}
         }
     }
 
     fun rateUserSubmission(submissionId: String, userRating: Float) {
         viewModelScope.launch {
-            val currentSubmissions = _userSubmissionsList.value
-            val target = currentSubmissions.find { it.id == submissionId }
-            if (target == null) {
-                repository.submitSubmissionRatingRemote(submissionId, userRating, 5.0f, 1)
+            if (!NetworkUtils.isOnline(getApplication())) {
+                _errorMessage.value = "❌ خطای شبکه: برای ثبت امتیاز روایت، اتصال به اینترنت الزامی است."
                 return@launch
             }
-            val success = repository.submitSubmissionRatingRemote(submissionId, userRating, target.rating, target.rating_count)
-            if (success) {
-                loadUserData()
-            } else {
-                val updatedCount = target.rating_count + 1
-                val calculatedRating = ((target.rating * target.rating_count) + userRating) / updatedCount
-                val updatedSub = target.copy(
-                    rating = String.format(java.util.Locale.US, "%.1f", calculatedRating).toFloat(),
-                    rating_count = updatedCount
-                )
-
-                _userSubmissionsList.value = _userSubmissionsList.value.map { if (it.id == submissionId) updatedSub else it }
-                _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submissionId) updatedSub else it }
-                repository.saveUserSubmissionsLocalOnly(listOf(updatedSub))
+            val currentSubmissions = _userSubmissionsList.value
+            val target = currentSubmissions.find { it.id == submissionId } ?: return@launch
+            _loading.value = true
+            try {
+                val success = repository.submitSubmissionRatingRemote(submissionId, userRating, target.rating, target.rating_count)
+                if (success) {
+                    val refreshed = repository.getUserSubmissions(true)
+                    _userSubmissionsList.value = refreshed
+                    _adminSubmissions.value = refreshed
+                } else {
+                    _errorMessage.value = "خطا در ثبت رأی در سرور دیتابیس. امتیاز ثبت نشد."
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "خطای اتصال به سرور: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
             }
         }
     }
 
     fun incrementSubmissionViews(submissionId: String) {
         viewModelScope.launch {
-            val currentSubmissions = _userSubmissionsList.value
-            val target = currentSubmissions.find { it.id == submissionId }
-            if (target == null) {
-                repository.incrementSubmissionViewRemote(submissionId, 1)
+            if (!NetworkUtils.isOnline(getApplication())) {
                 return@launch
             }
-            val success = repository.incrementSubmissionViewRemote(submissionId, target.view_count)
-            if (success) {
-                loadUserData()
-            } else {
-                val updatedSub = target.copy(view_count = target.view_count + 1)
-
-                _userSubmissionsList.value = _userSubmissionsList.value.map { if (it.id == submissionId) updatedSub else it }
-                _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submissionId) updatedSub else it }
-                repository.saveUserSubmissionsLocalOnly(listOf(updatedSub))
-            }
+            val currentSubmissions = _userSubmissionsList.value
+            val target = currentSubmissions.find { it.id == submissionId } ?: return@launch
+            try {
+                val success = repository.incrementSubmissionViewRemote(submissionId, target.view_count)
+                if (success) {
+                    val refreshed = repository.getUserSubmissions(true)
+                    _userSubmissionsList.value = refreshed
+                    _adminSubmissions.value = refreshed
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -744,6 +731,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun submitUserStory(title: String, content: String, author: String, onResult: (Boolean) -> Unit) {
         viewModelScope.launch {
+            if (!NetworkUtils.isOnline(getApplication())) {
+                _errorMessage.value = "❌ اتصال اینترنت برقرار نیست! ارسال روایت نیازمند اتصال فعال به اینترنت است."
+                onResult(false)
+                return@launch
+            }
             val newSub = UserStorySubmission(
                 id = java.util.UUID.randomUUID().toString(),
                 title = title.trim(),
@@ -760,7 +752,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 _adminSubmissions.value = listOf(saved) + _adminSubmissions.value
                 onResult(true)
             } catch (e: Exception) {
-                _errorMessage.value = "خطا در ارسال داستان: ${e.localizedMessage}"
+                _errorMessage.value = "خطا در ارسال داستان به سرور: ${e.localizedMessage}"
                 onResult(false)
             } finally {
                 _loading.value = false

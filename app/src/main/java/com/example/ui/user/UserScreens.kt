@@ -45,6 +45,7 @@ import com.example.R
 import com.example.data.*
 import com.example.ui.theme.*
 import com.example.util.HorrorSoundManager
+import com.example.util.NetworkUtils
 import com.example.viewmodel.HorrorViewModel
 
 // ==========================================
@@ -522,10 +523,13 @@ fun MirrorCracksCanvas(modifier: Modifier = Modifier) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
+    val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     var logoTapCount by remember { mutableIntStateOf(0) }
     var showAiStoryGeneratorDialog by remember { mutableStateOf(false) }
+    var showNoInternetDialog by remember { mutableStateOf(false) }
 
+    val isOnline by viewModel.isNetworkOnline.collectAsState()
     val grimFortunes by viewModel.grimFortunesList.collectAsState()
     val realStories by viewModel.realStoriesList.collectAsState()
     val scenarios by viewModel.scenariosList.collectAsState()
@@ -535,6 +539,44 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
 
     CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
         Scaffold(
+            topBar = {
+                if (!isOnline) {
+                    Surface(
+                        color = Color(0xFF4A0A17),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(
+                                    Icons.Default.WifiOff,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFD700),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "اینترنت متصل نیست (ثبت بازدید و امتیاز متوقف شد)",
+                                    color = Color(0xFFEDE8F5),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            TextButton(
+                                onClick = { viewModel.loadUserData() },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text("اتصال مجدد 🔄", color = Color(0xFFFFD700), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            },
             bottomBar = {
                 val infiniteTransition = rememberInfiniteTransition(label = "bottomBarPulse")
                 val pulseAlpha by infiniteTransition.animateFloat(
@@ -651,7 +693,11 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                                     }
                                 },
                                 onStoryRead = { selected ->
-                                    activeReadingStory = selected
+                                    if (!NetworkUtils.isOnline(context)) {
+                                        showNoInternetDialog = true
+                                    } else {
+                                        activeReadingStory = selected
+                                    }
                                 }
                             )
                             1 -> GrimFortuneScreen(grimFortunes, viewModel)
@@ -665,6 +711,49 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (showNoInternetDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoInternetDialog = false },
+            containerColor = Color(0xFF140C22),
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color(0xFFB8143F))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "عدم اتصال به اینترنت",
+                        color = Color(0xFFDEC595),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            },
+            text = {
+                Text(
+                    text = "برای گشایش این لوح کهن، ثبت بازدید و امتیاز در کتیبه‌های عمارت، اتصال به شبکه اینترنت الزامی است. لطفاً ارتباط خود را متصل نمایید و مجدداً تلاش کنید.",
+                    color = Color(0xFFEDE8F5),
+                    fontSize = 13.sp,
+                    lineHeight = 20.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showNoInternetDialog = false
+                        viewModel.loadUserData()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F))
+                ) {
+                    Text("تلاش مجدد", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoInternetDialog = false }) {
+                    Text("بستن", color = Color(0xFF8B8496))
+                }
+            }
+        )
     }
 
     if (showAiStoryGeneratorDialog) {
@@ -2922,6 +3011,16 @@ fun StoryReaderScreen(
     var showFontMenu by remember { mutableStateOf(false) }
     var showSizeMenu by remember { mutableStateOf(false) }
 
+    LaunchedEffect(story.id) {
+        if (NetworkUtils.isOnline(context)) {
+            if (story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true) {
+                viewModel.incrementSubmissionViews(story.id)
+            } else {
+                viewModel.incrementStoryViews(story.id)
+            }
+        }
+    }
+
     val shareUrl = "https://ai.studio/build/horrorhouse/story?id=${story.id}"
     val deepLinkSchema = "horrorhouse://story?id=${story.id}"
     val shareMessage = """
@@ -3222,23 +3321,22 @@ fun StoryReaderScreen(
                                     IconButton(
                                         onClick = {
                                             if (!ratingSubmitted) {
-                                                userRatingGiven = star
-                                                ratingSubmitted = true
-                                                HorrorSoundManager.playStarRatingSound(star)
-                                                
-                                                // Dynamic rating math: calculate new average rating
-                                                val totalRatingPoints = (story.rating * story.rating_count) + star
-                                                val newRatingCount = story.rating_count + 1
-                                                val newRating = totalRatingPoints / newRatingCount
-                                                
-                                                val updatedStory = story.copy(
-                                                    rating = String.format(java.util.Locale.US, "%.1f", newRating).toFloat(),
-                                                    rating_count = newRatingCount
-                                                )
-                                                if (story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true) {
-                                                    viewModel.rateUserSubmission(story.id, star.toFloat())
+                                                if (!NetworkUtils.isOnline(context)) {
+                                                    android.widget.Toast.makeText(
+                                                        context,
+                                                        "❌ اتصال اینترنت برقرار نیست! ثبت رأی در دیتابیس نیازمند اینترنت است.",
+                                                        android.widget.Toast.LENGTH_LONG
+                                                    ).show()
                                                 } else {
-                                                    viewModel.rateStory(story.id, star.toFloat())
+                                                    userRatingGiven = star
+                                                    ratingSubmitted = true
+                                                    HorrorSoundManager.playStarRatingSound(star)
+                                                    
+                                                    if (story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true) {
+                                                        viewModel.rateUserSubmission(story.id, star.toFloat())
+                                                    } else {
+                                                        viewModel.rateStory(story.id, star.toFloat())
+                                                    }
                                                 }
                                             }
                                         },
