@@ -39,6 +39,23 @@ data class SupabaseUser(
 )
 
 @JsonClass(generateAdapter = true)
+data class AppNotificationDto(
+    val id: String,
+    val title: String,
+    val message: String,
+    @Json(name = "image_url") val image_url: String?,
+    val timestamp: Long
+) {
+    fun toCached(): CachedAppNotification = CachedAppNotification(
+        id = id,
+        title = title,
+        message = message,
+        imageUrl = image_url,
+        timestamp = timestamp
+    )
+}
+
+@JsonClass(generateAdapter = true)
 data class AiGenerationRequest(
     val provider: String,
     val model: String,
@@ -183,6 +200,23 @@ interface SupabaseApi {
     @POST("rest/v1/rpc/submit_submission_rating")
     suspend fun submitSubmissionRating(
         @Body body: Map<String, Any>
+    ): Response<ResponseBody>
+
+    @GET("rest/v1/app_notifications")
+    suspend fun getAppNotifications(
+        @Query("select") select: String = "*",
+        @Query("order") order: String = "timestamp.desc"
+    ): Response<List<AppNotificationDto>>
+
+    @POST("rest/v1/app_notifications")
+    @Headers("Prefer: return=representation")
+    suspend fun createAppNotification(
+        @Body item: Map<String, Any>
+    ): Response<List<AppNotificationDto>>
+
+    @DELETE("rest/v1/app_notifications")
+    suspend fun deleteAppNotification(
+        @Query("id") idEq: String
     ): Response<ResponseBody>
 
     @GET("rest/v1/wrong_choice_scenarios")

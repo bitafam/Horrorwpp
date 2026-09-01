@@ -533,18 +533,54 @@ class HorrorRepository(context: Context) {
 
     // NOTIFICATIONS
     suspend fun getAllNotifications(): List<CachedAppNotification> = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val resp = api.getAppNotifications()
+                if (resp.isSuccessful && resp.body() != null) {
+                    val dtos = resp.body()!!
+                    val cachedList = dtos.map { it.toCached() }
+                    for (item in cachedList) {
+                        dao.upsertNotification(item)
+                    }
+                    return@withContext cachedList
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "getAllNotifications exception", e)
+            }
+        }
         dao.getAllNotifications()
     }
 
     suspend fun upsertNotification(notification: CachedAppNotification) = withContext(Dispatchers.IO) {
         dao.upsertNotification(notification)
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val body = mapOf(
+                    "id" to notification.id,
+                    "title" to notification.title,
+                    "message" to notification.message,
+                    "image_url" to (notification.imageUrl ?: ""),
+                    "timestamp" to notification.timestamp
+                )
+                api.createAppNotification(body)
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "upsertNotification exception", e)
+            }
+        }
     }
 
     suspend fun deleteNotification(id: String) = withContext(Dispatchers.IO) {
         dao.deleteNotification(id)
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                api.deleteAppNotification(idEq = "eq.$id")
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "deleteNotification exception", e)
+            }
+        }
     }
 
-    // ATOMIC RATING & VIEWS (Using REST PATCH to sync encoded stats in tags field)
+    // ATOMIC RATING & VIEWS (Using real Supabase table columns view_count, rating, rating_count)
     suspend fun incrementStoryViewRemote(storyId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         val newCount = currentCount + 1
         // Always save locally first so it is guaranteed to persist and show in UI immediately
@@ -557,11 +593,14 @@ class HorrorRepository(context: Context) {
             try {
                 val currentRating = cached?.rating ?: 5.0f
                 val currentRatingCount = cached?.ratingCount ?: 1
-                val cleanTags = cached?.tags ?: "وحشت, واقعی"
-                val encodedTags = encodeTagsWithStats(cleanTags, currentRating, currentRatingCount, newCount)
-
-                // Only use PATCH to sync to server
-                val resp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
+                val resp = api.updateRealStory(
+                    idEq = "eq.$storyId",
+                    item = mapOf(
+                        "view_count" to newCount,
+                        "rating" to currentRating,
+                        "rating_count" to currentRatingCount
+                    )
+                )
                 return@withContext resp.isSuccessful
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "incrementStoryView exception", e)
@@ -582,12 +621,15 @@ class HorrorRepository(context: Context) {
 
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val cleanTags = cached?.tags ?: "وحشت, واقعی"
                 val currentViewCount = cached?.viewCount ?: 0
-                val encodedTags = encodeTagsWithStats(cleanTags, newRating, newCount, currentViewCount)
-
-                // Only use PATCH to sync to server
-                val resp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
+                val resp = api.updateRealStory(
+                    idEq = "eq.$storyId",
+                    item = mapOf(
+                        "view_count" to currentViewCount,
+                        "rating" to newRating,
+                        "rating_count" to newCount
+                    )
+                )
                 return@withContext resp.isSuccessful
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "submitStoryRating exception", e)
