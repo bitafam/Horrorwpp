@@ -411,6 +411,72 @@ fun AdminStoriesManagerTab(
     var storyToEdit by remember { mutableStateOf<RealStory?>(null) }
     var submissionToPublish by remember { mutableStateOf<UserStorySubmission?>(null) }
 
+    // States for Real Stories search, sorting, sub-tab status
+    var realStatusTab by remember { mutableIntStateOf(0) } // 0: منتشر شده, 1: منتشر نشده
+    var realSearchQuery by remember { mutableStateOf("") }
+    var realSortOption by remember { mutableIntStateOf(0) } // 0: Newest, 1: Rating, 2: Alphabetical
+
+    // States for User Submissions search, sorting, sub-tab status
+    var userStatusTab by remember { mutableIntStateOf(0) } // 0: منتشر شده, 1: منتشر نشده
+    var userSearchQuery by remember { mutableStateOf("") }
+    var userSortOption by remember { mutableIntStateOf(0) } // 0: Newest, 1: Rating, 2: Alphabetical
+
+    // Filter and Sort calculations for Real Stories
+    val filteredRealStories = remember(realStories, realStatusTab, realSearchQuery, realSortOption) {
+        val statusFiltered = if (realStatusTab == 0) {
+            realStories.filter { it.status == "PUBLISHED" }
+        } else {
+            realStories.filter { it.status != "PUBLISHED" }
+        }
+        
+        val searchFiltered = if (realSearchQuery.isBlank()) {
+            statusFiltered
+        } else {
+            val q = realSearchQuery.trim().lowercase()
+            statusFiltered.filter { story ->
+                story.title.lowercase().contains(q) ||
+                story.content.lowercase().contains(q) ||
+                (story.author?.lowercase()?.contains(q) == true) ||
+                (story.source?.lowercase()?.contains(q) == true) ||
+                (story.createdAt?.lowercase()?.contains(q) == true)
+            }
+        }
+        
+        when (realSortOption) {
+            1 -> searchFiltered.sortedByDescending { it.rating }
+            2 -> searchFiltered.sortedBy { it.title }
+            else -> searchFiltered.sortedByDescending { it.createdAt ?: it.id }
+        }
+    }
+
+    // Filter and Sort calculations for User Submissions
+    val filteredSubmissions = remember(submissions, userStatusTab, userSearchQuery, userSortOption) {
+        val statusFiltered = if (userStatusTab == 0) {
+            submissions.filter { it.status == "PUBLISHED" }
+        } else {
+            submissions.filter { it.status != "PUBLISHED" }
+        }
+        
+        val searchFiltered = if (userSearchQuery.isBlank()) {
+            statusFiltered
+        } else {
+            val q = userSearchQuery.trim().lowercase()
+            statusFiltered.filter { sub ->
+                sub.title.lowercase().contains(q) ||
+                sub.content.lowercase().contains(q) ||
+                sub.author_name.lowercase().contains(q) ||
+                (sub.admin_notes?.lowercase()?.contains(q) == true) ||
+                (sub.createdAt?.lowercase()?.contains(q) == true)
+            }
+        }
+        
+        when (userSortOption) {
+            1 -> searchFiltered.sortedByDescending { it.rating }
+            2 -> searchFiltered.sortedBy { it.title }
+            else -> searchFiltered.sortedByDescending { it.createdAt ?: it.id }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -429,13 +495,13 @@ fun AdminStoriesManagerTab(
             Tab(
                 selected = subTab == 0,
                 onClick = { subTab = 0 },
-                text = { Text("داستان‌های واقعی و کاتبان (${realStories.size})", fontWeight = FontWeight.Bold) },
+                text = { Text("داستان‌های واقعی (${realStories.size})", fontWeight = FontWeight.Bold) },
                 icon = { Icon(Icons.Default.MenuBook, contentDescription = null) }
             )
             Tab(
                 selected = subTab == 1,
                 onClick = { subTab = 1 },
-                text = { Text("داستان‌های ارسالی کاربران (${submissions.size})", fontWeight = FontWeight.Bold) },
+                text = { Text("داستان‌های کاربران (${submissions.size})", fontWeight = FontWeight.Bold) },
                 icon = { Icon(Icons.Default.Inbox, contentDescription = null) }
             )
         }
@@ -450,7 +516,7 @@ fun AdminStoriesManagerTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "فهرست داستان‌های منتشر شده با پوستر",
+                    text = "مدیریت داستان‌های واقعی و پوسترها",
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
                 )
                 Button(
@@ -466,13 +532,107 @@ fun AdminStoriesManagerTab(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (realStories.isEmpty()) {
+            // Sub-status tabs (منتشر شده / منتشر نشده)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CryptCardElevated)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf("منتشر شده (${realStories.count { it.status == "PUBLISHED" }})", "منتشر نشده (${realStories.count { it.status != "PUBLISHED" }})").forEachIndexed { index, title ->
+                    val selected = realStatusTab == index
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (selected) BloodCrimson.copy(alpha = 0.8f) else Color.Transparent)
+                            .clickable { realStatusTab = index }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = title,
+                            color = if (selected) Color.White else MutedAsh,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Search and Filter controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = realSearchQuery,
+                    onValueChange = { realSearchQuery = it },
+                    placeholder = { Text("جستجو در عنوان، متن، کاتب...", color = MutedAsh.copy(alpha = 0.6f), fontSize = 12.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(18.dp)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        unfocusedBorderColor = MutedAsh.copy(alpha = 0.3f),
+                        focusedContainerColor = CryptCardElevated.copy(alpha = 0.6f),
+                        unfocusedContainerColor = CryptCardElevated.copy(alpha = 0.3f),
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                )
+
+                var showSortMenu by remember { mutableStateOf(false) }
+                val sortOptions = listOf("جدیدترین‌ها", "مقدار رای", "حروف الفبا")
+                
+                Box {
+                    Button(
+                        onClick = { showSortMenu = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.border(1.dp, MutedAsh.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Sort, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(sortOptions[realSortOption], color = SpectralWhite, fontSize = 11.sp)
+                    }
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false },
+                        modifier = Modifier.background(CryptCardElevated)
+                    ) {
+                        sortOptions.forEachIndexed { index, option ->
+                            DropdownMenuItem(
+                                text = { Text(option, color = SpectralWhite, fontSize = 12.sp) },
+                                onClick = {
+                                    realSortOption = index
+                                    showSortMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (filteredRealStories.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("هیچ داستانی ثبت نشده است.", color = MutedAsh)
+                    Text("هیچ داستانی با این مشخصات یافت نشد.", color = MutedAsh)
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(realStories) { story ->
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(filteredRealStories) { story ->
                         AdminRealStoryHorizontalCard(
                             story = story,
                             onEdit = { storyToEdit = story },
@@ -500,13 +660,107 @@ fun AdminStoriesManagerTab(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (submissions.isEmpty()) {
+            // Sub-status tabs (منتشر شده / منتشر نشده)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CryptCardElevated)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                listOf("منتشر شده (${submissions.count { it.status == "PUBLISHED" }})", "منتشر نشده (${submissions.count { it.status != "PUBLISHED" }})").forEachIndexed { index, title ->
+                    val selected = userStatusTab == index
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (selected) BloodCrimson.copy(alpha = 0.8f) else Color.Transparent)
+                            .clickable { userStatusTab = index }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = title,
+                            color = if (selected) Color.White else MutedAsh,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Search and Filter controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = userSearchQuery,
+                    onValueChange = { userSearchQuery = it },
+                    placeholder = { Text("جستجو در عنوان، متن، نام کاتب...", color = MutedAsh.copy(alpha = 0.6f), fontSize = 12.sp) },
+                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(18.dp)) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        unfocusedBorderColor = MutedAsh.copy(alpha = 0.3f),
+                        focusedContainerColor = CryptCardElevated.copy(alpha = 0.6f),
+                        unfocusedContainerColor = CryptCardElevated.copy(alpha = 0.3f),
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                )
+
+                var showSortMenu by remember { mutableStateOf(false) }
+                val sortOptions = listOf("جدیدترین‌ها", "مقدار رای", "حروف الفبا")
+                
+                Box {
+                    Button(
+                        onClick = { showSortMenu = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.border(1.dp, MutedAsh.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Sort, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(sortOptions[userSortOption], color = SpectralWhite, fontSize = 11.sp)
+                    }
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false },
+                        modifier = Modifier.background(CryptCardElevated)
+                    ) {
+                        sortOptions.forEachIndexed { index, option ->
+                            DropdownMenuItem(
+                                text = { Text(option, color = SpectralWhite, fontSize = 12.sp) },
+                                onClick = {
+                                    userSortOption = index
+                                    showSortMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (filteredSubmissions.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("هیچ داستان ارسالی در انتظار بررسی وجود ندارد.", color = MutedAsh)
+                    Text("هیچ داستان ارسالی با این مشخصات یافت نشد.", color = MutedAsh)
                 }
             } else {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    items(submissions) { sub ->
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    items(filteredSubmissions) { sub ->
                         AdminSubmissionCard(
                             submission = sub,
                             onPublishWithPoster = { submissionToPublish = sub },

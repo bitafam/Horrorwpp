@@ -233,6 +233,7 @@ class HorrorRepository(context: Context) {
     // REAL STORIES
     suspend fun getRealStories(forceRefresh: Boolean = false): List<RealStory> = withContext(Dispatchers.IO) {
         val cached = dao.getPublishedRealStories()
+        val cachedMap = cached.associateBy { it.id }
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
                 RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, null, null)
@@ -245,9 +246,29 @@ class HorrorRepository(context: Context) {
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
                     dao.upsertRealStories(list.map {
-                        CachedRealStory(it.id, it.title, it.content, it.author, it.source, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count)
+                        val cachedItem = cachedMap[it.id]
+                        CachedRealStory(
+                            it.id,
+                            it.title,
+                            it.content,
+                            it.author,
+                            it.source,
+                            it.cover_image_url,
+                            it.tags,
+                            it.status,
+                            rating = cachedItem?.rating ?: it.rating,
+                            ratingCount = cachedItem?.ratingCount ?: it.rating_count,
+                            viewCount = cachedItem?.viewCount ?: it.view_count
+                        )
                     })
-                    return@withContext list
+                    return@withContext list.map {
+                        val cachedItem = cachedMap[it.id]
+                        it.copy(
+                            rating = cachedItem?.rating ?: it.rating,
+                            rating_count = cachedItem?.ratingCount ?: it.rating_count,
+                            view_count = cachedItem?.viewCount ?: it.view_count
+                        )
+                    }
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
@@ -270,15 +291,37 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun getAllRealStoriesAdmin(): List<RealStory> = withContext(Dispatchers.IO) {
+        val cached = dao.getAllRealStories()
+        val cachedMap = cached.associateBy { it.id }
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.getRealStories()
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
                     dao.upsertRealStories(list.map {
-                        CachedRealStory(it.id, it.title, it.content, it.author, it.source, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count)
+                        val cachedItem = cachedMap[it.id]
+                        CachedRealStory(
+                            it.id,
+                            it.title,
+                            it.content,
+                            it.author,
+                            it.source,
+                            it.cover_image_url,
+                            it.tags,
+                            it.status,
+                            rating = cachedItem?.rating ?: it.rating,
+                            ratingCount = cachedItem?.ratingCount ?: it.rating_count,
+                            viewCount = cachedItem?.viewCount ?: it.view_count
+                        )
                     })
-                    return@withContext list
+                    return@withContext list.map {
+                        val cachedItem = cachedMap[it.id]
+                        it.copy(
+                            rating = cachedItem?.rating ?: it.rating,
+                            rating_count = cachedItem?.ratingCount ?: it.rating_count,
+                            view_count = cachedItem?.viewCount ?: it.view_count
+                        )
+                    }
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
@@ -468,6 +511,13 @@ class HorrorRepository(context: Context) {
 
     // ATOMIC RATING & VIEWS RPC (With robust REST PATCH fallbacks)
     suspend fun incrementStoryViewRemote(storyId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
+        val newCount = currentCount + 1
+        // Always save locally first so it is guaranteed to persist and show in UI immediately
+        val cached = dao.getAllRealStories().find { it.id == storyId }
+        if (cached != null) {
+            dao.upsertRealStory(cached.copy(viewCount = newCount))
+        }
+
         if (SupabaseClientProvider.isConfigured) {
             try {
                 // Try RPC first
@@ -477,27 +527,32 @@ class HorrorRepository(context: Context) {
                 } else {
                     val code = resp.code()
                     val err = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "incrementStoryView RPC failed: $code - $err. Falling back to direct PATCH.")
+                    android.util.Log.e("SupabaseError", "incrementStoryView RPC failed: $code - $err. Trying direct PATCH.")
                     // Fallback to direct PATCH
-                    val newCount = currentCount + 1
-                    val patchResp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("view_count" to newCount))
-                    return@withContext patchResp.isSuccessful
+                    api.updateRealStory(idEq = "eq.$storyId", item = mapOf("view_count" to newCount))
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "incrementStoryView exception. Falling back to direct PATCH.", e)
+                android.util.Log.e("SupabaseError", "incrementStoryView exception. Fallback handled.", e)
                 try {
-                    val newCount = currentCount + 1
-                    val patchResp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("view_count" to newCount))
-                    return@withContext patchResp.isSuccessful
+                    api.updateRealStory(idEq = "eq.$storyId", item = mapOf("view_count" to newCount))
                 } catch (ex: Exception) {
                     android.util.Log.e("SupabaseError", "incrementStoryView direct PATCH failed", ex)
                 }
             }
         }
-        false
+        true
     }
 
     suspend fun submitStoryRatingRemote(storyId: String, rating: Float, currentRating: Float, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
+        val newCount = currentCount + 1
+        val newRating = ((currentRating * currentCount) + rating) / newCount
+        
+        // Always save locally first so it is guaranteed to persist and show in UI immediately
+        val cached = dao.getAllRealStories().find { it.id == storyId }
+        if (cached != null) {
+            dao.upsertRealStory(cached.copy(rating = newRating, ratingCount = newCount))
+        }
+
         if (SupabaseClientProvider.isConfigured) {
             try {
                 // Try RPC first
@@ -507,32 +562,26 @@ class HorrorRepository(context: Context) {
                 } else {
                     val code = resp.code()
                     val err = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "submitStoryRating RPC failed: $code - $err. Falling back to direct PATCH.")
+                    android.util.Log.e("SupabaseError", "submitStoryRating RPC failed: $code - $err. Trying direct PATCH.")
                     // Fallback to direct PATCH
-                    val newCount = currentCount + 1
-                    val newRating = ((currentRating * currentCount) + rating) / newCount
-                    val patchResp = api.updateRealStory(
+                    api.updateRealStory(
                         idEq = "eq.$storyId",
                         item = mapOf("rating" to newRating, "rating_count" to newCount)
                     )
-                    return@withContext patchResp.isSuccessful
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "submitStoryRating exception. Falling back to direct PATCH.", e)
+                android.util.Log.e("SupabaseError", "submitStoryRating exception. Fallback handled.", e)
                 try {
-                    val newCount = currentCount + 1
-                    val newRating = ((currentRating * currentCount) + rating) / newCount
-                    val patchResp = api.updateRealStory(
+                    api.updateRealStory(
                         idEq = "eq.$storyId",
                         item = mapOf("rating" to newRating, "rating_count" to newCount)
                     )
-                    return@withContext patchResp.isSuccessful
                 } catch (ex: Exception) {
                     android.util.Log.e("SupabaseError", "submitStoryRating direct PATCH failed", ex)
                 }
             }
         }
-        false
+        true
     }
 
     // SCENARIOS

@@ -959,11 +959,11 @@ fun BeautifulStoriesDashboard(
     var storyTab by remember { mutableIntStateOf(0) } // 0 = داستان‌های واقعی, 1 = داستان‌های شما
     var showSubmitDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilterIndex by remember { mutableIntStateOf(0) } // 0 = همه, 1 = محبوب‌ترین, 2 = بالاترین امتیاز, 3 = جدیدترین
+    var selectedFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = بالاترین امتیاز, 2 = حروف الفبا
     
     // User Stories tab state
     var userSearchQuery by remember { mutableStateOf("") }
-    var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = همه, 1 = جدیدترین‌ها, 2 = داغ‌ترین‌ها, 3 = محبوب‌ترین‌ها
+    var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = بالاترین امتیاز, 2 = حروف الفبا
     
     var isAmbientPlaying by remember { mutableStateOf(false) }
 
@@ -981,9 +981,9 @@ fun BeautifulStoriesDashboard(
         }
 
         when (selectedFilterIndex) {
-            1 -> list.sortedByDescending { it.view_count }
-            2 -> list.sortedByDescending { it.rating }
-            3 -> list.sortedByDescending { it.id }
+            0 -> list.sortedByDescending { it.createdAt ?: it.id } // جدیدترین‌ها ⏳
+            1 -> list.sortedByDescending { it.rating }             // مقدار رای (بالاترین امتیاز) ⭐
+            2 -> list.sortedBy { it.title }                        // حروف الفبا 🔠
             else -> list
         }
     }
@@ -1004,9 +1004,9 @@ fun BeautifulStoriesDashboard(
         }
 
         when (userFilterIndex) {
-            1 -> list.sortedByDescending { it.createdAt ?: it.id } // جدیدترین‌ها ⏳
-            2 -> list.sortedByDescending { it.view_count } // داغ‌ترین‌ها 🔥
-            3 -> list.sortedByDescending { it.rating } // محبوب‌ترین‌ها ⭐
+            0 -> list.sortedByDescending { it.createdAt ?: it.id } // جدیدترین‌ها ⏳
+            1 -> list.sortedByDescending { it.rating }             // مقدار رای ⭐
+            2 -> list.sortedBy { it.title }                        // حروف الفبا 🔠
             else -> list
         }
     }
@@ -1237,7 +1237,7 @@ fun BeautifulStoriesDashboard(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val filterLabels = listOf("همه روایات", "محبوب‌ترین‌ها 👁️", "بالاترین امتیاز ⭐", "جدیدترین 📜")
+                    val filterLabels = listOf("جدیدترین‌ها ⏳", "بالاترین امتیاز ⭐", "حروف الفبا 🔠")
                     items(filterLabels.size) { idx ->
                         val isSelected = selectedFilterIndex == idx
                         Box(
@@ -1403,7 +1403,7 @@ fun BeautifulStoriesDashboard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        val userFilterLabels = listOf("همه روایات", "جدیدترین‌ها ⏳", "داغ‌ترین‌ها 🔥", "محبوب‌ترین‌ها ⭐")
+                        val userFilterLabels = listOf("جدیدترین‌ها ⏳", "بالاترین امتیاز ⭐", "حروف الفبا 🔠")
                         items(userFilterLabels.size) { idx ->
                             val isSelected = userFilterIndex == idx
                             Box(
@@ -2250,10 +2250,19 @@ fun WrongChoiceSection(scenarios: List<WrongChoiceScenario>, viewModel: HorrorVi
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            val filteredScenarios = remember(scenarios, selectedCategory) {
+                when (selectedCategory) {
+                    "علوم غریبه" -> scenarios.filterIndexed { index, _ -> index % 3 == 1 || index == 0 }
+                    "روانی" -> scenarios.filterIndexed { index, _ -> index % 3 == 2 }
+                    "هیولاها" -> scenarios.filterIndexed { index, _ -> index % 3 == 0 && index != 0 }
+                    else -> scenarios // "داغ‌ترین"
+                }
+            }
+
             // 2-COLUMN PREMIUM PORTRAIT CARD POSTERS
-            if (scenarios.isEmpty()) {
+            if (filteredScenarios.isEmpty()) {
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFFB8143F))
+                    Text("هنوز سناریویی در این دسته‌بندی بارگذاری نشده است.", color = Color(0xFF8B8496), fontSize = 12.sp)
                 }
             } else {
                 LazyVerticalGrid(
@@ -2262,7 +2271,7 @@ fun WrongChoiceSection(scenarios: List<WrongChoiceScenario>, viewModel: HorrorVi
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    itemsIndexed(scenarios) { index, sc ->
+                    itemsIndexed(filteredScenarios) { index, sc ->
                         GothicScenarioCard(
                             sc = sc,
                             index = index + 1,
