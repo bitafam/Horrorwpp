@@ -453,6 +453,53 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun rateUserSubmission(submissionId: String, userRating: Float) {
+        viewModelScope.launch {
+            val currentSubmissions = _userSubmissionsList.value
+            val target = currentSubmissions.find { it.id == submissionId }
+            if (target == null) {
+                repository.submitSubmissionRatingRemote(submissionId, userRating, 5.0f, 1)
+                return@launch
+            }
+            val success = repository.submitSubmissionRatingRemote(submissionId, userRating, target.rating, target.rating_count)
+            if (success) {
+                loadUserData()
+            } else {
+                val updatedCount = target.rating_count + 1
+                val calculatedRating = ((target.rating * target.rating_count) + userRating) / updatedCount
+                val updatedSub = target.copy(
+                    rating = String.format(java.util.Locale.US, "%.1f", calculatedRating).toFloat(),
+                    rating_count = updatedCount
+                )
+
+                _userSubmissionsList.value = _userSubmissionsList.value.map { if (it.id == submissionId) updatedSub else it }
+                _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submissionId) updatedSub else it }
+                repository.saveUserSubmissionsLocalOnly(listOf(updatedSub))
+            }
+        }
+    }
+
+    fun incrementSubmissionViews(submissionId: String) {
+        viewModelScope.launch {
+            val currentSubmissions = _userSubmissionsList.value
+            val target = currentSubmissions.find { it.id == submissionId }
+            if (target == null) {
+                repository.incrementSubmissionViewRemote(submissionId, 1)
+                return@launch
+            }
+            val success = repository.incrementSubmissionViewRemote(submissionId, target.view_count)
+            if (success) {
+                loadUserData()
+            } else {
+                val updatedSub = target.copy(view_count = target.view_count + 1)
+
+                _userSubmissionsList.value = _userSubmissionsList.value.map { if (it.id == submissionId) updatedSub else it }
+                _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submissionId) updatedSub else it }
+                repository.saveUserSubmissionsLocalOnly(listOf(updatedSub))
+            }
+        }
+    }
+
     fun setGeminiApiKey(key: String) {
         _geminiApiKey.value = key.trim()
         prefs.edit().putString(PREF_GEMINI_KEY, key.trim()).apply()
@@ -854,34 +901,27 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val title = editedTitle?.ifBlank { null } ?: submission.title
             val content = editedContent?.ifBlank { null } ?: submission.content
-            val author = "کاربر: ${submission.author_name}"
             _loading.value = true
             try {
-                val newStory = RealStory(
-                    id = java.util.UUID.randomUUID().toString(),
+                // Update submission as PUBLISHED with cover image, tags, and edited content
+                val updatedSub = submission.copy(
                     title = title,
                     content = content,
-                    author = author,
-                    source = "اعترافات و رازهای دریافتی کاربران",
                     cover_image_url = coverUrl.ifBlank { null },
-                    tags = "اعترافات, راز کاربران",
+                    tags = "روایت کاربر, اعترافات",
                     status = "PUBLISHED",
-                    createdAt = null,
-                    updatedAt = null
+                    admin_notes = "تایید و منتشر شده در بخش روایات کاربران"
                 )
-                val savedStory = repository.saveRealStory(newStory)
-                _adminRealStories.value = listOf(savedStory) + _adminRealStories.value
-                _realStoriesList.value = listOf(savedStory) + _realStoriesList.value
-                
-                // Approve submission
-                val updatedSub = submission.copy(status = "PUBLISHED", admin_notes = "منتشر شده به عنوان داستان واقعی")
                 val savedSub = repository.saveUserSubmission(updatedSub)
+                
+                // Update admin submissions and public user submissions lists
                 _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submission.id) savedSub else it }
-                _userSubmissionsList.value = _userSubmissionsList.value.filter { it.id != submission.id }
+                val currentList = _userSubmissionsList.value.filter { it.id != submission.id }
+                _userSubmissionsList.value = listOf(savedSub) + currentList
                 
                 onComplete(true)
             } catch (e: Exception) {
-                _errorMessage.value = "خطا در انتشار داستان: ${e.localizedMessage}"
+                _errorMessage.value = "خطا در انتشار داستان کاربر: ${e.localizedMessage}"
                 onComplete(false)
             } finally {
                 _loading.value = false

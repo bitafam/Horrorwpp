@@ -52,8 +52,13 @@ data class CachedUserSubmission(
     val title: String,
     val content: String,
     val authorName: String,
+    val coverImageUrl: String? = null,
+    val tags: String? = null,
     val status: String,
     val adminNotes: String? = null,
+    val rating: Float = 5.0f,
+    val ratingCount: Int = 1,
+    val viewCount: Int = 1,
     val createdAt: String? = null
 )
 
@@ -131,7 +136,7 @@ interface HorrorDao {
         CachedScenario::class,
         CachedUserSubmission::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class HorrorDatabase : RoomDatabase() {

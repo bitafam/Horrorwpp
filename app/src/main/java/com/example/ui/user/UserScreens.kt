@@ -871,6 +871,11 @@ fun BeautifulStoriesDashboard(
     var showSubmitDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilterIndex by remember { mutableIntStateOf(0) } // 0 = همه, 1 = محبوب‌ترین, 2 = بالاترین امتیاز, 3 = جدیدترین
+    
+    // User Stories tab state
+    var userSearchQuery by remember { mutableStateOf("") }
+    var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = همه, 1 = جدیدترین‌ها, 2 = داغ‌ترین‌ها, 3 = محبوب‌ترین‌ها
+    
     var isAmbientPlaying by remember { mutableStateOf(false) }
 
     // Filter and sort real stories
@@ -890,6 +895,29 @@ fun BeautifulStoriesDashboard(
             1 -> list.sortedByDescending { it.view_count }
             2 -> list.sortedByDescending { it.rating }
             3 -> list.sortedByDescending { it.id }
+            else -> list
+        }
+    }
+
+    // Filter and sort user stories
+    val userSubmissions by viewModel.userSubmissionsList.collectAsState(initial = emptyList())
+    val filteredUserSubmissions = remember(userSubmissions, userSearchQuery, userFilterIndex) {
+        val published = userSubmissions.filter { it.status == "PUBLISHED" }
+        var list = if (userSearchQuery.isBlank()) {
+            published
+        } else {
+            val q = userSearchQuery.trim().lowercase()
+            published.filter {
+                it.title.lowercase().contains(q) ||
+                it.content.lowercase().contains(q) ||
+                it.author_name.lowercase().contains(q)
+            }
+        }
+
+        when (userFilterIndex) {
+            1 -> list.sortedByDescending { it.createdAt ?: it.id } // جدیدترین‌ها ⏳
+            2 -> list.sortedByDescending { it.view_count } // داغ‌ترین‌ها 🔥
+            3 -> list.sortedByDescending { it.rating } // محبوب‌ترین‌ها ⭐
             else -> list
         }
     }
@@ -1179,28 +1207,27 @@ fun BeautifulStoriesDashboard(
                     }
                 }
             } else {
-                // TAB 1: USER STORIES / CONFESSIONS
-                val userSubmissions by viewModel.userSubmissionsList.collectAsState(initial = emptyList())
-
+                // TAB 1: USER STORIES / CONFESSIONS (روایات و اعترافات شما)
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // INTRO BANNER
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.3f), cornerRadiusDp = 12f)
                             .background(Color(0xFF0F0918))
-                            .padding(18.dp),
+                            .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(48.dp)
+                                    .size(44.dp)
                                     .background(Color(0xFF170E24), CircleShape)
                                     .border(1.dp, Color(0xFFB8143F), CircleShape),
                                 contentAlignment = Alignment.Center
@@ -1209,11 +1236,11 @@ fun BeautifulStoriesDashboard(
                                     Icons.Default.HourglassEmpty,
                                     contentDescription = null,
                                     tint = Color(0xFFB8143F),
-                                    modifier = Modifier.size(22.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                             Text(
-                                text = "بایگانی داستان‌ها و اعترافات شما",
+                                text = "طومار روایات و اعترافات شما",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     color = Color(0xFFDEC595),
                                     fontWeight = FontWeight.Bold,
@@ -1221,31 +1248,129 @@ fun BeautifulStoriesDashboard(
                                 )
                             )
                             Text(
-                                text = "اسرار و وقایع ماوراء‌الطبیعه‌ای که با عمارت در میان می‌گذارید، پس از بررسی توسط کاتبان، در این طومار برای عموم قرار می‌گیرد.\nبرای ثبت روایت خود از دکمه شناور پایین استفاده کنید.",
+                                text = "روایات وحشتناک ارسالی شما پس از تایید در این بخش منتشر می‌شوند.",
                                 textAlign = TextAlign.Center,
                                 color = Color(0xFF8B8496),
-                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
                                 fontSize = 11.sp
                             )
                         }
                     }
 
-                    if (userSubmissions.isEmpty()) {
+                    // USER STORIES SEARCH BAR
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF0F0918))
+                            .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "جستجو",
+                                tint = Color(0xFFDEC595),
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            OutlinedTextField(
+                                value = userSearchQuery,
+                                onValueChange = { userSearchQuery = it },
+                                placeholder = {
+                                    Text(
+                                        "جستجو در اعترافات و روایات کاربران...",
+                                        color = Color(0xFF6E687A),
+                                        fontSize = 12.sp
+                                    )
+                                },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (userSearchQuery.isNotEmpty()) {
+                                IconButton(onClick = { userSearchQuery = "" }) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        contentDescription = "پاک کردن",
+                                        tint = Color(0xFF8B8496),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // USER STORIES FILTER CHIPS ROW
+                    LazyRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val userFilterLabels = listOf("همه روایات", "جدیدترین‌ها ⏳", "داغ‌ترین‌ها 🔥", "محبوب‌ترین‌ها ⭐")
+                        items(userFilterLabels.size) { idx ->
+                            val isSelected = userFilterIndex == idx
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(if (isSelected) Color(0xFFB8143F) else Color(0xFF140C20))
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) Color(0xFFDEC595) else Color(0xFFDEC595).copy(alpha = 0.2f),
+                                        RoundedCornerShape(20.dp)
+                                    )
+                                    .clickable {
+                                        userFilterIndex = idx
+                                        HorrorSoundManager.playClickSound()
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 7.dp)
+                            ) {
+                                Text(
+                                    text = userFilterLabels[idx],
+                                    color = if (isSelected) Color.White else Color(0xFF8B8496),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    if (filteredUserSubmissions.isEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(120.dp),
+                                .height(140.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "هنوز اعترافی در این لوح ثبت نشده است. اولین راوی باشید!",
+                                text = if (userSearchQuery.isNotEmpty()) "روایتی مطابق با جستجوی شما یافت نشد." else "هنوز روایتی در این بخش منتشر نشده است. با دکمه پایین اولین راوی باشید!",
                                 color = Color(0xFF8B8496),
-                                fontSize = 12.sp
+                                fontSize = 12.sp,
+                                textAlign = TextAlign.Center
                             )
                         }
                     } else {
-                        userSubmissions.forEachIndexed { idx, sub ->
-                            UserSubmissionCard(submission = sub, index = idx)
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            filteredUserSubmissions.forEachIndexed { idx, sub ->
+                                UserStoryItemCard(
+                                    submission = sub,
+                                    index = idx,
+                                    onRead = {
+                                        HorrorSoundManager.playPageTurnSound()
+                                        viewModel.incrementSubmissionViews(sub.id)
+                                        onStoryRead(sub.toRealStory())
+                                    }
+                                )
+                            }
                         }
                     }
                     
@@ -3110,7 +3235,11 @@ fun StoryReaderScreen(
                                                     rating = String.format(java.util.Locale.US, "%.1f", newRating).toFloat(),
                                                     rating_count = newRatingCount
                                                 )
-                                                viewModel.rateStory(story.id, star.toFloat())
+                                                if (story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true) {
+                                                    viewModel.rateUserSubmission(story.id, star.toFloat())
+                                                } else {
+                                                    viewModel.rateStory(story.id, star.toFloat())
+                                                }
                                             }
                                         },
                                         modifier = Modifier.size(36.dp)
@@ -3680,86 +3809,216 @@ fun AIGeneratorDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
 }
 
 @Composable
-fun UserSubmissionCard(submission: com.example.data.UserStorySubmission, index: Int) {
+fun UserStoryItemCard(
+    submission: com.example.data.UserStorySubmission,
+    index: Int,
+    onRead: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.25f), cornerRadiusDp = 12f),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
-        shape = RoundedCornerShape(12.dp)
+            .height(200.dp)
+            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.4f), cornerRadiusDp = 14f)
+            .clickable { onRead() },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF0C0714))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(Color(0xFF1E1428), CircleShape)
-                            .border(1.dp, Color(0xFFB8143F), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = (index + 1).toString(),
-                            color = Color(0xFFDEC595),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "اعتراف مورخ پاییز شوم",
-                        color = Color(0xFF8B8496),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xFF2D936C).copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = "تطهیر شده",
-                        color = Color(0xFF2D936C),
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Full-bleed background image or atmospheric procedural canvas
+            if (!submission.cover_image_url.isNullOrBlank()) {
+                AsyncImage(
+                    model = submission.cover_image_url,
+                    contentDescription = submission.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                when (index % 4) {
+                    0 -> SpookyBellTowerCanvas(modifier = Modifier.fillMaxSize())
+                    1 -> SpookyWindowCanvas(modifier = Modifier.fillMaxSize())
+                    2 -> SpookyCorridorCanvas(modifier = Modifier.fillMaxSize())
+                    else -> SpookySilhouettedPathCanvas(modifier = Modifier.fillMaxSize())
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = submission.title,
-                color = Color(0xFFDEC595),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
+            // Dark transparent gradient overlay covering whole card
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xB3050209),
+                                Color(0xD9080414),
+                                Color(0xF2030107)
+                            )
+                        )
+                    )
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = submission.content,
-                color = Color.White,
-                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 22.sp),
-                fontSize = 12.sp
-            )
-            Spacer(modifier = Modifier.height(10.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+
+            // Card content structure
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
-                    text = "کاتب: ${submission.author_name}",
-                    color = Color(0xFFDEC595).copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                // Top Row: Tag badge + Rating + Views
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Category Tag
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF8A1332).copy(alpha = 0.9f))
+                            .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.HistoryEdu,
+                                contentDescription = null,
+                                tint = Color(0xFFDEC595),
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "روایت شما",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Rating & Views Badges
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Star Rating Display
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xAA160C24))
+                                .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = String.format(java.util.Locale.US, "%.1f", submission.rating),
+                                color = Color(0xFFDEC595),
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        // View Count Display
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xAA160C24))
+                                .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Visibility,
+                                contentDescription = null,
+                                tint = Color(0xFF8B8496),
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            val displayViews = if (submission.view_count >= 1000) "${submission.view_count / 1000}k" else "${submission.view_count}"
+                            Text(
+                                text = displayViews,
+                                color = Color(0xFFD4C8E0),
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+                }
+
+                // Middle: Story Title & Summary
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(
+                        text = submission.title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            color = Color(0xFFDEC595),
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Serif,
+                            fontSize = 15.sp
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = submission.content,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            lineHeight = 18.sp,
+                            fontSize = 11.sp
+                        ),
+                        color = Color(0xFFC7BED4),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                // Bottom: Author info & Read Button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "راوی: ${submission.author_name}",
+                        color = Color(0xFF8B8496),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+
+                    // Prominent Read Action Button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFB8143F))
+                            .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                            .clickable { onRead() }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "گشایش لوح",
+                                color = Color.White,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.Default.AutoStories,
+                                contentDescription = null,
+                                tint = Color(0xFFDEC595),
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+fun UserSubmissionCard(submission: com.example.data.UserStorySubmission, index: Int) {
+    UserStoryItemCard(submission = submission, index = index, onRead = {})
 }

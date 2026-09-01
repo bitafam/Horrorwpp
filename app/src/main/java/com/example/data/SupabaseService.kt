@@ -175,6 +175,16 @@ interface SupabaseApi {
         @Query("id") idEq: String
     ): Response<ResponseBody>
 
+    @POST("rest/v1/rpc/increment_submission_view")
+    suspend fun incrementSubmissionView(
+        @Body body: Map<String, String>
+    ): Response<ResponseBody>
+
+    @POST("rest/v1/rpc/submit_submission_rating")
+    suspend fun submitSubmissionRating(
+        @Body body: Map<String, Any>
+    ): Response<ResponseBody>
+
     @GET("rest/v1/wrong_choice_scenarios")
     suspend fun getScenarios(
         @Query("select") select: String = "*",

@@ -76,11 +76,32 @@ data class UserStorySubmission(
     val title: String,
     val content: String,
     val author_name: String,
+    val cover_image_url: String? = null,
+    val tags: String? = null,
     val status: String, // 'PENDING', 'PUBLISHED', 'REJECTED'
     val admin_notes: String? = null,
+    val rating: Float = 5.0f,
+    val rating_count: Int = 1,
+    val view_count: Int = 1,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null
-)
+) {
+    fun toRealStory(): RealStory = RealStory(
+        id = id,
+        title = title,
+        content = content,
+        author = author_name,
+        source = "روایات و اعترافات شما",
+        cover_image_url = cover_image_url,
+        tags = tags ?: "روایت کاربر, اعترافات",
+        status = status,
+        rating = rating,
+        rating_count = rating_count,
+        view_count = view_count,
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
+}
 
 @JsonClass(generateAdapter = true)
 data class AiPrompt(

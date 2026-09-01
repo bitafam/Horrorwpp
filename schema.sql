@@ -88,8 +88,13 @@ CREATE TABLE IF NOT EXISTS public.user_story_submissions (
     title TEXT NOT NULL,
     content TEXT NOT NULL,
     author_name TEXT NOT NULL,
+    cover_image_url TEXT,
+    tags TEXT,
     status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PUBLISHED', 'REJECTED')),
     admin_notes TEXT,
+    rating NUMERIC(3,2) DEFAULT 5.0,
+    rating_count INTEGER DEFAULT 1,
+    view_count INTEGER DEFAULT 1,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -249,6 +254,7 @@ CREATE POLICY "Allow admin manage choices" ON public.wrong_choice_choices ALL US
 
 -- 7. user_story_submissions Policies
 CREATE POLICY "Allow anyone to insert user stories" ON public.user_story_submissions FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public read published user stories" ON public.user_story_submissions FOR SELECT USING (status = 'PUBLISHED' OR public.is_admin());
 CREATE POLICY "Allow admin full manage submissions" ON public.user_story_submissions ALL USING (public.is_admin());
 
 -- 8. ai_prompts Policies
@@ -258,3 +264,93 @@ CREATE POLICY "Allow admin manage ai_prompts" ON public.ai_prompts ALL USING (pu
 -- 9. ai_providers Policies
 CREATE POLICY "Allow public read ai_providers" ON public.ai_providers FOR SELECT USING (true);
 CREATE POLICY "Allow admin manage ai_providers" ON public.ai_providers ALL USING (public.is_admin());
+
+-- ==========================================
+-- ATOMIC RPC FUNCTIONS FOR VIEWS & RATINGS
+-- ==========================================
+
+-- 1. Increment View for Real Story
+CREATE OR REPLACE FUNCTION public.increment_story_view(story_id UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE public.real_stories
+    SET view_count = COALESCE(view_count, 0) + 1
+    WHERE id = story_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 2. Submit Rating for Real Story
+CREATE OR REPLACE FUNCTION public.submit_story_rating(story_id UUID, new_rating NUMERIC)
+RETURNS void AS $$
+DECLARE
+    current_rating NUMERIC;
+    current_count INTEGER;
+    updated_rating NUMERIC;
+BEGIN
+    SELECT COALESCE(rating, 0), COALESCE(rating_count, 0)
+    INTO current_rating, current_count
+    FROM public.real_stories
+    WHERE id = story_id;
+
+    IF FOUND THEN
+        updated_rating := ROUND(((current_rating * current_count + new_rating) / (current_count + 1)), 2);
+        UPDATE public.real_stories
+        SET rating = updated_rating,
+            rating_count = current_count + 1
+        WHERE id = story_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Increment View for User Story Submission
+CREATE OR REPLACE FUNCTION public.increment_submission_view(submission_id UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE public.user_story_submissions
+    SET view_count = COALESCE(view_count, 0) + 1
+    WHERE id = submission_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 4. Submit Rating for User Story Submission
+CREATE OR REPLACE FUNCTION public.submit_submission_rating(submission_id UUID, new_rating NUMERIC)
+RETURNS void AS $$
+DECLARE
+    current_rating NUMERIC;
+    current_count INTEGER;
+    updated_rating NUMERIC;
+BEGIN
+    SELECT COALESCE(rating, 0), COALESCE(rating_count, 0)
+    INTO current_rating, current_count
+    FROM public.user_story_submissions
+    WHERE id = submission_id;
+
+    IF FOUND THEN
+        updated_rating := ROUND(((current_rating * current_count + new_rating) / (current_count + 1)), 2);
+        UPDATE public.user_story_submissions
+        SET rating = updated_rating,
+            rating_count = current_count + 1
+        WHERE id = submission_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant execution permissions
+GRANT EXECUTE ON FUNCTION public.increment_story_view(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_story_rating(UUID, NUMERIC) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_submission_view(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_submission_rating(UUID, NUMERIC) TO anon, authenticated;
+
+-- =========================================================
+-- MIGRATION SCRIPT (برای اضافه کردن سریع به دیتابیس موجود در Supabase)
+-- =========================================================
+/*
+ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS cover_image_url TEXT;
+ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS tags TEXT;
+ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS rating NUMERIC(3,2) DEFAULT 5.0;
+ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 1;
+ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 1;
+
+DROP POLICY IF EXISTS "Allow public read published user stories" ON public.user_story_submissions;
+CREATE POLICY "Allow public read published user stories" ON public.user_story_submissions FOR SELECT USING (status = 'PUBLISHED' OR public.is_admin());
+*/

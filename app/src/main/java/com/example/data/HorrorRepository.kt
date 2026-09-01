@@ -106,7 +106,20 @@ class HorrorRepository(context: Context) {
 
     suspend fun saveUserSubmissionsLocalOnly(submissions: List<UserStorySubmission>) = withContext(Dispatchers.IO) {
         dao.upsertUserSubmissions(submissions.map {
-            CachedUserSubmission(it.id, it.title, it.content, it.author_name, it.status, it.admin_notes, it.createdAt)
+            CachedUserSubmission(
+                it.id,
+                it.title,
+                it.content,
+                it.author_name,
+                it.cover_image_url,
+                it.tags,
+                it.status,
+                it.admin_notes,
+                it.rating,
+                it.rating_count,
+                it.view_count,
+                it.createdAt
+            )
         })
     }
 
@@ -695,7 +708,20 @@ class HorrorRepository(context: Context) {
         val cached = dao.getPublishedUserSubmissions()
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
-                UserStorySubmission(it.id, it.title, it.content, it.authorName, it.status, it.adminNotes, it.createdAt)
+                UserStorySubmission(
+                    it.id,
+                    it.title,
+                    it.content,
+                    it.authorName,
+                    it.coverImageUrl,
+                    it.tags,
+                    it.status,
+                    it.adminNotes,
+                    it.rating,
+                    it.ratingCount,
+                    it.viewCount,
+                    it.createdAt
+                )
             }
         }
         
@@ -705,7 +731,20 @@ class HorrorRepository(context: Context) {
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
                     dao.upsertUserSubmissions(list.map {
-                        CachedUserSubmission(it.id, it.title, it.content, it.author_name, it.status, it.admin_notes, it.createdAt)
+                        CachedUserSubmission(
+                            it.id,
+                            it.title,
+                            it.content,
+                            it.author_name,
+                            it.cover_image_url,
+                            it.tags,
+                            it.status,
+                            it.admin_notes,
+                            it.rating,
+                            it.rating_count,
+                            it.view_count,
+                            it.createdAt
+                        )
                     })
                     return@withContext list
                 } else {
@@ -722,7 +761,20 @@ class HorrorRepository(context: Context) {
         
         if (cached.isNotEmpty()) {
             cached.map {
-                UserStorySubmission(it.id, it.title, it.content, it.authorName, it.status, it.adminNotes, it.createdAt)
+                UserStorySubmission(
+                    it.id,
+                    it.title,
+                    it.content,
+                    it.authorName,
+                    it.coverImageUrl,
+                    it.tags,
+                    it.status,
+                    it.adminNotes,
+                    it.rating,
+                    it.ratingCount,
+                    it.viewCount,
+                    it.createdAt
+                )
             }
         } else {
             emptyList()
@@ -736,7 +788,20 @@ class HorrorRepository(context: Context) {
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
                     dao.upsertUserSubmissions(list.map {
-                        CachedUserSubmission(it.id, it.title, it.content, it.author_name, it.status, it.admin_notes, it.createdAt)
+                        CachedUserSubmission(
+                            it.id,
+                            it.title,
+                            it.content,
+                            it.author_name,
+                            it.cover_image_url,
+                            it.tags,
+                            it.status,
+                            it.admin_notes,
+                            it.rating,
+                            it.rating_count,
+                            it.view_count,
+                            it.createdAt
+                        )
                     })
                     return@withContext list
                 } else {
@@ -751,7 +816,20 @@ class HorrorRepository(context: Context) {
             }
         }
         dao.getAllUserSubmissions().map {
-            UserStorySubmission(it.id, it.title, it.content, it.authorName, it.status, it.adminNotes, it.createdAt)
+            UserStorySubmission(
+                it.id,
+                it.title,
+                it.content,
+                it.authorName,
+                it.coverImageUrl,
+                it.tags,
+                it.status,
+                it.adminNotes,
+                it.rating,
+                it.ratingCount,
+                it.viewCount,
+                it.createdAt
+            )
         }
     }
 
@@ -776,8 +854,13 @@ class HorrorRepository(context: Context) {
                             preparedSub.title,
                             preparedSub.content,
                             preparedSub.author_name,
+                            preparedSub.cover_image_url,
+                            preparedSub.tags,
                             preparedSub.status,
                             preparedSub.admin_notes,
+                            preparedSub.rating,
+                            preparedSub.rating_count,
+                            preparedSub.view_count,
                             preparedSub.createdAt
                         )
                     )
@@ -799,20 +882,30 @@ class HorrorRepository(context: Context) {
 
     suspend fun saveUserSubmission(sub: UserStorySubmission): UserStorySubmission = withContext(Dispatchers.IO) {
         val validId = if (isValidUuid(sub.id)) sub.id else java.util.UUID.randomUUID().toString()
-        val preparedSub = sub.copy(id = validId)
+        val safeRating = kotlin.math.round((sub.rating.coerceIn(0f, 5f)) * 10f) / 10.0
+        val preparedSub = sub.copy(id = validId, rating = safeRating.toFloat())
 
         if (SupabaseClientProvider.isConfigured) {
-            val map = mutableMapOf<String, Any>(
+            val baseMap = mutableMapOf<String, Any>(
                 "id" to validId,
                 "title" to preparedSub.title,
                 "content" to preparedSub.content,
                 "author_name" to preparedSub.author_name,
                 "status" to preparedSub.status
             )
-            if (preparedSub.admin_notes != null) map["admin_notes"] = preparedSub.admin_notes
+            if (!preparedSub.cover_image_url.isNullOrBlank()) baseMap["cover_image_url"] = preparedSub.cover_image_url
+            if (!preparedSub.tags.isNullOrBlank()) baseMap["tags"] = preparedSub.tags
+            if (preparedSub.admin_notes != null) baseMap["admin_notes"] = preparedSub.admin_notes
+
+            val fullMap = baseMap.toMutableMap().apply {
+                put("rating", safeRating)
+                put("rating_count", preparedSub.rating_count)
+                put("view_count", preparedSub.view_count)
+            }
+
             try {
                 // 1. Try Upsert
-                val resp = api.upsertUserSubmission(item = map)
+                val resp = api.upsertUserSubmission(item = fullMap)
                 if (resp.isSuccessful) {
                     dao.upsertUserSubmission(
                         CachedUserSubmission(
@@ -820,16 +913,21 @@ class HorrorRepository(context: Context) {
                             preparedSub.title,
                             preparedSub.content,
                             preparedSub.author_name,
+                            preparedSub.cover_image_url,
+                            preparedSub.tags,
                             preparedSub.status,
                             preparedSub.admin_notes,
+                            preparedSub.rating,
+                            preparedSub.rating_count,
+                            preparedSub.view_count,
                             preparedSub.createdAt
                         )
                     )
                     return@withContext preparedSub
                 }
 
-                // 2. Try Update (strip id from PATCH body)
-                val patchMap = map.toMutableMap().apply { remove("id") }
+                // 2. Try Update with full map (strip id from PATCH body)
+                val patchMap = fullMap.toMutableMap().apply { remove("id") }
                 val updateResp = api.updateUserSubmissionMinimal(idEq = "eq.$validId", item = patchMap)
                 if (updateResp.isSuccessful) {
                     dao.upsertUserSubmission(
@@ -838,8 +936,36 @@ class HorrorRepository(context: Context) {
                             preparedSub.title,
                             preparedSub.content,
                             preparedSub.author_name,
+                            preparedSub.cover_image_url,
+                            preparedSub.tags,
                             preparedSub.status,
                             preparedSub.admin_notes,
+                            preparedSub.rating,
+                            preparedSub.rating_count,
+                            preparedSub.view_count,
+                            preparedSub.createdAt
+                        )
+                    )
+                    return@withContext preparedSub
+                }
+
+                // 3. Fallback to base map without ratings columns
+                val basePatchMap = baseMap.toMutableMap().apply { remove("id") }
+                val updateBaseResp = api.updateUserSubmissionMinimal(idEq = "eq.$validId", item = basePatchMap)
+                if (updateBaseResp.isSuccessful) {
+                    dao.upsertUserSubmission(
+                        CachedUserSubmission(
+                            preparedSub.id,
+                            preparedSub.title,
+                            preparedSub.content,
+                            preparedSub.author_name,
+                            preparedSub.cover_image_url,
+                            preparedSub.tags,
+                            preparedSub.status,
+                            preparedSub.admin_notes,
+                            preparedSub.rating,
+                            preparedSub.rating_count,
+                            preparedSub.view_count,
                             preparedSub.createdAt
                         )
                     )
@@ -857,6 +983,72 @@ class HorrorRepository(context: Context) {
         } else {
             throw Exception("اتصال به Supabase تنظیم نشده است.")
         }
+    }
+
+    suspend fun incrementSubmissionViewRemote(submissionId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                // Try RPC first
+                val resp = api.incrementSubmissionView(mapOf("submission_id" to submissionId))
+                if (resp.isSuccessful) {
+                    return@withContext true
+                } else {
+                    val code = resp.code()
+                    val err = resp.errorBody()?.string() ?: ""
+                    android.util.Log.e("SupabaseError", "incrementSubmissionView RPC failed: $code - $err. Falling back to direct PATCH.")
+                    val newCount = currentCount + 1
+                    val patchResp = api.updateUserSubmissionMinimal(idEq = "eq.$submissionId", item = mapOf("view_count" to newCount))
+                    return@withContext patchResp.isSuccessful
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "incrementSubmissionView exception. Falling back to direct PATCH.", e)
+                try {
+                    val newCount = currentCount + 1
+                    val patchResp = api.updateUserSubmissionMinimal(idEq = "eq.$submissionId", item = mapOf("view_count" to newCount))
+                    return@withContext patchResp.isSuccessful
+                } catch (ex: Exception) {
+                    android.util.Log.e("SupabaseError", "incrementSubmissionView direct PATCH failed", ex)
+                }
+            }
+        }
+        false
+    }
+
+    suspend fun submitSubmissionRatingRemote(submissionId: String, rating: Float, currentRating: Float, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                // Try RPC first
+                val resp = api.submitSubmissionRating(mapOf("submission_id" to submissionId, "new_rating" to rating))
+                if (resp.isSuccessful) {
+                    return@withContext true
+                } else {
+                    val code = resp.code()
+                    val err = resp.errorBody()?.string() ?: ""
+                    android.util.Log.e("SupabaseError", "submitSubmissionRating RPC failed: $code - $err. Falling back to direct PATCH.")
+                    val newCount = currentCount + 1
+                    val newRating = ((currentRating * currentCount) + rating) / newCount
+                    val patchResp = api.updateUserSubmissionMinimal(
+                        idEq = "eq.$submissionId",
+                        item = mapOf("rating" to newRating, "rating_count" to newCount)
+                    )
+                    return@withContext patchResp.isSuccessful
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "submitSubmissionRating exception. Falling back to direct PATCH.", e)
+                try {
+                    val newCount = currentCount + 1
+                    val newRating = ((currentRating * currentCount) + rating) / newCount
+                    val patchResp = api.updateUserSubmissionMinimal(
+                        idEq = "eq.$submissionId",
+                        item = mapOf("rating" to newRating, "rating_count" to newCount)
+                    )
+                    return@withContext patchResp.isSuccessful
+                } catch (ex: Exception) {
+                    android.util.Log.e("SupabaseError", "submitSubmissionRating direct PATCH failed", ex)
+                }
+            }
+        }
+        false
     }
 
     suspend fun deleteUserSubmission(id: String) = withContext(Dispatchers.IO) {
