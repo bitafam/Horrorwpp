@@ -285,28 +285,36 @@ class HorrorRepository(context: Context) {
     suspend fun saveRealStory(story: RealStory): RealStory = withContext(Dispatchers.IO) {
         val validId = if (isValidUuid(story.id)) story.id else java.util.UUID.randomUUID().toString()
         val safeRating = kotlin.math.round((story.rating.coerceIn(0f, 5f)) * 10f) / 10.0
-        val preparedStory = story.copy(id = validId, rating = safeRating.toFloat())
+        val preparedStory = story.copy(
+            id = validId,
+            rating = safeRating.toFloat(),
+            author = story.author?.ifBlank { "راوی عمارت" } ?: "راوی عمارت",
+            source = story.source?.ifBlank { "روایات واقعی" } ?: "روایات واقعی"
+        )
 
         if (SupabaseClientProvider.isConfigured) {
-            val map = mutableMapOf<String, Any>(
+            val baseMap = mutableMapOf<String, Any>(
                 "id" to validId,
                 "title" to preparedStory.title,
                 "content" to preparedStory.content,
-                "status" to preparedStory.status,
-                "rating" to safeRating,
-                "rating_count" to preparedStory.rating_count,
-                "view_count" to preparedStory.view_count
+                "author" to (preparedStory.author ?: "راوی عمارت"),
+                "source" to (preparedStory.source ?: "روایات واقعی"),
+                "status" to preparedStory.status
             )
-            if (!preparedStory.author.isNullOrBlank()) map["author"] = preparedStory.author
-            if (!preparedStory.source.isNullOrBlank()) map["source"] = preparedStory.source
-            if (!preparedStory.cover_image_url.isNullOrBlank()) map["cover_image_url"] = preparedStory.cover_image_url
-            if (!preparedStory.tags.isNullOrBlank()) map["tags"] = preparedStory.tags
+            if (!preparedStory.cover_image_url.isNullOrBlank()) baseMap["cover_image_url"] = preparedStory.cover_image_url
+            if (!preparedStory.tags.isNullOrBlank()) baseMap["tags"] = preparedStory.tags
+
+            val fullMap = baseMap.toMutableMap().apply {
+                put("rating", safeRating)
+                put("rating_count", preparedStory.rating_count)
+                put("view_count", preparedStory.view_count)
+            }
 
             try {
-                // 1. Try Upsert with List
-                val resp = api.upsertRealStories(items = listOf(map))
-                if (resp.isSuccessful && !resp.body().isNullOrEmpty()) {
-                    val returned = resp.body()!!.first()
+                // 1. Try Upsert with fullMap
+                val resp = api.upsertRealStory(item = fullMap)
+                if (resp.isSuccessful) {
+                    val returned = resp.body()?.firstOrNull() ?: preparedStory
                     dao.upsertRealStory(
                         CachedRealStory(
                             returned.id,
@@ -325,55 +333,74 @@ class HorrorRepository(context: Context) {
                     return@withContext returned
                 }
 
-                // 2. Try Create with List
-                val createResp = api.createRealStories(items = listOf(map))
-                if (createResp.isSuccessful && !createResp.body().isNullOrEmpty()) {
-                    val returned = createResp.body()!!.first()
+                // 2. Try minimal insert with fullMap
+                val minRespFull = api.insertRealStoryMinimal(item = fullMap)
+                if (minRespFull.isSuccessful) {
                     dao.upsertRealStory(
                         CachedRealStory(
-                            returned.id,
-                            returned.title,
-                            returned.content,
-                            returned.author,
-                            returned.source,
-                            returned.cover_image_url,
-                            returned.tags,
-                            returned.status,
-                            returned.rating,
-                            returned.rating_count,
-                            returned.view_count
+                            preparedStory.id,
+                            preparedStory.title,
+                            preparedStory.content,
+                            preparedStory.author,
+                            preparedStory.source,
+                            preparedStory.cover_image_url,
+                            preparedStory.tags,
+                            preparedStory.status,
+                            preparedStory.rating,
+                            preparedStory.rating_count,
+                            preparedStory.view_count
                         )
                     )
-                    return@withContext returned
+                    return@withContext preparedStory
                 }
 
-                // 3. Fallback: Update existing row without "id" in PATCH body
-                val patchMap = map.toMutableMap().apply { remove("id") }
-                val updateResp = api.updateRealStory(idEq = "eq.$validId", item = patchMap)
-                if (updateResp.isSuccessful && !updateResp.body().isNullOrEmpty()) {
-                    val returned = updateResp.body()!!.first()
+                // 3. Try minimal insert with baseMap (excludes optional rating/view columns)
+                val minRespBase = api.insertRealStoryMinimal(item = baseMap)
+                if (minRespBase.isSuccessful) {
                     dao.upsertRealStory(
                         CachedRealStory(
-                            returned.id,
-                            returned.title,
-                            returned.content,
-                            returned.author,
-                            returned.source,
-                            returned.cover_image_url,
-                            returned.tags,
-                            returned.status,
-                            returned.rating,
-                            returned.rating_count,
-                            returned.view_count
+                            preparedStory.id,
+                            preparedStory.title,
+                            preparedStory.content,
+                            preparedStory.author,
+                            preparedStory.source,
+                            preparedStory.cover_image_url,
+                            preparedStory.tags,
+                            preparedStory.status,
+                            preparedStory.rating,
+                            preparedStory.rating_count,
+                            preparedStory.view_count
                         )
                     )
-                    return@withContext returned
+                    return@withContext preparedStory
                 }
 
-                val code = if (resp.code() != 200 && resp.code() != 0) resp.code() else if (createResp.code() != 200 && createResp.code() != 0) createResp.code() else updateResp.code()
-                val errorBody = resp.errorBody()?.string() ?: createResp.errorBody()?.string() ?: updateResp.errorBody()?.string() ?: ""
-                android.util.Log.e("SupabaseError", "saveRealStory failed: $code - $errorBody")
-                throw Exception("خطا در ذخیره‌سازی داستان در سرور: $code")
+                // 4. Try minimal update (PATCH without id)
+                val patchMap = baseMap.toMutableMap().apply { remove("id") }
+                val updateResp = api.updateRealStoryMinimal(idEq = "eq.$validId", item = patchMap)
+                if (updateResp.isSuccessful) {
+                    dao.upsertRealStory(
+                        CachedRealStory(
+                            preparedStory.id,
+                            preparedStory.title,
+                            preparedStory.content,
+                            preparedStory.author,
+                            preparedStory.source,
+                            preparedStory.cover_image_url,
+                            preparedStory.tags,
+                            preparedStory.status,
+                            preparedStory.rating,
+                            preparedStory.rating_count,
+                            preparedStory.view_count
+                        )
+                    )
+                    return@withContext preparedStory
+                }
+
+                val lastCode = if (minRespBase.code() != 0) minRespBase.code() else if (minRespFull.code() != 0) minRespFull.code() else resp.code()
+                val lastError = minRespBase.errorBody()?.string() ?: minRespFull.errorBody()?.string() ?: resp.errorBody()?.string() ?: ""
+                android.util.Log.e("SupabaseError", "saveRealStory failed: $lastCode - $lastError")
+                throw Exception("خطا در ذخیره‌سازی داستان در سرور ($lastCode): $lastError")
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "saveRealStory exception", e)
                 throw e
@@ -784,47 +811,45 @@ class HorrorRepository(context: Context) {
             )
             if (preparedSub.admin_notes != null) map["admin_notes"] = preparedSub.admin_notes
             try {
-                // 1. Try Upsert with List
-                val resp = api.upsertUserSubmissions(items = listOf(map))
-                if (resp.isSuccessful && !resp.body().isNullOrEmpty()) {
-                    val returned = resp.body()!!.first()
+                // 1. Try Upsert
+                val resp = api.upsertUserSubmission(item = map)
+                if (resp.isSuccessful) {
                     dao.upsertUserSubmission(
                         CachedUserSubmission(
-                            returned.id,
-                            returned.title,
-                            returned.content,
-                            returned.author_name,
-                            returned.status,
-                            returned.admin_notes,
-                            returned.createdAt
-                         )
+                            preparedSub.id,
+                            preparedSub.title,
+                            preparedSub.content,
+                            preparedSub.author_name,
+                            preparedSub.status,
+                            preparedSub.admin_notes,
+                            preparedSub.createdAt
+                        )
                     )
-                    return@withContext returned
+                    return@withContext preparedSub
                 }
 
                 // 2. Try Update (strip id from PATCH body)
                 val patchMap = map.toMutableMap().apply { remove("id") }
-                val updateResp = api.updateUserSubmission(idEq = "eq.$validId", item = patchMap)
-                if (updateResp.isSuccessful && !updateResp.body().isNullOrEmpty()) {
-                    val returned = updateResp.body()!!.first()
+                val updateResp = api.updateUserSubmissionMinimal(idEq = "eq.$validId", item = patchMap)
+                if (updateResp.isSuccessful) {
                     dao.upsertUserSubmission(
                         CachedUserSubmission(
-                            returned.id,
-                            returned.title,
-                            returned.content,
-                            returned.author_name,
-                            returned.status,
-                            returned.admin_notes,
-                            returned.createdAt
+                            preparedSub.id,
+                            preparedSub.title,
+                            preparedSub.content,
+                            preparedSub.author_name,
+                            preparedSub.status,
+                            preparedSub.admin_notes,
+                            preparedSub.createdAt
                         )
                     )
-                    return@withContext returned
+                    return@withContext preparedSub
                 }
 
-                val code = if (resp.code() != 200 && resp.code() != 0) resp.code() else updateResp.code()
-                val errorBody = resp.errorBody()?.string() ?: updateResp.errorBody()?.string() ?: ""
+                val code = if (updateResp.code() != 0) updateResp.code() else resp.code()
+                val errorBody = updateResp.errorBody()?.string() ?: resp.errorBody()?.string() ?: ""
                 android.util.Log.e("SupabaseError", "saveUserSubmission failed: $code - $errorBody")
-                throw Exception("خطا در ذخیره‌سازی ارسالی در سرور: $code")
+                throw Exception("خطا در ذخیره‌سازی ارسالی در سرور ($code): $errorBody")
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "saveUserSubmission exception", e)
                 throw e

@@ -93,15 +93,28 @@ interface SupabaseApi {
 
     @POST("rest/v1/real_stories?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
-    suspend fun upsertRealStories(
-        @Body items: List<Map<String, Any>>
+    suspend fun upsertRealStory(
+        @Body item: Map<String, Any>
     ): Response<List<RealStory>>
 
     @POST("rest/v1/real_stories")
+    @Headers("Prefer: return=minimal")
+    suspend fun insertRealStoryMinimal(
+        @Body item: Map<String, Any>
+    ): Response<ResponseBody>
+
+    @POST("rest/v1/real_stories")
     @Headers("Prefer: return=representation")
-    suspend fun createRealStories(
-        @Body items: List<Map<String, Any>>
+    suspend fun createRealStory(
+        @Body item: Map<String, Any>
     ): Response<List<RealStory>>
+
+    @PATCH("rest/v1/real_stories")
+    @Headers("Prefer: return=minimal")
+    suspend fun updateRealStoryMinimal(
+        @Query("id") idEq: String,
+        @Body item: Map<String, Any>
+    ): Response<ResponseBody>
 
     @PATCH("rest/v1/real_stories")
     @Headers("Prefer: return=representation")
@@ -132,14 +145,21 @@ interface SupabaseApi {
     ): Response<List<UserStorySubmission>>
 
     @POST("rest/v1/user_story_submissions?on_conflict=id")
-    @Headers("Prefer: resolution=merge-duplicates,return=representation")
-    suspend fun upsertUserSubmissions(
-        @Body items: List<Map<String, Any>>
-    ): Response<List<UserStorySubmission>>
+    @Headers("Prefer: resolution=merge-duplicates,return=minimal")
+    suspend fun upsertUserSubmission(
+        @Body item: Map<String, Any>
+    ): Response<ResponseBody>
 
     @POST("rest/v1/user_story_submissions")
     @Headers("Prefer: return=minimal")
     suspend fun submitUserStory(
+        @Body item: Map<String, Any>
+    ): Response<ResponseBody>
+
+    @PATCH("rest/v1/user_story_submissions")
+    @Headers("Prefer: return=minimal")
+    suspend fun updateUserSubmissionMinimal(
+        @Query("id") idEq: String,
         @Body item: Map<String, Any>
     ): Response<ResponseBody>
 
