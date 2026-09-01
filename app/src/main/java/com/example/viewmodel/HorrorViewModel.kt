@@ -165,25 +165,49 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.upsertNotification(notification)
             loadNotifications()
-            showSystemNotification(notification.title, notification.message)
+            showSystemNotification(notification.title, notification.message, notification.imageUrl)
         }
     }
 
-    private fun showSystemNotification(title: String, message: String) {
+    private fun showSystemNotification(title: String, message: String, imageUrl: String?) {
         try {
             val context = getApplication<Application>()
             val channelId = "horror_notifications_channel"
             val notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val channel = android.app.NotificationChannel(channelId, "اعلان‌های عمارت", android.app.NotificationManager.IMPORTANCE_HIGH)
+                val channel = android.app.NotificationChannel(
+                    channelId,
+                    "اعلان‌های عمارت ارواح",
+                    android.app.NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "اعلان‌های رسمی و ترسناک عمارت"
+                    enableVibration(true)
+                }
                 notificationManager.createNotificationChannel(channel)
             }
             val builder = androidx.core.app.NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle(title)
+                .setSmallIcon(android.R.drawable.ic_menu_agenda)
+                .setContentTitle("🕯️ $title")
                 .setContentText(message)
+                .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(message))
                 .setAutoCancel(true)
-                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setColor(android.graphics.Color.parseColor("#B8143F"))
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
+
+            if (!imageUrl.isNullOrBlank()) {
+                try {
+                    val url = java.net.URL(imageUrl)
+                    val bitmap = android.graphics.BitmapFactory.decodeStream(url.openConnection().getInputStream())
+                    if (bitmap != null) {
+                        builder.setStyle(
+                            androidx.core.app.NotificationCompat.BigPictureStyle()
+                                .bigPicture(bitmap)
+                                .bigLargeIcon(null as android.graphics.Bitmap?)
+                                .setSummaryText(message)
+                        )
+                    }
+                } catch (_: Exception) {}
+            }
 
             notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
         } catch (_: Exception) {}
