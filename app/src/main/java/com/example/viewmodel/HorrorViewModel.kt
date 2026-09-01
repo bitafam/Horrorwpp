@@ -1065,6 +1065,133 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun draftRealStoriesBulk(ids: List<String>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                ids.forEach { id ->
+                    val story = _adminRealStories.value.find { it.id == id }
+                    if (story != null && story.status == "PUBLISHED") {
+                        try {
+                            val updated = story.copy(status = "DRAFT")
+                            repository.saveRealStory(updated)
+                        } catch (e: Exception) {
+                            android.util.Log.e("BulkDraft", "Failed to draft story: $id", e)
+                        }
+                    }
+                }
+                val refreshed = repository.getAllRealStoriesAdmin()
+                _adminRealStories.value = refreshed
+                _realStoriesList.value = repository.getRealStories(true)
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در پیش‌نویس کردن گروهی داستان‌ها: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun deleteRealStoriesBulk(ids: List<String>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                ids.forEach { id ->
+                    try {
+                        repository.deleteRealStory(id)
+                    } catch (e: Exception) {
+                        android.util.Log.e("BulkDelete", "Failed to delete story: $id", e)
+                    }
+                }
+                val refreshed = repository.getAllRealStoriesAdmin()
+                _adminRealStories.value = refreshed
+                _realStoriesList.value = repository.getRealStories(true)
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در حذف گروهی داستان‌ها: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun publishSubmissionsBulk(ids: List<String>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                ids.forEach { id ->
+                    val sub = _adminSubmissions.value.find { it.id == id }
+                    if (sub != null && sub.status != "PUBLISHED") {
+                        try {
+                            val updated = sub.copy(status = "PUBLISHED")
+                            repository.saveUserSubmission(updated)
+                        } catch (e: Exception) {
+                            android.util.Log.e("BulkPublishSub", "Failed to publish submission: $id", e)
+                        }
+                    }
+                }
+                val refreshed = repository.getAllUserSubmissionsAdmin()
+                _adminSubmissions.value = refreshed
+                _userSubmissionsList.value = repository.getUserSubmissions(true)
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در انتشار گروهی ارسالی‌ها: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun draftSubmissionsBulk(ids: List<String>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                ids.forEach { id ->
+                    val sub = _adminSubmissions.value.find { it.id == id }
+                    if (sub != null && sub.status == "PUBLISHED") {
+                        try {
+                            val updated = sub.copy(status = "DRAFT")
+                            repository.saveUserSubmission(updated)
+                        } catch (e: Exception) {
+                            android.util.Log.e("BulkDraftSub", "Failed to draft submission: $id", e)
+                        }
+                    }
+                }
+                val refreshed = repository.getAllUserSubmissionsAdmin()
+                _adminSubmissions.value = refreshed
+                _userSubmissionsList.value = repository.getUserSubmissions(true)
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در پیش‌نویس کردن گروهی ارسالی‌ها: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun deleteSubmissionsBulk(ids: List<String>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                ids.forEach { id ->
+                    try {
+                        repository.deleteUserSubmission(id)
+                    } catch (e: Exception) {
+                        android.util.Log.e("BulkDeleteSub", "Failed to delete submission: $id", e)
+                    }
+                }
+                val refreshed = repository.getAllUserSubmissionsAdmin()
+                _adminSubmissions.value = refreshed
+                _userSubmissionsList.value = repository.getUserSubmissions(true)
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در حذف گروهی ارسالی‌ها: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
     fun updateRealStory(id: String, title: String, content: String, author: String, source: String, coverUrl: String, tags: String, status: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             _loading.value = true

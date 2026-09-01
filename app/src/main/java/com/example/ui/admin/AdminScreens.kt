@@ -499,15 +499,19 @@ fun AdminStoriesManagerTab(
     var realSortOption by remember { mutableIntStateOf(0) } // 0: Newest, 1: Hottest, 2: Popular
     var showBulkAddDialog by remember { mutableStateOf(false) }
     var selectedRealStoryIds by remember { mutableStateOf(setOf<String>()) }
-
-    LaunchedEffect(realStatusTab, realSearchQuery) {
-        selectedRealStoryIds = emptySet()
-    }
+    var selectedSubmissionIds by remember { mutableStateOf(setOf<String>()) }
 
     // States for User Submissions search, sorting, sub-tab status
     var userStatusTab by remember { mutableIntStateOf(0) } // 0: منتشر شده, 1: منتشر نشده
     var userSearchQuery by remember { mutableStateOf("") }
     var userSortOption by remember { mutableIntStateOf(0) } // 0: Newest, 1: Rating, 2: Alphabetical
+
+    LaunchedEffect(realStatusTab, realSearchQuery) {
+        selectedRealStoryIds = emptySet()
+    }
+    LaunchedEffect(userStatusTab, userSearchQuery) {
+        selectedSubmissionIds = emptySet()
+    }
 
     // Filter and Sort calculations for Real Stories
     val filteredRealStories = remember(realStories, realStatusTab, realSearchQuery, realSortOption) {
@@ -733,60 +737,92 @@ fun AdminStoriesManagerTab(
                     Text("هیچ داستانی با این مشخصات یافت نشد.", color = MutedAsh)
                 }
             } else {
-                if (realStatusTab == 1) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CryptCardElevated)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val allIds = filteredRealStories.map { it.id }.toSet()
+                    val isAllSelected = selectedRealStoryIds.size == allIds.size && allIds.isNotEmpty()
+                    
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CryptCardElevated)
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val allIds = filteredRealStories.map { it.id }.toSet()
-                        val isAllSelected = selectedRealStoryIds.size == allIds.size && allIds.isNotEmpty()
-                        
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.clickable {
-                                selectedRealStoryIds = if (isAllSelected) emptySet() else allIds
-                            }
-                        ) {
-                            Checkbox(
-                                checked = isAllSelected,
-                                onCheckedChange = { checked ->
-                                    selectedRealStoryIds = if (checked) allIds else emptySet()
-                                },
-                                colors = CheckboxDefaults.colors(checkedColor = BloodCrimson, uncheckedColor = MutedAsh)
-                            )
-                            Text(
-                                text = if (isAllSelected) "لغو انتخاب همه" else "انتخاب همه داستان‌های این صفحه",
-                                color = SpectralWhite,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.clickable {
+                            selectedRealStoryIds = if (isAllSelected) emptySet() else allIds
                         }
-                        
-                        if (selectedRealStoryIds.isNotEmpty()) {
+                    ) {
+                        Checkbox(
+                            checked = isAllSelected,
+                            onCheckedChange = { checked ->
+                                selectedRealStoryIds = if (checked) allIds else emptySet()
+                            },
+                            colors = CheckboxDefaults.colors(checkedColor = BloodCrimson, uncheckedColor = MutedAsh)
+                        )
+                        Text(
+                            text = if (isAllSelected) "لغو انتخاب همه" else "انتخاب همه داستان‌های این صفحه",
+                            color = SpectralWhite,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    if (selectedRealStoryIds.isNotEmpty()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (realStatusTab == 1) {
+                                Button(
+                                    onClick = {
+                                        viewModel.publishRealStoriesBulk(selectedRealStoryIds.toList()) {
+                                            selectedRealStoryIds = emptySet()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("انتشار گروهی (${selectedRealStoryIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        viewModel.draftRealStoriesBulk(selectedRealStoryIds.toList()) {
+                                            selectedRealStoryIds = emptySet()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = WarningAmber),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Drafts, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("پیش‌نویس گروهی (${selectedRealStoryIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
                             Button(
                                 onClick = {
-                                    viewModel.publishRealStoriesBulk(selectedRealStoryIds.toList()) {
+                                    viewModel.deleteRealStoriesBulk(selectedRealStoryIds.toList()) {
                                         selectedRealStoryIds = emptySet()
                                     }
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
                                 shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("انتشار گروهی (${selectedRealStoryIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Text("حذف (${selectedRealStoryIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(10.dp))
                 }
+                Spacer(modifier = Modifier.height(10.dp))
 
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -801,7 +837,7 @@ fun AdminStoriesManagerTab(
                                 viewModel.updateRealStoryStatus(story.id, next) {}
                             },
                             onDelete = { viewModel.deleteRealStory(story.id) {} },
-                            showSelection = (realStatusTab == 1),
+                            showSelection = true,
                             isSelected = selectedRealStoryIds.contains(story.id),
                             onSelectionChange = { checked ->
                                 selectedRealStoryIds = if (checked) selectedRealStoryIds + story.id else selectedRealStoryIds - story.id
@@ -921,6 +957,93 @@ fun AdminStoriesManagerTab(
                     Text("هیچ داستان ارسالی با این مشخصات یافت نشد.", color = MutedAsh)
                 }
             } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CryptCardElevated)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val allIds = filteredSubmissions.map { it.id }.toSet()
+                    val isAllSelected = selectedSubmissionIds.size == allIds.size && allIds.isNotEmpty()
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.clickable {
+                            selectedSubmissionIds = if (isAllSelected) emptySet() else allIds
+                        }
+                    ) {
+                        Checkbox(
+                            checked = isAllSelected,
+                            onCheckedChange = { checked ->
+                                selectedSubmissionIds = if (checked) allIds else emptySet()
+                            },
+                            colors = CheckboxDefaults.colors(checkedColor = BloodCrimson, uncheckedColor = MutedAsh)
+                        )
+                        Text(
+                            text = if (isAllSelected) "لغو انتخاب همه" else "انتخاب همه ارسالی‌های این صفحه",
+                            color = SpectralWhite,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    if (selectedSubmissionIds.isNotEmpty()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            if (userStatusTab == 1) {
+                                Button(
+                                    onClick = {
+                                        viewModel.publishSubmissionsBulk(selectedSubmissionIds.toList()) {
+                                            selectedSubmissionIds = emptySet()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("انتشار گروهی (${selectedSubmissionIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Button(
+                                    onClick = {
+                                        viewModel.draftSubmissionsBulk(selectedSubmissionIds.toList()) {
+                                            selectedSubmissionIds = emptySet()
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = WarningAmber),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.Drafts, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("پیش‌نویس گروهی (${selectedSubmissionIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            Button(
+                                onClick = {
+                                    viewModel.deleteSubmissionsBulk(selectedSubmissionIds.toList()) {
+                                        selectedSubmissionIds = emptySet()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("حذف (${selectedSubmissionIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.weight(1f)
@@ -929,8 +1052,16 @@ fun AdminStoriesManagerTab(
                         AdminSubmissionCard(
                             submission = sub,
                             onPublishWithPoster = { submissionToPublish = sub },
-                            onReject = { viewModel.updateSubmissionStatus(sub.id, "REJECTED", "رد شده توسط مدیر") {} },
-                            onDelete = { viewModel.deleteSubmission(sub.id) {} }
+                            onToggleStatus = {
+                                val next = if (sub.status == "PUBLISHED") "DRAFT" else "PUBLISHED"
+                                viewModel.updateSubmissionStatus(sub.id, next, null) {}
+                            },
+                            onDelete = { viewModel.deleteSubmission(sub.id) {} },
+                            showSelection = true,
+                            isSelected = selectedSubmissionIds.contains(sub.id),
+                            onSelectionChange = { checked ->
+                                selectedSubmissionIds = if (checked) selectedSubmissionIds + sub.id else selectedSubmissionIds - sub.id
+                            }
                         )
                     }
                 }
@@ -1425,8 +1556,11 @@ fun AdminRealStoryHorizontalCard(
 fun AdminSubmissionCard(
     submission: UserStorySubmission,
     onPublishWithPoster: () -> Unit,
-    onReject: () -> Unit,
-    onDelete: () -> Unit
+    onToggleStatus: () -> Unit,
+    onDelete: () -> Unit,
+    showSelection: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -1435,46 +1569,67 @@ fun AdminSubmissionCard(
         colors = CardDefaults.cardColors(containerColor = CryptCard),
         shape = RoundedCornerShape(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = submission.title, fontWeight = FontWeight.Bold, color = BloodGlow)
-                Badge(
-                    containerColor = when (submission.status) {
-                        "PUBLISHED" -> SuccessNeon
-                        "REJECTED" -> BloodCrimson
-                        else -> WarningAmber
-                    }
-                ) {
-                    Text(submission.status, color = SpectralWhite, modifier = Modifier.padding(4.dp), fontSize = 10.sp)
-                }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (showSelection) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectionChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = BloodCrimson,
+                        uncheckedColor = MutedAsh
+                    ),
+                    modifier = Modifier.padding(end = 8.dp)
+                )
             }
-            Text(text = "ارسال‌کننده: ${submission.author_name}", style = MaterialTheme.typography.bodySmall, color = MutedAsh)
-            Text(text = submission.content, style = MaterialTheme.typography.bodyMedium, color = SpectralWhite)
 
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = onPublishWithPoster,
-                    colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("تأیید و انتشار با پوستر", fontSize = 12.sp)
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = submission.title, fontWeight = FontWeight.Bold, color = BloodGlow)
+                    Badge(
+                        containerColor = when (submission.status) {
+                            "PUBLISHED" -> SuccessNeon
+                            "REJECTED" -> BloodCrimson
+                            else -> WarningAmber
+                        }
+                    ) {
+                        Text(if (submission.status == "PUBLISHED") "منتشر شده" else "پیش‌نویس", color = SpectralWhite, modifier = Modifier.padding(4.dp), fontSize = 10.sp)
+                    }
                 }
+                Text(text = "ارسال‌کننده: ${submission.author_name}", style = MaterialTheme.typography.bodySmall, color = MutedAsh)
+                Text(text = submission.content, style = MaterialTheme.typography.bodyMedium, color = SpectralWhite, maxLines = 3, overflow = TextOverflow.Ellipsis)
 
-                OutlinedButton(
-                    onClick = onReject,
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text("رد کردن", color = BloodGlow, fontSize = 12.sp)
-                }
+                Spacer(modifier = Modifier.height(6.dp))
 
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = null, tint = MutedAsh)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (submission.status != "PUBLISHED") {
+                        Button(
+                            onClick = onPublishWithPoster,
+                            colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("انتشار با پوستر", fontSize = 11.sp)
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = onToggleStatus,
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(if (submission.status == "PUBLISHED") "پیش‌نویس" else "تأیید سریع", color = SpectralWhite, fontSize = 11.sp)
+                    }
+
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
