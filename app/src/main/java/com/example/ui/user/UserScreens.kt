@@ -967,6 +967,7 @@ fun BeautifulStoriesDashboard(
     var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = داغ‌ترین‌ها, 2 = محبوب‌ترین‌ها ♥️
     
     var isAmbientPlaying by remember { mutableStateOf(false) }
+    val notifications by viewModel.notificationsList.collectAsState(initial = emptyList())
 
     // Filter and sort real stories
     val filteredStories = remember(realStories, searchQuery, selectedFilterIndex) {
@@ -1046,25 +1047,45 @@ fun BeautifulStoriesDashboard(
                         )
                 )
 
-                // Ambient Music Toggle in Banner Top-Right
+                // Notification Bell with Badge
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(12.dp)
-                        .clip(CircleShape)
-                        .background(Color(0x880E0718))
-                        .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f), CircleShape)
-                        .clickable {
-                            viewModel.setAppMode(AppMode.NOTIFICATIONS)
-                        }
-                        .padding(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "اعلان‌ها",
-                        tint = Color(0xFFDEC595),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Color(0x880E0718))
+                            .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f), CircleShape)
+                            .clickable {
+                                viewModel.setAppMode(AppMode.NOTIFICATIONS)
+                            }
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "اعلان‌ها",
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    if (notifications.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .size(16.dp)
+                                .background(Color(0xFFB8143F), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${notifications.size}",
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
 
                 // Dynamic Farsi Typography titles centered at bottom of banner
@@ -3877,6 +3898,18 @@ fun NotificationsScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
                             color = Color.White,
                             fontSize = 14.sp
                         )
+                        if (!notification.imageUrl.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            coil.compose.AsyncImage(
+                                model = notification.imageUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp)
+                                    .clip(RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = java.text.SimpleDateFormat("yyyy/MM/dd HH:mm", java.util.Locale.getDefault()).format(java.util.Date(notification.timestamp)),

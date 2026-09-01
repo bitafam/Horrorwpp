@@ -165,7 +165,28 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.upsertNotification(notification)
             loadNotifications()
+            showSystemNotification(notification.title, notification.message)
         }
+    }
+
+    private fun showSystemNotification(title: String, message: String) {
+        try {
+            val context = getApplication<Application>()
+            val channelId = "horror_notifications_channel"
+            val notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                val channel = android.app.NotificationChannel(channelId, "اعلان‌های عمارت", android.app.NotificationManager.IMPORTANCE_HIGH)
+                notificationManager.createNotificationChannel(channel)
+            }
+            val builder = androidx.core.app.NotificationCompat.Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setAutoCancel(true)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+
+            notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
+        } catch (_: Exception) {}
     }
 
     fun deleteNotification(id: String) {
@@ -423,26 +444,31 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         )
     }
 
+    fun getUserVote(storyId: String): Float {
+        val p = getApplication<Application>().getSharedPreferences("horror_user_votes", android.content.Context.MODE_PRIVATE)
+        return p.getFloat("vote_$storyId", -1f)
+    }
+
     fun rateStory(storyId: String, userRating: Float) {
         viewModelScope.launch {
-            if (!NetworkUtils.isOnline(getApplication())) {
-                _errorMessage.value = "❌ خطای شبکه: برای ثبت امتیاز، اتصال به اینترنت الزامی است."
+            val p = getApplication<Application>().getSharedPreferences("horror_user_votes", android.content.Context.MODE_PRIVATE)
+            val existingVote = p.getFloat("vote_$storyId", -1f)
+            if (existingVote != -1f) {
+                _errorMessage.value = "شما قبلاً به این داستان رای داده‌اید (${existingVote} ستاره)."
                 return@launch
             }
+            p.edit().putFloat("vote_$storyId", userRating).apply()
+
             val currentStories = _realStoriesList.value
             val target = currentStories.find { it.id == storyId } ?: return@launch
             _loading.value = true
             try {
-                val success = repository.submitStoryRatingRemote(storyId, userRating, target.rating, target.rating_count)
-                if (success) {
-                    val refreshed = repository.getRealStories(true)
-                    _realStoriesList.value = refreshed
-                    _adminRealStories.value = refreshed
-                } else {
-                    _errorMessage.value = "خطا در ثبت رأی در سرور دیتابیس. امتیاز ثبت نشد."
-                }
+                repository.submitStoryRatingRemote(storyId, userRating, target.rating, target.rating_count)
+                val refreshed = repository.getRealStories(true)
+                _realStoriesList.value = refreshed
+                _adminRealStories.value = refreshed
             } catch (e: Exception) {
-                _errorMessage.value = "خطای اتصال به سرور: ${e.localizedMessage}"
+                _errorMessage.value = "خطا در ثبت رأی: ${e.localizedMessage}"
             } finally {
                 _loading.value = false
             }
@@ -451,42 +477,37 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun incrementStoryViews(storyId: String) {
         viewModelScope.launch {
-            if (!NetworkUtils.isOnline(getApplication())) {
-                return@launch
-            }
             val currentStories = _realStoriesList.value
             val target = currentStories.find { it.id == storyId } ?: return@launch
             try {
-                val success = repository.incrementStoryViewRemote(storyId, target.view_count)
-                if (success) {
-                    val refreshed = repository.getRealStories(true)
-                    _realStoriesList.value = refreshed
-                    _adminRealStories.value = refreshed
-                }
+                repository.incrementStoryViewRemote(storyId, target.view_count)
+                val refreshed = repository.getRealStories(true)
+                _realStoriesList.value = refreshed
+                _adminRealStories.value = refreshed
             } catch (_: Exception) {}
         }
     }
 
     fun rateUserSubmission(submissionId: String, userRating: Float) {
         viewModelScope.launch {
-            if (!NetworkUtils.isOnline(getApplication())) {
-                _errorMessage.value = "❌ خطای شبکه: برای ثبت امتیاز روایت، اتصال به اینترنت الزامی است."
+            val p = getApplication<Application>().getSharedPreferences("horror_user_votes", android.content.Context.MODE_PRIVATE)
+            val existingVote = p.getFloat("vote_$submissionId", -1f)
+            if (existingVote != -1f) {
+                _errorMessage.value = "شما قبلاً به این روایت رای داده‌اید (${existingVote} ستاره)."
                 return@launch
             }
+            p.edit().putFloat("vote_$submissionId", userRating).apply()
+
             val currentSubmissions = _userSubmissionsList.value
             val target = currentSubmissions.find { it.id == submissionId } ?: return@launch
             _loading.value = true
             try {
-                val success = repository.submitSubmissionRatingRemote(submissionId, userRating, target.rating, target.rating_count)
-                if (success) {
-                    val refreshed = repository.getUserSubmissions(true)
-                    _userSubmissionsList.value = refreshed
-                    _adminSubmissions.value = refreshed
-                } else {
-                    _errorMessage.value = "خطا در ثبت رأی در سرور دیتابیس. امتیاز ثبت نشد."
-                }
+                repository.submitSubmissionRatingRemote(submissionId, userRating, target.rating, target.rating_count)
+                val refreshed = repository.getUserSubmissions(true)
+                _userSubmissionsList.value = refreshed
+                _adminSubmissions.value = refreshed
             } catch (e: Exception) {
-                _errorMessage.value = "خطای اتصال به سرور: ${e.localizedMessage}"
+                _errorMessage.value = "خطا در ثبت رأی: ${e.localizedMessage}"
             } finally {
                 _loading.value = false
             }
@@ -495,18 +516,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun incrementSubmissionViews(submissionId: String) {
         viewModelScope.launch {
-            if (!NetworkUtils.isOnline(getApplication())) {
-                return@launch
-            }
             val currentSubmissions = _userSubmissionsList.value
             val target = currentSubmissions.find { it.id == submissionId } ?: return@launch
             try {
-                val success = repository.incrementSubmissionViewRemote(submissionId, target.view_count)
-                if (success) {
-                    val refreshed = repository.getUserSubmissions(true)
-                    _userSubmissionsList.value = refreshed
-                    _adminSubmissions.value = refreshed
-                }
+                repository.incrementSubmissionViewRemote(submissionId, target.view_count)
+                val refreshed = repository.getUserSubmissions(true)
+                _userSubmissionsList.value = refreshed
+                _adminSubmissions.value = refreshed
             } catch (_: Exception) {}
         }
     }
