@@ -93,14 +93,14 @@ interface SupabaseApi {
 
     @POST("rest/v1/real_stories?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
-    suspend fun upsertRealStory(
-        @Body item: Map<String, Any>
+    suspend fun upsertRealStories(
+        @Body items: List<Map<String, Any>>
     ): Response<List<RealStory>>
 
     @POST("rest/v1/real_stories")
     @Headers("Prefer: return=representation")
-    suspend fun createRealStory(
-        @Body item: Map<String, Any>
+    suspend fun createRealStories(
+        @Body items: List<Map<String, Any>>
     ): Response<List<RealStory>>
 
     @PATCH("rest/v1/real_stories")
@@ -133,8 +133,8 @@ interface SupabaseApi {
 
     @POST("rest/v1/user_story_submissions?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
-    suspend fun upsertUserSubmission(
-        @Body item: Map<String, Any>
+    suspend fun upsertUserSubmissions(
+        @Body items: List<Map<String, Any>>
     ): Response<List<UserStorySubmission>>
 
     @POST("rest/v1/user_story_submissions")
@@ -163,14 +163,14 @@ interface SupabaseApi {
 
     @POST("rest/v1/wrong_choice_scenarios?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
-    suspend fun upsertScenario(
-        @Body item: Map<String, Any>
+    suspend fun upsertScenarios(
+        @Body items: List<Map<String, Any>>
     ): Response<List<WrongChoiceScenario>>
 
     @POST("rest/v1/wrong_choice_scenarios")
     @Headers("Prefer: return=representation")
-    suspend fun createScenario(
-        @Body item: Map<String, Any>
+    suspend fun createScenarios(
+        @Body items: List<Map<String, Any>>
     ): Response<List<WrongChoiceScenario>>
 
     @PATCH("rest/v1/wrong_choice_scenarios")
