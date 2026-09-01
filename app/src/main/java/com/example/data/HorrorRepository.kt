@@ -580,7 +580,7 @@ class HorrorRepository(context: Context) {
         }
     }
 
-    // ATOMIC RATING & VIEWS (Using real Supabase table columns view_count, rating, rating_count)
+    // ATOMIC RATING & VIEWS (Using tag encoding to persist ratings and view counts in Supabase real_stories)
     suspend fun incrementStoryViewRemote(storyId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         val newCount = currentCount + 1
         // Always save locally first so it is guaranteed to persist and show in UI immediately
@@ -593,13 +593,12 @@ class HorrorRepository(context: Context) {
             try {
                 val currentRating = cached?.rating ?: 5.0f
                 val currentRatingCount = cached?.ratingCount ?: 1
-                val resp = api.updateRealStory(
+                val cleanTags = cached?.tags ?: "روایات واقعی, ترس"
+                val encodedTags = encodeTagsWithStats(cleanTags, currentRating, currentRatingCount, newCount)
+
+                val resp = api.updateRealStoryMinimal(
                     idEq = "eq.$storyId",
-                    item = mapOf(
-                        "view_count" to newCount,
-                        "rating" to currentRating,
-                        "rating_count" to currentRatingCount
-                    )
+                    item = mapOf("tags" to encodedTags)
                 )
                 return@withContext resp.isSuccessful
             } catch (e: Exception) {
@@ -622,13 +621,12 @@ class HorrorRepository(context: Context) {
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val currentViewCount = cached?.viewCount ?: 0
-                val resp = api.updateRealStory(
+                val cleanTags = cached?.tags ?: "روایات واقعی, ترس"
+                val encodedTags = encodeTagsWithStats(cleanTags, newRating, newCount, currentViewCount)
+
+                val resp = api.updateRealStoryMinimal(
                     idEq = "eq.$storyId",
-                    item = mapOf(
-                        "view_count" to currentViewCount,
-                        "rating" to newRating,
-                        "rating_count" to newCount
-                    )
+                    item = mapOf("tags" to encodedTags)
                 )
                 return@withContext resp.isSuccessful
             } catch (e: Exception) {

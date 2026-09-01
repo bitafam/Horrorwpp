@@ -3778,8 +3778,8 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
                             viewModel.submitUserStory(title.trim(), content.trim(), author.ifBlank { "ناشناس" }) { success ->
                                 isSubmitting = false
                                 if (success) {
-                                    submitted = true
                                     showSuccessDialog = true
+                                    submitted = true
                                 } else {
                                     errorMessage = "خطا در ثبت داستان، لطفاً اتصال اینترنت را بررسی کنید."
                                 }
