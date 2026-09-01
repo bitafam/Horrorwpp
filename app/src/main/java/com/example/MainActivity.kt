@@ -14,9 +14,16 @@ import androidx.compose.ui.unit.LayoutDirection
 import com.example.ui.admin.AdminLoginScreen
 import com.example.ui.admin.AdminPanelScreen
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.user.NotificationsScreen
 import com.example.ui.user.UserMainScreen
 import com.example.viewmodel.AppMode
 import com.example.viewmodel.HorrorViewModel
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 
 class MainActivity : ComponentActivity() {
     private val viewModel: HorrorViewModel by viewModels()
@@ -36,6 +43,17 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun HorrorAppRoot(viewModel: HorrorViewModel) {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = {}
+    )
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+    
     val appMode by viewModel.appMode.collectAsState()
 
     when (appMode) {
@@ -59,6 +77,14 @@ fun HorrorAppRoot(viewModel: HorrorViewModel) {
             AdminPanelScreen(
                 viewModel = viewModel,
                 onExitAdmin = {
+                    viewModel.setAppMode(AppMode.USER)
+                }
+            )
+        }
+        AppMode.NOTIFICATIONS -> {
+            NotificationsScreen(
+                viewModel = viewModel,
+                onBack = {
                     viewModel.setAppMode(AppMode.USER)
                 }
             )

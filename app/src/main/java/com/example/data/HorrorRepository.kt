@@ -544,7 +544,7 @@ class HorrorRepository(context: Context) {
         dao.deleteNotification(id)
     }
 
-    // ATOMIC RATING & VIEWS RPC (With robust REST PATCH fallbacks)
+    // ATOMIC RATING & VIEWS (Using REST PATCH to sync encoded stats in tags field)
     suspend fun incrementStoryViewRemote(storyId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
         val newCount = currentCount + 1
         // Always save locally first so it is guaranteed to persist and show in UI immediately
@@ -560,30 +560,11 @@ class HorrorRepository(context: Context) {
                 val cleanTags = cached?.tags ?: "وحشت, واقعی"
                 val encodedTags = encodeTagsWithStats(cleanTags, currentRating, currentRatingCount, newCount)
 
-                // Try RPC first
-                val resp = api.incrementStoryView(mapOf("story_id" to storyId))
-                if (resp.isSuccessful) {
-                    // Try to also sync the encoded tags metadata to server
-                    api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
-                    return@withContext true
-                } else {
-                    val code = resp.code()
-                    val err = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "incrementStoryView RPC failed: $code - $err. Trying direct PATCH.")
-                    // Fallback to direct PATCH using the tags field to sync views count
-                    api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
-                }
+                // Only use PATCH to sync to server
+                val resp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
+                return@withContext resp.isSuccessful
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "incrementStoryView exception. Fallback handled.", e)
-                try {
-                    val currentRating = cached?.rating ?: 5.0f
-                    val currentRatingCount = cached?.ratingCount ?: 1
-                    val cleanTags = cached?.tags ?: "وحشت, واقعی"
-                    val encodedTags = encodeTagsWithStats(cleanTags, currentRating, currentRatingCount, newCount)
-                    api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
-                } catch (ex: Exception) {
-                    android.util.Log.e("SupabaseError", "incrementStoryView direct PATCH failed", ex)
-                }
+                android.util.Log.e("SupabaseError", "incrementStoryView exception", e)
             }
         }
         true
@@ -605,34 +586,11 @@ class HorrorRepository(context: Context) {
                 val currentViewCount = cached?.viewCount ?: 0
                 val encodedTags = encodeTagsWithStats(cleanTags, newRating, newCount, currentViewCount)
 
-                // Try RPC first
-                val resp = api.submitStoryRating(mapOf("story_id" to storyId, "new_rating" to rating))
-                if (resp.isSuccessful) {
-                    api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
-                    return@withContext true
-                } else {
-                    val code = resp.code()
-                    val err = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "submitStoryRating RPC failed: $code - $err. Trying direct PATCH.")
-                    // Fallback to direct PATCH using the tags field
-                    api.updateRealStory(
-                        idEq = "eq.$storyId",
-                        item = mapOf("tags" to encodedTags)
-                    )
-                }
+                // Only use PATCH to sync to server
+                val resp = api.updateRealStory(idEq = "eq.$storyId", item = mapOf("tags" to encodedTags))
+                return@withContext resp.isSuccessful
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "submitStoryRating exception. Fallback handled.", e)
-                try {
-                    val cleanTags = cached?.tags ?: "وحشت, واقعی"
-                    val currentViewCount = cached?.viewCount ?: 0
-                    val encodedTags = encodeTagsWithStats(cleanTags, newRating, newCount, currentViewCount)
-                    api.updateRealStory(
-                        idEq = "eq.$storyId",
-                        item = mapOf("tags" to encodedTags)
-                    )
-                } catch (ex: Exception) {
-                    android.util.Log.e("SupabaseError", "submitStoryRating direct PATCH failed", ex)
-                }
+                android.util.Log.e("SupabaseError", "submitStoryRating exception", e)
             }
         }
         true

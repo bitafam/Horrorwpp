@@ -20,7 +20,7 @@ import org.json.JSONArray
 import com.example.BuildConfig
 
 enum class AppMode {
-    USER, ADMIN_LOGIN, ADMIN_PANEL
+    USER, ADMIN_LOGIN, ADMIN_PANEL, NOTIFICATIONS
 }
 
 class HorrorViewModel(application: Application) : AndroidViewModel(application) {

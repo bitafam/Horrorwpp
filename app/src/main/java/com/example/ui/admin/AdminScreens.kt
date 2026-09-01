@@ -322,6 +322,13 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
         OutlinedTextField(value = message, onValueChange = { message = it }, label = { Text("پیام") }, modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(8.dp))
         OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("لینک تصویر (اختیاری)") }, modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { title = "داستان جدید!"; message = "یک داستان ترسناک جدید منتشر شد، آن را بخوانید." }) { Text("قالب داستان") }
+            Button(onClick = { title = "طالع‌بینی جدید!"; message = "طالع شوم ماه جدید منتشر شد." }) { Text("قالب طالع") }
+        }
+        
         Spacer(modifier = Modifier.height(16.dp))
         
         Button(

@@ -47,6 +47,7 @@ import com.example.ui.theme.*
 import com.example.util.HorrorSoundManager
 import com.example.util.NetworkUtils
 import com.example.viewmodel.HorrorViewModel
+import com.example.viewmodel.AppMode
 
 // ==========================================
 // PREMIUM HORROR GRAPHICS (DYNAMIC CUSTOM CANVASES)
@@ -1054,19 +1055,14 @@ fun BeautifulStoriesDashboard(
                         .background(Color(0x880E0718))
                         .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f), CircleShape)
                         .clickable {
-                            isAmbientPlaying = !isAmbientPlaying
-                            if (isAmbientPlaying) {
-                                HorrorSoundManager.startAmbientDrone()
-                            } else {
-                                HorrorSoundManager.stopAmbientDrone()
-                            }
+                            viewModel.setAppMode(AppMode.NOTIFICATIONS)
                         }
                         .padding(8.dp)
                 ) {
                     Icon(
-                        imageVector = if (isAmbientPlaying) Icons.Default.VolumeUp else Icons.Default.VolumeOff,
-                        contentDescription = "نوای پس‌زمینه",
-                        tint = if (isAmbientPlaying) Color(0xFFFF1A4D) else Color(0xFFDEC595),
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "اعلان‌ها",
+                        tint = Color(0xFFDEC595),
                         modifier = Modifier.size(18.dp)
                     )
                 }
