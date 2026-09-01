@@ -414,7 +414,13 @@ fun AdminStoriesManagerTab(
     // States for Real Stories search, sorting, sub-tab status
     var realStatusTab by remember { mutableIntStateOf(0) } // 0: منتشر شده, 1: منتشر نشده
     var realSearchQuery by remember { mutableStateOf("") }
-    var realSortOption by remember { mutableIntStateOf(0) } // 0: Newest, 1: Rating, 2: Alphabetical
+    var realSortOption by remember { mutableIntStateOf(0) } // 0: Newest, 1: Hottest, 2: Popular
+    var showBulkAddDialog by remember { mutableStateOf(false) }
+    var selectedRealStoryIds by remember { mutableStateOf(setOf<String>()) }
+
+    LaunchedEffect(realStatusTab, realSearchQuery) {
+        selectedRealStoryIds = emptySet()
+    }
 
     // States for User Submissions search, sorting, sub-tab status
     var userStatusTab by remember { mutableIntStateOf(0) } // 0: منتشر شده, 1: منتشر نشده
@@ -443,8 +449,8 @@ fun AdminStoriesManagerTab(
         }
         
         when (realSortOption) {
-            1 -> searchFiltered.sortedByDescending { it.rating }
-            2 -> searchFiltered.sortedBy { it.title }
+            1 -> searchFiltered.sortedByDescending { it.view_count }
+            2 -> searchFiltered.sortedByDescending { it.rating }
             else -> searchFiltered.sortedByDescending { it.createdAt ?: it.id }
         }
     }
@@ -471,8 +477,8 @@ fun AdminStoriesManagerTab(
         }
         
         when (userSortOption) {
-            1 -> searchFiltered.sortedByDescending { it.rating }
-            2 -> searchFiltered.sortedBy { it.title }
+            1 -> searchFiltered.sortedByDescending { it.view_count }
+            2 -> searchFiltered.sortedByDescending { it.rating }
             else -> searchFiltered.sortedByDescending { it.createdAt ?: it.id }
         }
     }
@@ -517,16 +523,33 @@ fun AdminStoriesManagerTab(
             ) {
                 Text(
                     text = "مدیریت داستان‌های واقعی و پوسترها",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = SpectralWhite),
+                    modifier = Modifier.weight(1.5f)
                 )
-                Button(
-                    onClick = { showAddStoryDialog = true },
-                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                    shape = RoundedCornerShape(12.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("داستان جدید")
+                    Button(
+                        onClick = { showBulkAddDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A154B)),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.GridView, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("افزودن گروهی", fontSize = 11.sp)
+                    }
+                    Button(
+                        onClick = { showAddStoryDialog = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("داستان جدید", fontSize = 11.sp)
+                    }
                 }
             }
 
@@ -589,7 +612,7 @@ fun AdminStoriesManagerTab(
                 )
 
                 var showSortMenu by remember { mutableStateOf(false) }
-                val sortOptions = listOf("جدیدترین‌ها", "مقدار رای", "حروف الفبا")
+                val sortOptions = listOf("جدیدترین‌ها", "داغ‌ترین‌ها", "محبوب‌ترین‌ها")
                 
                 Box {
                     Button(
@@ -628,6 +651,61 @@ fun AdminStoriesManagerTab(
                     Text("هیچ داستانی با این مشخصات یافت نشد.", color = MutedAsh)
                 }
             } else {
+                if (realStatusTab == 1) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CryptCardElevated)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val allIds = filteredRealStories.map { it.id }.toSet()
+                        val isAllSelected = selectedRealStoryIds.size == allIds.size && allIds.isNotEmpty()
+                        
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.clickable {
+                                selectedRealStoryIds = if (isAllSelected) emptySet() else allIds
+                            }
+                        ) {
+                            Checkbox(
+                                checked = isAllSelected,
+                                onCheckedChange = { checked ->
+                                    selectedRealStoryIds = if (checked) allIds else emptySet()
+                                },
+                                colors = CheckboxDefaults.colors(checkedColor = BloodCrimson, uncheckedColor = MutedAsh)
+                            )
+                            Text(
+                                text = if (isAllSelected) "لغو انتخاب همه" else "انتخاب همه داستان‌های این صفحه",
+                                color = SpectralWhite,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        if (selectedRealStoryIds.isNotEmpty()) {
+                            Button(
+                                onClick = {
+                                    viewModel.publishRealStoriesBulk(selectedRealStoryIds.toList()) {
+                                        selectedRealStoryIds = emptySet()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("انتشار گروهی (${selectedRealStoryIds.size})", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.weight(1f)
@@ -640,7 +718,12 @@ fun AdminStoriesManagerTab(
                                 val next = if (story.status == "PUBLISHED") "DRAFT" else "PUBLISHED"
                                 viewModel.updateRealStoryStatus(story.id, next) {}
                             },
-                            onDelete = { viewModel.deleteRealStory(story.id) {} }
+                            onDelete = { viewModel.deleteRealStory(story.id) {} },
+                            showSelection = (realStatusTab == 1),
+                            isSelected = selectedRealStoryIds.contains(story.id),
+                            onSelectionChange = { checked ->
+                                selectedRealStoryIds = if (checked) selectedRealStoryIds + story.id else selectedRealStoryIds - story.id
+                            }
                         )
                     }
                 }
@@ -717,7 +800,7 @@ fun AdminStoriesManagerTab(
                 )
 
                 var showSortMenu by remember { mutableStateOf(false) }
-                val sortOptions = listOf("جدیدترین‌ها", "مقدار رای", "حروف الفبا")
+                val sortOptions = listOf("جدیدترین‌ها", "داغ‌ترین‌ها", "محبوب‌ترین‌ها")
                 
                 Box {
                     Button(
@@ -857,30 +940,127 @@ fun AdminStoriesManagerTab(
                 }
             },
             confirmButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            if (title.isNotBlank() && content.isNotBlank()) {
+                                viewModel.createRealStory(
+                                    title = title,
+                                    content = content,
+                                    author = author.ifBlank { "کاتب عمارت" },
+                                    source = source.ifBlank { "روایات واقعی" },
+                                    coverUrl = coverUrl,
+                                    tags = tags,
+                                    status = "DRAFT"
+                                ) {
+                                    showAddStoryDialog = false
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E1C38)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("افزودن به پیش‌نویس", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Button(
+                        onClick = {
+                            if (title.isNotBlank() && content.isNotBlank()) {
+                                viewModel.createRealStory(
+                                    title = title,
+                                    content = content,
+                                    author = author.ifBlank { "کاتب عمارت" },
+                                    source = source.ifBlank { "روایات واقعی" },
+                                    coverUrl = coverUrl,
+                                    tags = tags,
+                                    status = "PUBLISHED"
+                                ) {
+                                    showAddStoryDialog = false
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("ذخیره و انتشار", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddStoryDialog = false }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+
+    if (showBulkAddDialog) {
+        var bulkText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showBulkAddDialog = false },
+            containerColor = CryptCardElevated,
+            title = { Text("افزودن گروهی داستان‌ها (به پیش‌نویس)", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "داستان‌های خود را با جداکننده --- از هم جدا کنید. برای وارد کردن سریع فیلدها می‌توانید از قالب زیر استفاده کنید:",
+                        color = SpectralWhite,
+                        fontSize = 11.sp
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            text = "عنوان: اسم داستان\nمتن: متن کامل داستان\nپوستر: لینک تصویر یا -\nنویسنده: کاتب عمارت یا -\n---\nعنوان: داستان دوم...\nمتن: متن دوم...",
+                            color = BloodGlow,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            textAlign = TextAlign.Left
+                        )
+                    }
+                    Text(
+                        text = "💡 راهنما: اگر قالبی وارد نکنید، به طور خودکار خط اول به عنوان عنوان و خطوط بعدی به عنوان متن داستان در تب پیش‌نویس (منتشر نشده) ثبت خواهد شد.",
+                        color = Color(0xFFDEC595),
+                        fontSize = 10.sp
+                    )
+                    OutlinedTextField(
+                        value = bulkText,
+                        onValueChange = { bulkText = it },
+                        placeholder = { Text("داستان‌ها را اینجا پیست کنید...", color = MutedAsh.copy(alpha = 0.5f)) },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 8,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
                 Button(
                     onClick = {
-                        if (title.isNotBlank() && content.isNotBlank()) {
-                            viewModel.createRealStory(
-                                title = title,
-                                content = content,
-                                author = author.ifBlank { "کاتب عمارت" },
-                                source = source.ifBlank { "روایات واقعی" },
-                                coverUrl = coverUrl,
-                                tags = tags,
-                                status = if (isPublished) "PUBLISHED" else "DRAFT"
-                            ) {
-                                showAddStoryDialog = false
+                        val parsed = parseBulkStories(bulkText)
+                        if (parsed.isNotEmpty()) {
+                            viewModel.createRealStoriesBulk(parsed) {
+                                showBulkAddDialog = false
                             }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("ذخیره و انتشار")
+                    Text("ثبت گروهی پیش‌نویس‌ها", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddStoryDialog = false }) { Text("انصراف", color = MutedAsh) }
+                TextButton(onClick = { showBulkAddDialog = false }) { Text("انصراف", color = MutedAsh) }
             }
         )
     }
@@ -1035,7 +1215,10 @@ fun AdminRealStoryHorizontalCard(
     story: RealStory,
     onEdit: () -> Unit,
     onToggleStatus: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    showSelection: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -1050,6 +1233,18 @@ fun AdminRealStoryHorizontalCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (showSelection) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectionChange,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = BloodCrimson,
+                        uncheckedColor = MutedAsh
+                    ),
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+            }
+
             // Poster thumbnail on the side
             Box(
                 modifier = Modifier
@@ -2264,4 +2459,86 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
             }
         }
     }
+}
+
+fun parseBulkStories(inputText: String): List<RealStory> {
+    val rawBlocks = inputText.split("---")
+    val list = mutableListOf<RealStory>()
+    for (block in rawBlocks) {
+        val trimmedBlock = block.trim()
+        if (trimmedBlock.isBlank()) continue
+        
+        var title = ""
+        var content = ""
+        var poster: String? = null
+        var author = "کاتب عمارت"
+        var source = "روایات واقعی"
+        
+        val lines = trimmedBlock.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        if (lines.isEmpty()) continue
+        
+        // Check if block uses structured format (has 'عنوان:' or 'متن:')
+        val hasKeys = lines.any { it.startsWith("عنوان:") || it.startsWith("متن:") }
+        if (hasKeys) {
+            for (line in lines) {
+                when {
+                    line.startsWith("عنوان:") -> {
+                        title = line.substringAfter("عنوان:").trim()
+                    }
+                    line.startsWith("متن:") -> {
+                        content = line.substringAfter("متن:").trim()
+                    }
+                    line.startsWith("پوستر:") -> {
+                        val p = line.substringAfter("پوستر:").trim()
+                        if (p != "-" && p != "—" && p.isNotBlank()) {
+                            poster = p
+                        }
+                    }
+                    line.startsWith("نویسنده:") -> {
+                        val a = line.substringAfter("نویسنده:").trim()
+                        if (a != "-" && a != "—" && a.isNotBlank()) {
+                            author = a
+                        }
+                    }
+                    line.startsWith("منبع:") -> {
+                        val s = line.substringAfter("منبع:").trim()
+                        if (s != "-" && s != "—" && s.isNotBlank()) {
+                            source = s
+                        }
+                    }
+                    else -> {
+                        if (content.isNotEmpty()) {
+                            content += "\n" + line
+                        }
+                    }
+                }
+            }
+        } else {
+            // Unstructured: first line is Title, the rest is Content!
+            title = lines[0]
+            content = lines.drop(1).joinToString("\n")
+            if (content.isBlank()) {
+                content = title
+                title = if (title.length > 25) title.take(25) + "..." else title
+            }
+        }
+        
+        if (title.isNotBlank() && content.isNotBlank()) {
+            list.add(
+                RealStory(
+                    id = java.util.UUID.randomUUID().toString(),
+                    title = title,
+                    content = content,
+                    author = author,
+                    source = source,
+                    cover_image_url = poster,
+                    tags = "وحشت, واقعی",
+                    status = "DRAFT",
+                    createdAt = null,
+                    updatedAt = null
+                )
+            )
+        }
+    }
+    return list
 }

@@ -63,9 +63,9 @@ data class RealStory(
     val cover_image_url: String? = null,
     val tags: String? = null,
     val status: String, // 'DRAFT', 'PUBLISHED', 'ARCHIVED'
-    val rating: Float = 4.8f,
-    val rating_count: Int = 18,
-    val view_count: Int = 340,
+    val rating: Float = 0.0f,
+    val rating_count: Int = 0,
+    val view_count: Int = 0,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null
 )
@@ -80,9 +80,9 @@ data class UserStorySubmission(
     val tags: String? = null,
     val status: String, // 'PENDING', 'PUBLISHED', 'REJECTED'
     val admin_notes: String? = null,
-    val rating: Float = 5.0f,
-    val rating_count: Int = 1,
-    val view_count: Int = 1,
+    val rating: Float = 0.0f,
+    val rating_count: Int = 0,
+    val view_count: Int = 0,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null
 ) {

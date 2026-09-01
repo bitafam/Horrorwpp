@@ -951,6 +951,56 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun createRealStoriesBulk(stories: List<RealStory>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                stories.forEach { story ->
+                    try {
+                        repository.saveRealStory(story)
+                    } catch (e: Exception) {
+                        android.util.Log.e("BulkAdd", "Failed to save story: ${story.title}", e)
+                    }
+                }
+                val refreshed = repository.getAllRealStoriesAdmin()
+                _adminRealStories.value = refreshed
+                _realStoriesList.value = repository.getRealStories(true)
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در افزودن گروهی داستان‌ها: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun publishRealStoriesBulk(ids: List<String>, onComplete: () -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                ids.forEach { id ->
+                    val story = _adminRealStories.value.find { it.id == id }
+                    if (story != null && story.status != "PUBLISHED") {
+                        try {
+                            val updated = story.copy(status = "PUBLISHED")
+                            repository.saveRealStory(updated)
+                        } catch (e: Exception) {
+                            android.util.Log.e("BulkPublish", "Failed to publish story: $id", e)
+                        }
+                    }
+                }
+                val refreshed = repository.getAllRealStoriesAdmin()
+                _adminRealStories.value = refreshed
+                _realStoriesList.value = repository.getRealStories(true)
+                onComplete()
+            } catch (e: Exception) {
+                _errorMessage.value = "خطا در انتشار گروهی داستان‌ها: ${e.localizedMessage}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
     fun updateRealStory(id: String, title: String, content: String, author: String, source: String, coverUrl: String, tags: String, status: String, onComplete: () -> Unit) {
         viewModelScope.launch {
             _loading.value = true
