@@ -111,6 +111,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _scenarioPrompt = MutableStateFlow(prefs.getString(PREF_SCENARIO_PROMPT, DEFAULT_SCENARIO_PROMPT) ?: DEFAULT_SCENARIO_PROMPT)
     val scenarioPrompt: StateFlow<String> = _scenarioPrompt.asStateFlow()
 
+    private var hasAttemptedPromptSeeding = false
+
     // Supabase Connection Settings
     private val _supabaseUrl = MutableStateFlow(
         prefs.getString(PREF_SUPABASE_URL, SupabaseClientProvider.supabaseUrl) ?: SupabaseClientProvider.supabaseUrl
@@ -610,7 +612,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         // Seeding logic if missing on remote
-        if (SupabaseClientProvider.isConfigured) {
+        if (SupabaseClientProvider.isConfigured && !hasAttemptedPromptSeeding) {
+            hasAttemptedPromptSeeding = true
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val hasGf = prompts.any { it.prompt_key == "GRIM_FORTUNE_PROMPT" }

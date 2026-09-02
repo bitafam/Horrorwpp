@@ -3041,8 +3041,13 @@ fun StoryReaderScreen(
     val realStoriesState by viewModel.realStoriesList.collectAsState()
     val userSubmissionsState by viewModel.userSubmissionsList.collectAsState()
     
-    val liveStory = remember(story, realStoriesState, userSubmissionsState) {
-        val isUserSub = story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true
+    val isUserSub = remember(story.id, userSubmissionsState) {
+        userSubmissionsState.any { it.id == story.id } || 
+        story.source == "روایات و اعترافات شما" || 
+        (story.tags?.contains("روایت کاربر") == true || story.tags?.contains("اعترافات") == true)
+    }
+
+    val liveStory = remember(story, realStoriesState, userSubmissionsState, isUserSub) {
         if (isUserSub) {
             userSubmissionsState.find { it.id == story.id }?.toRealStory() ?: story
         } else {
@@ -3063,7 +3068,7 @@ fun StoryReaderScreen(
 
     LaunchedEffect(story.id) {
         if (NetworkUtils.isOnline(context)) {
-            if (story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true) {
+            if (isUserSub) {
                 viewModel.incrementSubmissionViews(story.id)
             } else {
                 viewModel.incrementStoryViews(story.id)
@@ -3443,7 +3448,7 @@ fun StoryReaderScreen(
                                                     ratingSubmitted = true
                                                     HorrorSoundManager.playStarRatingSound(star)
                                                     
-                                                    if (story.source?.contains("روایات") == true || story.tags?.contains("کاربر") == true || story.tags?.contains("اعترافات") == true) {
+                                                    if (isUserSub) {
                                                         viewModel.rateUserSubmission(story.id, star.toFloat())
                                                     } else {
                                                         viewModel.rateStory(story.id, star.toFloat())
