@@ -233,10 +233,9 @@ class HorrorRepository(context: Context) {
     // REAL STORIES
     suspend fun getRealStories(forceRefresh: Boolean = false): List<RealStory> = withContext(Dispatchers.IO) {
         val cached = dao.getPublishedRealStories()
-        val cachedMap = cached.associateBy { it.id }
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
-                RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, null, null)
+                RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, cleanTagsString(it.tags), it.status, it.rating, it.ratingCount, it.viewCount, null, null)
             }
         }
         
@@ -245,39 +244,25 @@ class HorrorRepository(context: Context) {
                 val resp = api.getRealStories(status = "eq.PUBLISHED")
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
-                    dao.upsertRealStories(list.map {
-                        val parsed = decodeTagsWithStats(it.tags, defaultRating = if (it.rating > 0f) it.rating else 5.0f, defaultRatingCount = if (it.rating_count > 0) it.rating_count else 1, defaultViewCount = it.view_count)
-                        val cachedItem = cachedMap[it.id]
-                        val finalRating = if (it.rating > 0f) it.rating else (if (parsed.rating > 0f) parsed.rating else (cachedItem?.rating ?: 5.0f))
-                        val finalRatingCount = if (it.rating_count > 0) it.rating_count else (if (parsed.ratingCount > 0) parsed.ratingCount else (cachedItem?.ratingCount ?: 1))
-                        val finalViewCount = if (it.view_count > 0) it.view_count else (if (parsed.viewCount > 0) parsed.viewCount else (cachedItem?.viewCount ?: 0))
+                    val cleanedList = list.map { story ->
+                        story.copy(tags = cleanTagsString(story.tags))
+                    }
+                    dao.upsertRealStories(cleanedList.map {
                         CachedRealStory(
-                            it.id,
-                            it.title,
-                            it.content,
-                            it.author,
-                            it.source,
-                            it.cover_image_url,
-                            parsed.tags,
-                            it.status,
-                            rating = finalRating,
-                            ratingCount = finalRatingCount,
-                            viewCount = finalViewCount
+                            id = it.id,
+                            title = it.title,
+                            content = it.content,
+                            author = it.author,
+                            source = it.source,
+                            coverImageUrl = it.cover_image_url,
+                            tags = it.tags,
+                            status = it.status,
+                            rating = it.rating,
+                            ratingCount = it.rating_count,
+                            viewCount = it.view_count
                         )
                     })
-                    return@withContext list.map {
-                        val parsed = decodeTagsWithStats(it.tags, defaultRating = if (it.rating > 0f) it.rating else 5.0f, defaultRatingCount = if (it.rating_count > 0) it.rating_count else 1, defaultViewCount = it.view_count)
-                        val cachedItem = cachedMap[it.id]
-                        val finalRating = if (it.rating > 0f) it.rating else (if (parsed.rating > 0f) parsed.rating else (cachedItem?.rating ?: 5.0f))
-                        val finalRatingCount = if (it.rating_count > 0) it.rating_count else (if (parsed.ratingCount > 0) parsed.ratingCount else (cachedItem?.ratingCount ?: 1))
-                        val finalViewCount = if (it.view_count > 0) it.view_count else (if (parsed.viewCount > 0) parsed.viewCount else (cachedItem?.viewCount ?: 0))
-                        it.copy(
-                            tags = parsed.tags,
-                            rating = finalRating,
-                            rating_count = finalRatingCount,
-                            view_count = finalViewCount
-                        )
-                    }
+                    return@withContext cleanedList
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
@@ -292,7 +277,7 @@ class HorrorRepository(context: Context) {
         
         if (cached.isNotEmpty()) {
             cached.map {
-                RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, null, null)
+                RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, cleanTagsString(it.tags), it.status, it.rating, it.ratingCount, it.viewCount, null, null)
             }
         } else {
             emptyList()
@@ -301,45 +286,30 @@ class HorrorRepository(context: Context) {
 
     suspend fun getAllRealStoriesAdmin(): List<RealStory> = withContext(Dispatchers.IO) {
         val cached = dao.getAllRealStories()
-        val cachedMap = cached.associateBy { it.id }
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.getRealStories()
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
-                    dao.upsertRealStories(list.map {
-                        val parsed = decodeTagsWithStats(it.tags, defaultRating = if (it.rating > 0f) it.rating else 5.0f, defaultRatingCount = if (it.rating_count > 0) it.rating_count else 1, defaultViewCount = it.view_count)
-                        val cachedItem = cachedMap[it.id]
-                        val finalRating = if (it.rating > 0f) it.rating else (if (parsed.rating > 0f) parsed.rating else (cachedItem?.rating ?: 5.0f))
-                        val finalRatingCount = if (it.rating_count > 0) it.rating_count else (if (parsed.ratingCount > 0) parsed.ratingCount else (cachedItem?.ratingCount ?: 1))
-                        val finalViewCount = if (it.view_count > 0) it.view_count else (if (parsed.viewCount > 0) parsed.viewCount else (cachedItem?.viewCount ?: 0))
+                    val cleanedList = list.map { story ->
+                        story.copy(tags = cleanTagsString(story.tags))
+                    }
+                    dao.upsertRealStories(cleanedList.map {
                         CachedRealStory(
-                            it.id,
-                            it.title,
-                            it.content,
-                            it.author,
-                            it.source,
-                            it.cover_image_url,
-                            parsed.tags,
-                            it.status,
-                            rating = finalRating,
-                            ratingCount = finalRatingCount,
-                            viewCount = finalViewCount
+                            id = it.id,
+                            title = it.title,
+                            content = it.content,
+                            author = it.author,
+                            source = it.source,
+                            coverImageUrl = it.cover_image_url,
+                            tags = it.tags,
+                            status = it.status,
+                            rating = it.rating,
+                            ratingCount = it.rating_count,
+                            viewCount = it.view_count
                         )
                     })
-                    return@withContext list.map {
-                        val parsed = decodeTagsWithStats(it.tags, defaultRating = if (it.rating > 0f) it.rating else 5.0f, defaultRatingCount = if (it.rating_count > 0) it.rating_count else 1, defaultViewCount = it.view_count)
-                        val cachedItem = cachedMap[it.id]
-                        val finalRating = if (it.rating > 0f) it.rating else (if (parsed.rating > 0f) parsed.rating else (cachedItem?.rating ?: 5.0f))
-                        val finalRatingCount = if (it.rating_count > 0) it.rating_count else (if (parsed.ratingCount > 0) parsed.ratingCount else (cachedItem?.ratingCount ?: 1))
-                        val finalViewCount = if (it.view_count > 0) it.view_count else (if (parsed.viewCount > 0) parsed.viewCount else (cachedItem?.viewCount ?: 0))
-                        it.copy(
-                            tags = parsed.tags,
-                            rating = finalRating,
-                            rating_count = finalRatingCount,
-                            view_count = finalViewCount
-                        )
-                    }
+                    return@withContext cleanedList
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
@@ -352,145 +322,63 @@ class HorrorRepository(context: Context) {
             }
         }
         dao.getAllRealStories().map {
-            RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, null, null)
+            RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, cleanTagsString(it.tags), it.status, it.rating, it.ratingCount, it.viewCount, null, null)
         }
     }
 
     suspend fun saveRealStory(story: RealStory): RealStory = withContext(Dispatchers.IO) {
         val validId = if (isValidUuid(story.id)) story.id else java.util.UUID.randomUUID().toString()
-        val finalRating = if (story.rating <= 0f && story.status == "PUBLISHED") 5.0f else story.rating
-        val finalRatingCount = if (story.rating_count <= 0 && story.status == "PUBLISHED") 1 else story.rating_count
-        val finalViewCount = story.view_count
-        val safeRating = kotlin.math.round((finalRating.coerceIn(0f, 5f)) * 10f) / 10.0
-        
-        val parsedTags = decodeTagsWithStats(story.tags, finalRating, finalRatingCount, finalViewCount)
-        val encodedTags = encodeTagsWithStats(parsedTags.tags, safeRating.toFloat(), finalRatingCount, finalViewCount)
+        val cleanTags = cleanTagsString(story.tags)
 
         val preparedStory = story.copy(
             id = validId,
-            rating = safeRating.toFloat(),
-            rating_count = finalRatingCount,
-            view_count = finalViewCount,
             author = story.author?.ifBlank { "راوی عمارت" } ?: "راوی عمارت",
             source = story.source?.ifBlank { "روایات واقعی" } ?: "روایات واقعی",
-            tags = parsedTags.tags
+            tags = cleanTags
         )
 
         if (SupabaseClientProvider.isConfigured) {
-            val baseMap = mutableMapOf<String, Any>(
+            val fullMap = mutableMapOf<String, Any>(
                 "id" to validId,
                 "title" to preparedStory.title,
                 "content" to preparedStory.content,
                 "author" to (preparedStory.author ?: "راوی عمارت"),
                 "source" to (preparedStory.source ?: "روایات واقعی"),
                 "status" to preparedStory.status,
-                "tags" to encodedTags
+                "rating" to preparedStory.rating,
+                "rating_count" to preparedStory.rating_count,
+                "view_count" to preparedStory.view_count
             )
-            if (!preparedStory.cover_image_url.isNullOrBlank()) baseMap["cover_image_url"] = preparedStory.cover_image_url
-
-            val fullMap = baseMap.toMutableMap().apply {
-                put("rating", safeRating)
-                put("rating_count", preparedStory.rating_count)
-                put("view_count", preparedStory.view_count)
-            }
+            if (!cleanTags.isNullOrBlank()) fullMap["tags"] = cleanTags
+            if (!preparedStory.cover_image_url.isNullOrBlank()) fullMap["cover_image_url"] = preparedStory.cover_image_url
 
             try {
-                // 1. Try Upsert with fullMap
                 val resp = api.upsertRealStory(item = fullMap)
                 if (resp.isSuccessful) {
                     val returned = resp.body()?.firstOrNull() ?: preparedStory
-                    val parsedReturnedTags = decodeTagsWithStats(returned.tags, safeRating.toFloat(), preparedStory.rating_count, preparedStory.view_count)
+                    val returnedCleaned = returned.copy(tags = cleanTagsString(returned.tags))
                     dao.upsertRealStory(
                         CachedRealStory(
-                            returned.id,
-                            returned.title,
-                            returned.content,
-                            returned.author,
-                            returned.source,
-                            returned.cover_image_url,
-                            parsedReturnedTags.tags,
-                            returned.status,
-                            rating = parsedReturnedTags.rating,
-                            ratingCount = parsedReturnedTags.ratingCount,
-                            viewCount = parsedReturnedTags.viewCount
+                            returnedCleaned.id,
+                            returnedCleaned.title,
+                            returnedCleaned.content,
+                            returnedCleaned.author,
+                            returnedCleaned.source,
+                            returnedCleaned.cover_image_url,
+                            returnedCleaned.tags,
+                            returnedCleaned.status,
+                            rating = returnedCleaned.rating,
+                            ratingCount = returnedCleaned.rating_count,
+                            viewCount = returnedCleaned.view_count
                         )
                     )
-                    return@withContext returned.copy(
-                        tags = parsedReturnedTags.tags,
-                        rating = parsedReturnedTags.rating,
-                        rating_count = parsedReturnedTags.ratingCount,
-                        view_count = parsedReturnedTags.viewCount
-                    )
+                    return@withContext returnedCleaned
+                } else {
+                    val code = resp.code()
+                    val errorBody = resp.errorBody()?.string() ?: ""
+                    android.util.Log.e("SupabaseError", "saveRealStory failed: $code - $errorBody")
+                    throw Exception("خطا در ذخیره‌سازی داستان واقعی در سرور: $code")
                 }
-
-                // 2. Try minimal insert with fullMap
-                val minRespFull = api.insertRealStoryMinimal(item = fullMap)
-                if (minRespFull.isSuccessful) {
-                    dao.upsertRealStory(
-                        CachedRealStory(
-                            preparedStory.id,
-                            preparedStory.title,
-                            preparedStory.content,
-                            preparedStory.author,
-                            preparedStory.source,
-                            preparedStory.cover_image_url,
-                            preparedStory.tags,
-                            preparedStory.status,
-                            preparedStory.rating,
-                            preparedStory.rating_count,
-                            preparedStory.view_count
-                        )
-                    )
-                    return@withContext preparedStory
-                }
-
-                // 3. Try minimal insert with baseMap (excludes optional rating/view columns)
-                val minRespBase = api.insertRealStoryMinimal(item = baseMap)
-                if (minRespBase.isSuccessful) {
-                    dao.upsertRealStory(
-                        CachedRealStory(
-                            preparedStory.id,
-                            preparedStory.title,
-                            preparedStory.content,
-                            preparedStory.author,
-                            preparedStory.source,
-                            preparedStory.cover_image_url,
-                            preparedStory.tags,
-                            preparedStory.status,
-                            preparedStory.rating,
-                            preparedStory.rating_count,
-                            preparedStory.view_count
-                        )
-                    )
-                    return@withContext preparedStory
-                }
-
-                // 4. Try minimal update (PATCH without id)
-                val patchMap = baseMap.toMutableMap().apply { remove("id") }
-                val updateResp = api.updateRealStoryMinimal(idEq = "eq.$validId", item = patchMap)
-                if (updateResp.isSuccessful) {
-                    dao.upsertRealStory(
-                        CachedRealStory(
-                            preparedStory.id,
-                            preparedStory.title,
-                            preparedStory.content,
-                            preparedStory.author,
-                            preparedStory.source,
-                            preparedStory.cover_image_url,
-                            preparedStory.tags,
-                            preparedStory.status,
-                            preparedStory.rating,
-                            preparedStory.rating_count,
-                            preparedStory.view_count
-                        )
-                    )
-                    return@withContext preparedStory
-                }
-
-                val lastCode = if (minRespBase.code() != 0) minRespBase.code() else if (minRespFull.code() != 0) minRespFull.code() else resp.code()
-                val lastError = minRespBase.errorBody()?.string() ?: minRespFull.errorBody()?.string() ?: resp.errorBody()?.string() ?: ""
-                android.util.Log.e("SupabaseError", "saveRealStory failed: $lastCode - $lastError")
-                throw Exception("خطا در ذخیره‌سازی داستان در سرور ($lastCode): $lastError")
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "saveRealStory exception", e)
                 throw e
@@ -592,70 +480,50 @@ class HorrorRepository(context: Context) {
         }
     }
 
-    // ATOMIC RATING & VIEWS (Using tag encoding and direct column PATCH to persist ratings and view counts in Supabase real_stories)
-    suspend fun incrementStoryViewRemote(storyId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
-        val newCount = currentCount + 1
-        // Always save locally first so it is guaranteed to persist and show in UI immediately
-        val cached = dao.getAllRealStories().find { it.id == storyId }
-        if (cached != null) {
-            dao.upsertRealStory(cached.copy(viewCount = newCount))
-        }
+    // ATOMIC RATING & VIEWS
+    suspend fun incrementStoryViewRemote(storyId: String): Boolean = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext false
 
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                val currentRating = cached?.rating ?: 5.0f
-                val currentRatingCount = cached?.ratingCount ?: 1
-                val cleanTags = cached?.tags ?: "روایات واقعی, ترس"
-                val encodedTags = encodeTagsWithStats(cleanTags, currentRating, currentRatingCount, newCount)
-
-                val patchResp = api.updateRealStoryMinimal(
-                    idEq = "eq.$storyId",
-                    item = mapOf(
-                        "tags" to encodedTags,
-                        "view_count" to newCount
-                    )
-                )
-                return@withContext patchResp.isSuccessful
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "incrementStoryView exception", e)
+        try {
+            val resp = api.incrementStoryView(mapOf("story_id" to storyId))
+            if (resp.isSuccessful) {
+                getRealStories(forceRefresh = true)
+                return@withContext true
+            } else {
+                val code = resp.code()
+                val err = resp.errorBody()?.string() ?: ""
+                android.util.Log.e("SupabaseError", "increment_story_view RPC failed: $code - $err")
+                return@withContext false
             }
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseError", "incrementStoryViewRemote exception", e)
+            return@withContext false
         }
-        true
     }
 
-    suspend fun submitStoryRatingRemote(storyId: String, rating: Float, currentRating: Float, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
-        val safeRating = if (currentRating <= 0f) 5.0f else currentRating
-        val safeCount = if (currentCount <= 0) 1 else currentCount
-        val newCount = safeCount + 1
-        val newRating = ((safeRating * safeCount) + rating) / newCount
-        val roundedRating = kotlin.math.round(newRating * 10f) / 10.0f
-        
-        // Always save locally first so it is guaranteed to persist and show in UI immediately
-        val cached = dao.getAllRealStories().find { it.id == storyId }
-        if (cached != null) {
-            dao.upsertRealStory(cached.copy(rating = roundedRating, ratingCount = newCount))
-        }
+    suspend fun submitStoryRatingRemote(storyId: String, rating: Float): Boolean = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext false
 
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                val currentViewCount = cached?.viewCount ?: 0
-                val cleanTags = cached?.tags ?: "روایات واقعی, ترس"
-                val encodedTags = encodeTagsWithStats(cleanTags, roundedRating, newCount, currentViewCount)
-
-                val patchResp = api.updateRealStoryMinimal(
-                    idEq = "eq.$storyId",
-                    item = mapOf(
-                        "tags" to encodedTags,
-                        "rating" to roundedRating,
-                        "rating_count" to newCount
-                    )
+        try {
+            val resp = api.submitStoryRating(
+                mapOf(
+                    "story_id" to storyId,
+                    "new_rating" to rating
                 )
-                return@withContext patchResp.isSuccessful
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "submitStoryRating exception", e)
+            )
+            if (resp.isSuccessful) {
+                getRealStories(forceRefresh = true)
+                return@withContext true
+            } else {
+                val code = resp.code()
+                val err = resp.errorBody()?.string() ?: ""
+                android.util.Log.e("SupabaseError", "submit_story_rating RPC failed: $code - $err")
+                return@withContext false
             }
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseError", "submitStoryRatingRemote exception", e)
+            return@withContext false
         }
-        true
     }
 
     // SCENARIOS
@@ -1136,60 +1004,49 @@ class HorrorRepository(context: Context) {
         }
     }
 
-    suspend fun incrementSubmissionViewRemote(submissionId: String, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
-        val newCount = currentCount + 1
-        val cached = dao.getUserSubmissionById(submissionId)
-        if (cached != null) {
-            dao.upsertUserSubmission(cached.copy(viewCount = newCount))
-        }
+    suspend fun incrementSubmissionViewRemote(submissionId: String): Boolean = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext false
 
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                val currentRating = cached?.rating ?: 5.0f
-                val currentRatingCount = cached?.ratingCount ?: 1
-                val cleanTags = cached?.tags ?: "وحشت, واقعی"
-                val encodedTags = encodeTagsWithStats(cleanTags, currentRating, currentRatingCount, newCount)
-
-                val patchResp = api.updateUserSubmissionMinimal(
-                    idEq = "eq.$submissionId",
-                    item = mapOf("tags" to encodedTags, "view_count" to newCount)
-                )
-                return@withContext patchResp.isSuccessful
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "incrementSubmissionView exception. Falling back.", e)
+        try {
+            val resp = api.incrementSubmissionView(mapOf("submission_id" to submissionId))
+            if (resp.isSuccessful) {
+                getUserSubmissions(forceRefresh = true)
+                return@withContext true
+            } else {
+                val code = resp.code()
+                val err = resp.errorBody()?.string() ?: ""
+                android.util.Log.e("SupabaseError", "increment_submission_view RPC failed: $code - $err")
+                return@withContext false
             }
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseError", "incrementSubmissionViewRemote exception", e)
+            return@withContext false
         }
-        false
     }
 
-    suspend fun submitSubmissionRatingRemote(submissionId: String, rating: Float, currentRating: Float, currentCount: Int): Boolean = withContext(Dispatchers.IO) {
-        val safeRating = if (currentRating <= 0f) 5.0f else currentRating
-        val safeCount = if (currentCount <= 0) 1 else currentCount
-        val newCount = safeCount + 1
-        val newRating = ((safeRating * safeCount) + rating) / newCount
-        val roundedRating = kotlin.math.round(newRating * 10f) / 10.0f
+    suspend fun submitSubmissionRatingRemote(submissionId: String, rating: Float): Boolean = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext false
 
-        val cached = dao.getUserSubmissionById(submissionId)
-        if (cached != null) {
-            dao.upsertUserSubmission(cached.copy(rating = roundedRating, ratingCount = newCount))
-        }
-
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                val cleanTags = cached?.tags ?: "وحشت, واقعی"
-                val currentViewCount = cached?.viewCount ?: 0
-                val encodedTags = encodeTagsWithStats(cleanTags, roundedRating, newCount, currentViewCount)
-
-                val patchResp = api.updateUserSubmissionMinimal(
-                    idEq = "eq.$submissionId",
-                    item = mapOf("tags" to encodedTags, "rating" to roundedRating, "rating_count" to newCount)
+        try {
+            val resp = api.submitSubmissionRating(
+                mapOf(
+                    "submission_id" to submissionId,
+                    "new_rating" to rating
                 )
-                return@withContext patchResp.isSuccessful
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "submitSubmissionRating exception. Falling back.", e)
+            )
+            if (resp.isSuccessful) {
+                getUserSubmissions(forceRefresh = true)
+                return@withContext true
+            } else {
+                val code = resp.code()
+                val err = resp.errorBody()?.string() ?: ""
+                android.util.Log.e("SupabaseError", "submit_submission_rating RPC failed: $code - $err")
+                return@withContext false
             }
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseError", "submitSubmissionRatingRemote exception", e)
+            return@withContext false
         }
-        false
     }
 
     suspend fun deleteUserSubmission(id: String) = withContext(Dispatchers.IO) {
@@ -1218,33 +1075,10 @@ class HorrorRepository(context: Context) {
     }
 }
 
-// Helper function to encode story stats in the tags field for Supabase compatibility
-
-
-fun encodeTagsWithStats(tags: String?, rating: Float, ratingCount: Int, viewCount: Int): String {
-    val cleanTags = if (tags.isNullOrBlank()) "وحشت, واقعی" else tags.split("| STATS_v1:")[0].trim()
-    return "$cleanTags | STATS_v1:[r=$rating,rc=$ratingCount,v=$viewCount]"
-}
-
-data class ParsedStoryStats(val tags: String, val rating: Float, val ratingCount: Int, val viewCount: Int)
-
-fun decodeTagsWithStats(fullTags: String?, defaultRating: Float = 5.0f, defaultRatingCount: Int = 1, defaultViewCount: Int = 0): ParsedStoryStats {
-    if (fullTags.isNullOrBlank()) {
-        return ParsedStoryStats("وحشت, واقعی", defaultRating, defaultRatingCount, defaultViewCount)
-    }
-    val parts = fullTags.split("| STATS_v1:")
-    val tagsOnly = parts[0].trim()
-    if (parts.size < 2) {
-        return ParsedStoryStats(tagsOnly, defaultRating, defaultRatingCount, defaultViewCount)
-    }
-    try {
-        val statsStr = parts[1].trim() // "[r=5.0,rc=1,v=0]"
-        val r = statsStr.substringAfter("r=").substringBefore(",").toFloatOrNull() ?: defaultRating
-        val rc = statsStr.substringAfter("rc=").substringBefore(",").toIntOrNull() ?: defaultRatingCount
-        val v = statsStr.substringAfter("v=").substringBefore("]").toIntOrNull() ?: defaultViewCount
-        return ParsedStoryStats(tagsOnly, r, rc, v)
-    } catch (e: Exception) {
-        return ParsedStoryStats(tagsOnly, defaultRating, defaultRatingCount, defaultViewCount)
-    }
+// Helper function to clean tags string
+fun cleanTagsString(tags: String?): String? {
+    if (tags.isNullOrBlank()) return null
+    val tagsOnly = tags.split("| STATS_v1:")[0].trim()
+    return tagsOnly.ifBlank { null }
 }
 
