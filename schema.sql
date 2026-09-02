@@ -433,5 +433,5 @@ CREATE TABLE IF NOT EXISTS public.story_reports (
 ALTER TABLE public.story_reports ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public insert story_reports" ON public.story_reports FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow all manage story_reports" ON public.story_reports ALL USING (true);
+CREATE POLICY "Allow all manage story_reports" ON public.story_reports FOR ALL USING (true);
 
