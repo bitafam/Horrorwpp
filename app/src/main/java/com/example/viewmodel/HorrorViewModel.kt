@@ -181,6 +181,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         try {
             val context = getApplication<Application>()
             com.example.util.NotificationHelper.createNotificationChannel(context)
+            
+            // Schedule AlarmManager repeating fallback
+            com.example.util.NotificationSyncReceiver.scheduleNextAlarm(context)
+
+            // Schedule WorkManager
             val workManager = androidx.work.WorkManager.getInstance(context)
 
             val oneTimeRequest = androidx.work.OneTimeWorkRequestBuilder<com.example.util.NotificationWorker>().build()
@@ -200,7 +205,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
             workManager.enqueueUniquePeriodicWork(
                 "PeriodicNotificationSync",
-                androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                androidx.work.ExistingPeriodicWorkPolicy.UPDATE,
                 periodicRequest
             )
         } catch (e: Exception) {
