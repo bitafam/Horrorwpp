@@ -227,6 +227,22 @@ interface SupabaseApi {
         @Query("id") idEq: String
     ): Response<ResponseBody>
 
+    @GET("rest/v1/story_reports")
+    suspend fun getStoryReports(
+        @Query("select") select: String = "*",
+        @Query("order") order: String = "created_at.desc"
+    ): Response<List<StoryReport>>
+
+    @POST("rest/v1/story_reports")
+    suspend fun createStoryReport(
+        @Body report: Map<String, Any>
+    ): Response<ResponseBody>
+
+    @DELETE("rest/v1/story_reports")
+    suspend fun deleteStoryReport(
+        @Query("id") idEq: String
+    ): Response<ResponseBody>
+
     @GET("rest/v1/wrong_choice_scenarios")
     suspend fun getScenarios(
         @Query("select") select: String = "*",

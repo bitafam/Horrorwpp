@@ -327,3 +327,14 @@ data class NotificationTemplate(
     val category: String = "عمومی"
 )
 
+@JsonClass(generateAdapter = true)
+data class StoryReport(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val story_id: String,
+    val story_title: String,
+    val story_author: String,
+    val story_type: String, // 'REAL' or 'USER'
+    val reason: String,
+    @Json(name = "created_at") val createdAt: String? = null
+)
+

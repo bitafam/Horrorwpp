@@ -361,6 +361,7 @@ CREATE TABLE IF NOT EXISTS public.app_notifications (
     is_scheduled BOOLEAN DEFAULT FALSE,
     scheduled_at BIGINT,
     status TEXT NOT NULL DEFAULT 'PUBLISHED' CHECK (status IN ('PUBLISHED', 'PENDING_SCHEDULE', 'CANCELLED')),
+    trigger_condition TEXT,
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -417,4 +418,20 @@ CREATE POLICY "Allow all manage automation_configs" ON public.automation_configs
 
 CREATE POLICY "Allow all read automation_logs" ON public.automation_logs FOR SELECT USING (true);
 CREATE POLICY "Allow all insert automation_logs" ON public.automation_logs FOR INSERT WITH CHECK (true);
+
+-- STORY REPORTS TABLE FOR USER COMPLIANCE
+CREATE TABLE IF NOT EXISTS public.story_reports (
+    id TEXT PRIMARY KEY,
+    story_id TEXT NOT NULL,
+    story_title TEXT NOT NULL,
+    story_author TEXT NOT NULL,
+    story_type TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.story_reports ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public insert story_reports" ON public.story_reports FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all manage story_reports" ON public.story_reports ALL USING (true);
 

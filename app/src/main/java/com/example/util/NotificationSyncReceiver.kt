@@ -44,7 +44,7 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                 val notifications = repository.getAllNotifications()
 
                 for (notification in notifications) {
-                    if (!NotificationHelper.isNotificationShown(context.applicationContext, notification.id)) {
+                    if (!NotificationHelper.checkAndMarkNotificationAsShown(context.applicationContext, notification.id)) {
                         NotificationHelper.showSystemNotification(
                             context = context.applicationContext,
                             notificationId = notification.id.hashCode(),
@@ -52,7 +52,6 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                             message = notification.message,
                             imageUrl = notification.imageUrl
                         )
-                        NotificationHelper.markNotificationAsShown(context.applicationContext, notification.id)
                     }
                 }
 
@@ -62,14 +61,13 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                 if (isUserAdmin) {
                     val submissions = repository.getAllUserSubmissionsAdmin()
                     for (sub in submissions) {
-                        if (sub.status == "PENDING" && !NotificationHelper.isSubmissionNotified(context.applicationContext, sub.id)) {
+                        if (sub.status == "PENDING" && !NotificationHelper.checkAndMarkSubmissionNotified(context.applicationContext, sub.id)) {
                             NotificationHelper.showSystemNotification(
                                 context = context.applicationContext,
                                 notificationId = sub.id.hashCode(),
                                 title = "📥 روایت جدید ثبت شد!",
                                 message = "روایتی با عنوان «${sub.title}» توسط ${sub.author_name} ارسال شد و منتظر تایید شماست."
                             )
-                            NotificationHelper.markSubmissionNotified(context.applicationContext, sub.id)
                         }
                     }
                 }

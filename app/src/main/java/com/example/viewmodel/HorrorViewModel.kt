@@ -169,6 +169,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _automationLogs = MutableStateFlow<List<AutomationLog>>(emptyList())
     val automationLogs: StateFlow<List<AutomationLog>> = _automationLogs.asStateFlow()
 
+    private val _storyReports = MutableStateFlow<List<StoryReport>>(emptyList())
+    val storyReports: StateFlow<List<StoryReport>> = _storyReports.asStateFlow()
+
     fun loadNotifications() {
         viewModelScope.launch {
             val list = repository.getAllNotifications()
@@ -178,7 +181,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
             val context = getApplication<Application>()
             for (notification in list) {
-                if (!com.example.util.NotificationHelper.isNotificationShown(context, notification.id)) {
+                if (!com.example.util.NotificationHelper.checkAndMarkNotificationAsShown(context, notification.id)) {
                     com.example.util.NotificationHelper.showSystemNotification(
                         context = context,
                         notificationId = notification.id.hashCode(),
@@ -186,7 +189,6 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                         message = notification.message,
                         imageUrl = notification.imageUrl
                     )
-                    com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
                 }
             }
         }
@@ -355,6 +357,51 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun loadStoryReports() {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                val list = repository.getStoryReports()
+                _storyReports.value = list
+            } catch (e: Exception) {
+                android.util.Log.e("HorrorViewModel", "loadStoryReports failed: ${e.message}")
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun submitStoryReport(report: StoryReport, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = repository.createStoryReport(report)
+            onResult(success)
+        }
+    }
+
+    fun deleteStoryReport(id: String, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = repository.deleteStoryReport(id)
+            if (success) {
+                _storyReports.value = _storyReports.value.filter { it.id != id }
+            }
+            onResult(success)
+        }
+    }
+
+    fun deleteStoryReportsBulk(ids: List<String>, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            var allSuccess = true
+            for (id in ids) {
+                val success = repository.deleteStoryReport(id)
+                if (!success) {
+                    allSuccess = false
+                }
+            }
+            loadStoryReports()
+            onResult(allSuccess)
+        }
+    }
+
     fun triggerEdgeFunction(functionName: String, onResult: (Boolean, String) -> Unit) {
         viewModelScope.launch {
             _loading.value = true
@@ -450,7 +497,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                         _notificationsList.value = list
                         val context = getApplication<Application>()
                         for (notification in list) {
-                            if (!com.example.util.NotificationHelper.isNotificationShown(context, notification.id)) {
+                            if (!com.example.util.NotificationHelper.checkAndMarkNotificationAsShown(context, notification.id)) {
                                 com.example.util.NotificationHelper.showSystemNotification(
                                     context = context,
                                     notificationId = notification.id.hashCode(),
@@ -458,7 +505,6 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                     message = notification.message,
                                     imageUrl = notification.imageUrl
                                 )
-                                com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
                             }
                         }
 

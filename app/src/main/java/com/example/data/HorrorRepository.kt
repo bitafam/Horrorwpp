@@ -1237,6 +1237,52 @@ class HorrorRepository(context: Context) {
             throw Exception("اتصال به Supabase تنظیم نشده است.")
         }
     }
+
+    suspend fun getStoryReports(): List<StoryReport> = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val resp = api.getStoryReports()
+                if (resp.isSuccessful && resp.body() != null) {
+                    return@withContext resp.body()!!
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "getStoryReports exception", e)
+            }
+        }
+        emptyList()
+    }
+
+    suspend fun createStoryReport(report: StoryReport): Boolean = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val body = mapOf<String, Any>(
+                    "id" to report.id,
+                    "story_id" to report.story_id,
+                    "story_title" to report.story_title,
+                    "story_author" to report.story_author,
+                    "story_type" to report.story_type,
+                    "reason" to report.reason
+                )
+                val resp = api.createStoryReport(body)
+                return@withContext resp.isSuccessful
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "createStoryReport exception", e)
+            }
+        }
+        false
+    }
+
+    suspend fun deleteStoryReport(id: String): Boolean = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val resp = api.deleteStoryReport(idEq = "eq.$id")
+                return@withContext resp.isSuccessful
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "deleteStoryReport exception", e)
+            }
+        }
+        false
+    }
 }
 
 // Helper function to clean tags string

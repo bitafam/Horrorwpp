@@ -118,6 +118,21 @@ object NotificationHelper {
         }
     }
 
+    private val lock = Any()
+
+    fun checkAndMarkNotificationAsShown(context: Context, notificationId: String): Boolean {
+        synchronized(lock) {
+            val prefs = context.getSharedPreferences(PREF_SHOWN_NOTIFICATIONS, Context.MODE_PRIVATE)
+            val key = "shown_$notificationId"
+            val alreadyShown = prefs.getBoolean(key, false)
+            if (alreadyShown) {
+                return true
+            }
+            prefs.edit().putBoolean(key, true).commit()
+            return false
+        }
+    }
+
     fun markNotificationAsShown(context: Context, notificationId: String) {
         val prefs = context.getSharedPreferences(PREF_SHOWN_NOTIFICATIONS, Context.MODE_PRIVATE)
         prefs.edit().putBoolean("shown_$notificationId", true).apply()
@@ -136,5 +151,18 @@ object NotificationHelper {
     fun markSubmissionNotified(context: Context, submissionId: String) {
         val prefs = context.getSharedPreferences("notified_submissions", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("notified_$submissionId", true).apply()
+    }
+
+    fun checkAndMarkSubmissionNotified(context: Context, submissionId: String): Boolean {
+        synchronized(lock) {
+            val prefs = context.getSharedPreferences("notified_submissions", Context.MODE_PRIVATE)
+            val key = "notified_$submissionId"
+            val alreadyNotified = prefs.getBoolean(key, false)
+            if (alreadyNotified) {
+                return true
+            }
+            prefs.edit().putBoolean(key, true).commit()
+            return false
+        }
     }
 }

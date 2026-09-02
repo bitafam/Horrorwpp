@@ -31,6 +31,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.BorderStroke
 import coil.compose.AsyncImage
 import com.example.data.*
 import com.example.ui.theme.*
@@ -197,6 +199,16 @@ fun AdminLoginScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
 @Composable
 fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
     var adminTab by remember { mutableIntStateOf(0) }
+    var activeViewingStory by remember { mutableStateOf<RealStory?>(null) }
+
+    if (activeViewingStory != null) {
+        com.example.ui.user.StoryReaderScreen(
+            story = activeViewingStory!!,
+            viewModel = viewModel,
+            onBack = { activeViewingStory = null }
+        )
+        return
+    }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -239,49 +251,56 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                     selected = adminTab == 0,
                     onClick = { adminTab = 0 },
                     icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
-                    label = { Text("داشبورد", fontSize = 11.sp) },
+                    label = { Text("داشبورد", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 1,
                     onClick = { adminTab = 1 },
                     icon = { Icon(Icons.Default.AutoStories, contentDescription = null) },
-                    label = { Text("داستان‌ها", fontSize = 11.sp) },
+                    label = { Text("داستان‌ها", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 2,
                     onClick = { adminTab = 2 },
                     icon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                    label = { Text("طالع شوم", fontSize = 11.sp) },
+                    label = { Text("طالع", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 3,
                     onClick = { adminTab = 3 },
                     icon = { Icon(Icons.Default.AltRoute, contentDescription = null) },
-                    label = { Text("سناریوها", fontSize = 11.sp) },
+                    label = { Text("سناریو", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 4,
                     onClick = { adminTab = 4 },
                     icon = { Icon(Icons.Default.Psychology, contentDescription = null) },
-                    label = { Text("تنظیمات AI", fontSize = 11.sp) },
+                    label = { Text("تنظیم AI", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 5,
                     onClick = { adminTab = 5 },
                     icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
-                    label = { Text("اعلان‌ها", fontSize = 11.sp) },
+                    label = { Text("اعلان‌ها", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 6,
                     onClick = { adminTab = 6 },
                     icon = { Icon(Icons.Default.Bolt, contentDescription = null) },
-                    label = { Text("اتوماسیون", fontSize = 11.sp) },
+                    label = { Text("اتوماسیون", fontSize = 10.sp) },
+                    colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
+                )
+                NavigationBarItem(
+                    selected = adminTab == 7,
+                    onClick = { adminTab = 7 },
+                    icon = { Icon(Icons.Default.Report, contentDescription = null) },
+                    label = { Text("گزارش‌ها", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
             }
@@ -301,6 +320,7 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                 4 -> AdminAiSettingsTab(viewModel)
                 5 -> AdminNotificationsTab(viewModel)
                 6 -> AdminAutomationTab(viewModel)
+                7 -> AdminReportsTab(viewModel) { story -> activeViewingStory = story }
             }
         }
     }
@@ -924,6 +944,15 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                             if (notification.scheduledAt != null) {
                                 val sDate = java.text.SimpleDateFormat("HH:mm - yyyy/MM/dd", java.util.Locale.getDefault()).format(java.util.Date(notification.scheduledAt))
                                 Text("زمان موعد: $sDate", color = BloodGlow, fontSize = 10.sp)
+                            }
+                            if (!notification.triggerCondition.isNullOrBlank()) {
+                                val condLabel = when (notification.triggerCondition) {
+                                    "ON_FORTUNE_PUBLISH" -> "شرط: انتشار طالع ۱۲ ماه سال"
+                                    "ON_SCENARIO_TURN1" -> "شرط: انتشار سناریو دور اول"
+                                    "ON_SCENARIO_TURN2" -> "شرط: انتشار سناریو دور دوم"
+                                    else -> "شرط: ${notification.triggerCondition}"
+                                }
+                                Text(condLabel, color = BloodGlow, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                         IconButton(onClick = { viewModel.deleteNotification(notification.id) }) {
@@ -1805,10 +1834,11 @@ fun AdminStoriesManagerTab(
                 text = { Text("داستان‌های واقعی (${realStories.size})", fontWeight = FontWeight.Bold) },
                 icon = { Icon(Icons.Default.MenuBook, contentDescription = null) }
             )
+            val pendingCount = submissions.count { it.status != "PUBLISHED" }
             Tab(
                 selected = subTab == 1,
                 onClick = { subTab = 1 },
-                text = { Text("داستان‌های کاربران (${submissions.size})", fontWeight = FontWeight.Bold) },
+                text = { Text("داستان‌های کاربران ($pendingCount در انتظار)", fontWeight = FontWeight.Bold) },
                 icon = { Icon(Icons.Default.Inbox, contentDescription = null) }
             )
         }
@@ -3993,4 +4023,266 @@ fun parseBulkStories(inputText: String): List<RealStory> {
         }
     }
     return list
+}
+
+@Composable
+fun AdminReportsTab(viewModel: HorrorViewModel, onOpenStory: (RealStory) -> Unit) {
+    val reports by viewModel.storyReports.collectAsState()
+    val context = LocalContext.current
+    var selectedReports by remember { mutableStateOf(setOf<String>()) }
+    var isDeletingAll by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadStoryReports()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Top action row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "گزارش‌های کاربران",
+                    style = MaterialTheme.typography.titleLarge.copy(color = BloodGlow, fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    text = "${reports.size} مورد گزارش نامناسب دریافت شده",
+                    style = MaterialTheme.typography.bodySmall.copy(color = MutedAsh)
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Refresh Button
+                IconButton(
+                    onClick = { viewModel.loadStoryReports() },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(DeepCrypt, RoundedCornerShape(8.dp))
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = "بروزرسانی", tint = SpectralWhite)
+                }
+
+                // Bulk Delete button (if any selected)
+                if (selectedReports.isNotEmpty()) {
+                    Button(
+                        onClick = {
+                            isDeletingAll = true
+                            viewModel.deleteStoryReportsBulk(selectedReports.toList()) { success ->
+                                isDeletingAll = false
+                                if (success) {
+                                    android.widget.Toast.makeText(context, "گزارش‌های انتخاب شده حذف شدند.", android.widget.Toast.LENGTH_SHORT).show()
+                                    selectedReports = emptySet()
+                                } else {
+                                    android.widget.Toast.makeText(context, "خطا در حذف برخی گزارش‌ها.", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodGlow),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = !isDeletingAll,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        if (isDeletingAll) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Text("حذف گروهی (${selectedReports.size})", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(color = MutedAsh.copy(alpha = 0.2f))
+
+        if (reports.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF2E7D32), modifier = Modifier.size(48.dp))
+                    Text("هیچ گزارش جدیدی ثبت نشده است.", color = SpectralWhite, fontSize = 13.sp)
+                    Text("تمامی لوح‌ها عاری از هرگونه آلودگی و محتوای نامناسب هستند.", color = MutedAsh, fontSize = 11.sp)
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(reports) { report ->
+                    val isSelected = selectedReports.contains(report.id)
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(
+                                width = 1.dp,
+                                color = if (isSelected) BloodGlow else DeepCrypt.copy(alpha = 0.5f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable {
+                                if (isSelected) {
+                                    selectedReports = selectedReports - report.id
+                                } else {
+                                    selectedReports = selectedReports + report.id
+                                }
+                            },
+                        colors = CardDefaults.cardColors(containerColor = DeepCrypt.copy(alpha = 0.7f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = isSelected,
+                                        onCheckedChange = { checked ->
+                                            if (checked == true) {
+                                                selectedReports = selectedReports + report.id
+                                            } else {
+                                                selectedReports = selectedReports - report.id
+                                            }
+                                        },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = BloodGlow,
+                                            checkmarkColor = Color.White,
+                                            uncheckedColor = MutedAsh
+                                        )
+                                    )
+                                    Text(
+                                        text = report.story_title,
+                                        color = SpectralWhite,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
+
+                                Text(
+                                    text = if (report.story_type == "USER") "روایت کاربر" else "داستان اصلی",
+                                    color = if (report.story_type == "USER") Color(0xFFDEC595) else BloodGlow,
+                                    fontSize = 10.sp,
+                                    modifier = Modifier
+                                        .background(
+                                            color = (if (report.story_type == "USER") Color(0xFFDEC595) else BloodGlow).copy(alpha = 0.15f),
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+
+                            Text(
+                                text = "نویسنده/راوی: ${report.story_author}",
+                                color = MutedAsh,
+                                fontSize = 11.sp
+                            )
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(VoidBlack.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                    .border(0.5.dp, MutedAsh.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                    .padding(10.dp)
+                            ) {
+                                Text(
+                                    text = "علت گزارش: ${report.reason}",
+                                    color = Color(0xFFEDE8F5),
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp,
+                                    textAlign = TextAlign.Right,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Link to story button
+                                Button(
+                                    onClick = {
+                                        val subStories = viewModel.adminSubmissions.value
+                                        val realStories = viewModel.adminRealStories.value
+                                        val foundStory = if (report.story_type == "USER") {
+                                            subStories.find { it.id == report.story_id }?.toRealStory()
+                                        } else {
+                                            realStories.find { it.id == report.story_id }
+                                        }
+                                        if (foundStory != null) {
+                                            onOpenStory(foundStory)
+                                        } else {
+                                            onOpenStory(
+                                                RealStory(
+                                                    id = report.story_id,
+                                                    title = report.story_title,
+                                                    content = "این داستان مستقیماً یافت نشد. ممکن است از پایگاه داده حذف شده باشد.",
+                                                    author = report.story_author,
+                                                    source = "گزارش خطا",
+                                                    status = "PUBLISHED"
+                                                )
+                                            )
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F1135)),
+                                    border = BorderStroke(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.4f)),
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(Icons.Default.Visibility, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(13.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("مشاهده داستان مرتبط", color = Color(0xFFDEC595), fontSize = 10.5.sp)
+                                }
+
+                                // Delete single report
+                                TextButton(
+                                    onClick = {
+                                        viewModel.deleteStoryReport(report.id) { success ->
+                                            if (success) {
+                                                android.widget.Toast.makeText(context, "گزارش حذف شد.", android.widget.Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                android.widget.Toast.makeText(context, "خطا در حذف گزارش.", android.widget.Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.textButtonColors(contentColor = BloodGlow)
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("رد گزارش (حذف)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

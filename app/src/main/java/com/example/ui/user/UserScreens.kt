@@ -3589,6 +3589,50 @@ fun StoryReaderScreen(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // REPORT / REPORT CONTENT BUTTON (MYKET COMPLIANCE)
+                    var showReportDialog by remember { mutableStateOf(false) }
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFB8143F).copy(alpha = 0.08f))
+                            .border(1.dp, Color(0xFFB8143F).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                            .clickable {
+                                HorrorSoundManager.playClickSound()
+                                showReportDialog = true
+                            }
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.Report, contentDescription = null, tint = Color(0xFFB8143F), modifier = Modifier.size(16.dp))
+                            Text(
+                                text = "گزارش محتوای نامناسب (ریپورت داستان)",
+                                color = Color(0xFFB8143F),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = selectedFont.second
+                            )
+                        }
+                    }
+
+                    if (showReportDialog) {
+                        ReportStoryDialog(
+                            storyId = story.id,
+                            storyTitle = story.title,
+                            storyAuthor = story.author ?: "کاتبان عمارت وحشت",
+                            storyType = if (isUserSub) "USER" else "REAL",
+                            viewModel = viewModel,
+                            onDismiss = { showReportDialog = false }
+                        )
+                    }
                 }
             }
         }
@@ -4437,4 +4481,110 @@ fun UserStoryItemCard(
 @Composable
 fun UserSubmissionCard(submission: com.example.data.UserStorySubmission, index: Int) {
     UserStoryItemCard(submission = submission, index = index, onRead = {})
+}
+
+@Composable
+fun ReportStoryDialog(
+    storyId: String,
+    storyTitle: String,
+    storyAuthor: String,
+    storyType: String,
+    viewModel: HorrorViewModel,
+    onDismiss: () -> Unit
+) {
+    var reason by remember { mutableStateOf("") }
+    var isSending by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "⚠️ گزارش محتوای نامناسب",
+                color = Color(0xFFDEC595),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Right,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "در صورتی که این داستان خلاف قوانین، دارای محتوای توهین‌آمیز یا نامناسب است، لطفاً دلیل خود را بنویسید تا کاتبان عمارت آن را بررسی و حذف کنند.",
+                    color = Color(0xFFEDE8F5),
+                    fontSize = 12.sp,
+                    lineHeight = 20.sp,
+                    textAlign = TextAlign.Right
+                )
+                
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it },
+                    label = { Text("علت گزارش", color = Color(0xFF8B8496), fontSize = 11.sp) },
+                    placeholder = { Text("مثال: حاوی واژگان نامناسب، نقض کپی‌رایت و...", color = Color(0xFF4C4556), fontSize = 11.sp) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    maxLines = 4,
+                    textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp, textAlign = TextAlign.Right),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFB8143F),
+                        unfocusedBorderColor = Color(0xFFDEC595).copy(alpha = 0.4f),
+                        focusedLabelColor = Color(0xFFB8143F),
+                        unfocusedLabelColor = Color(0xFFDEC595),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (reason.isBlank()) {
+                        android.widget.Toast.makeText(context, "لطفاً دلیل گزارش را بنویسید.", android.widget.Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    isSending = true
+                    viewModel.submitStoryReport(
+                        com.example.data.StoryReport(
+                            story_id = storyId,
+                            story_title = storyTitle,
+                            story_author = storyAuthor,
+                            story_type = storyType,
+                            reason = reason
+                        )
+                    ) { success ->
+                        isSending = false
+                        if (success) {
+                            android.widget.Toast.makeText(context, "گزارش شما با موفقیت به ادمین ارسال شد.", android.widget.Toast.LENGTH_LONG).show()
+                            onDismiss()
+                        } else {
+                            android.widget.Toast.makeText(context, "خطا در ارسال گزارش! لطفاً اتصال خود را بررسی کنید.", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
+                enabled = !isSending,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                if (isSending) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                } else {
+                    Text("ارسال گزارش", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("انصراف", color = Color(0xFFDEC595), fontSize = 12.sp)
+            }
+        },
+        containerColor = Color(0xFF140C22),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.border(1.dp, Color(0xFFDEC595).copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+    )
 }
