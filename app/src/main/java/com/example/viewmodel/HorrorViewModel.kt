@@ -469,32 +469,46 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getUserVote(storyId: String): Float {
-        val p = getApplication<Application>().getSharedPreferences("horror_user_votes", android.content.Context.MODE_PRIVATE)
-        return p.getFloat("vote_$storyId", -1f)
+        val p = getApplication<Application>().getSharedPreferences("horror_house_user_ratings", android.content.Context.MODE_PRIVATE)
+        val v = p.getFloat("rating_$storyId", -1f)
+        if (v != -1f) return v
+        val pOld = getApplication<Application>().getSharedPreferences("horror_user_votes", android.content.Context.MODE_PRIVATE)
+        return pOld.getFloat("vote_$storyId", -1f)
     }
 
     fun rateStory(storyId: String, userRating: Float) {
         viewModelScope.launch {
-            val p = getApplication<Application>().getSharedPreferences("horror_user_votes", android.content.Context.MODE_PRIVATE)
-            val existingVote = p.getFloat("vote_$storyId", -1f)
+            val p = getApplication<Application>().getSharedPreferences("horror_house_user_ratings", android.content.Context.MODE_PRIVATE)
+            val existingVote = p.getFloat("rating_$storyId", -1f)
             if (existingVote != -1f) {
-                _errorMessage.value = "شما قبلاً به این داستان رای داده‌اید (${existingVote} ستاره)."
+                _errorMessage.value = "شما قبلاً به این داستان رای داده‌اید (${existingVote.toInt()} ستاره)."
                 return@launch
             }
-            p.edit().putFloat("vote_$storyId", userRating).apply()
+            p.edit().putFloat("rating_$storyId", userRating).apply()
 
             val currentStories = _realStoriesList.value
             val target = currentStories.find { it.id == storyId } ?: return@launch
-            _loading.value = true
+
+            // Immediate UI update
+            val safeRating = if (target.rating <= 0f) 5.0f else target.rating
+            val safeCount = if (target.rating_count <= 0) 1 else target.rating_count
+            val newCount = safeCount + 1
+            val newRating = ((safeRating * safeCount) + userRating) / newCount
+            val roundedRating = kotlin.math.round(newRating * 10f) / 10.0f
+            val updatedTarget = target.copy(rating = roundedRating, rating_count = newCount)
+
+            _realStoriesList.value = currentStories.map { if (it.id == storyId) updatedTarget else it }
+            _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedTarget else it }
+
             try {
                 repository.submitStoryRatingRemote(storyId, userRating, target.rating, target.rating_count)
                 val refreshed = repository.getRealStories(true)
-                _realStoriesList.value = refreshed
-                _adminRealStories.value = refreshed
+                if (refreshed.isNotEmpty()) {
+                    _realStoriesList.value = refreshed
+                    _adminRealStories.value = refreshed
+                }
             } catch (e: Exception) {
-                _errorMessage.value = "خطا در ثبت رأی: ${e.localizedMessage}"
-            } finally {
-                _loading.value = false
+                android.util.Log.e("RatingError", "Error submitting story rating remote: ${e.localizedMessage}")
             }
         }
     }
@@ -503,37 +517,52 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val currentStories = _realStoriesList.value
             val target = currentStories.find { it.id == storyId } ?: return@launch
+            val newCount = target.view_count + 1
+            val updatedTarget = target.copy(view_count = newCount)
+
+            // Immediate UI update
+            _realStoriesList.value = currentStories.map { if (it.id == storyId) updatedTarget else it }
+            _adminRealStories.value = _adminRealStories.value.map { if (it.id == storyId) updatedTarget else it }
+
             try {
                 repository.incrementStoryViewRemote(storyId, target.view_count)
-                val refreshed = repository.getRealStories(true)
-                _realStoriesList.value = refreshed
-                _adminRealStories.value = refreshed
             } catch (_: Exception) {}
         }
     }
 
     fun rateUserSubmission(submissionId: String, userRating: Float) {
         viewModelScope.launch {
-            val p = getApplication<Application>().getSharedPreferences("horror_user_votes", android.content.Context.MODE_PRIVATE)
-            val existingVote = p.getFloat("vote_$submissionId", -1f)
+            val p = getApplication<Application>().getSharedPreferences("horror_house_user_ratings", android.content.Context.MODE_PRIVATE)
+            val existingVote = p.getFloat("rating_$submissionId", -1f)
             if (existingVote != -1f) {
-                _errorMessage.value = "شما قبلاً به این روایت رای داده‌اید (${existingVote} ستاره)."
+                _errorMessage.value = "شما قبلاً به این روایت رای داده‌اید (${existingVote.toInt()} ستاره)."
                 return@launch
             }
-            p.edit().putFloat("vote_$submissionId", userRating).apply()
+            p.edit().putFloat("rating_$submissionId", userRating).apply()
 
             val currentSubmissions = _userSubmissionsList.value
             val target = currentSubmissions.find { it.id == submissionId } ?: return@launch
-            _loading.value = true
+
+            // Immediate UI update
+            val safeRating = if (target.rating <= 0f) 5.0f else target.rating
+            val safeCount = if (target.rating_count <= 0) 1 else target.rating_count
+            val newCount = safeCount + 1
+            val newRating = ((safeRating * safeCount) + userRating) / newCount
+            val roundedRating = kotlin.math.round(newRating * 10f) / 10.0f
+            val updatedTarget = target.copy(rating = roundedRating, rating_count = newCount)
+
+            _userSubmissionsList.value = currentSubmissions.map { if (it.id == submissionId) updatedTarget else it }
+            _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submissionId) updatedTarget else it }
+
             try {
                 repository.submitSubmissionRatingRemote(submissionId, userRating, target.rating, target.rating_count)
                 val refreshed = repository.getUserSubmissions(true)
-                _userSubmissionsList.value = refreshed
-                _adminSubmissions.value = refreshed
+                if (refreshed.isNotEmpty()) {
+                    _userSubmissionsList.value = refreshed
+                    _adminSubmissions.value = refreshed
+                }
             } catch (e: Exception) {
-                _errorMessage.value = "خطا در ثبت رأی: ${e.localizedMessage}"
-            } finally {
-                _loading.value = false
+                android.util.Log.e("RatingError", "Error submitting submission rating remote: ${e.localizedMessage}")
             }
         }
     }
@@ -542,11 +571,15 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val currentSubmissions = _userSubmissionsList.value
             val target = currentSubmissions.find { it.id == submissionId } ?: return@launch
+            val newCount = target.view_count + 1
+            val updatedTarget = target.copy(view_count = newCount)
+
+            // Immediate UI update
+            _userSubmissionsList.value = currentSubmissions.map { if (it.id == submissionId) updatedTarget else it }
+            _adminSubmissions.value = _adminSubmissions.value.map { if (it.id == submissionId) updatedTarget else it }
+
             try {
                 repository.incrementSubmissionViewRemote(submissionId, target.view_count)
-                val refreshed = repository.getUserSubmissions(true)
-                _userSubmissionsList.value = refreshed
-                _adminSubmissions.value = refreshed
             } catch (_: Exception) {}
         }
     }
