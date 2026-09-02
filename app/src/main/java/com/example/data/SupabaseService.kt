@@ -47,7 +47,8 @@ data class AppNotificationDto(
     val timestamp: Long,
     @Json(name = "is_scheduled") val is_scheduled: Boolean? = false,
     @Json(name = "scheduled_at") val scheduled_at: Long? = null,
-    val status: String? = "PUBLISHED"
+    val status: String? = "PUBLISHED",
+    @Json(name = "trigger_condition") val trigger_condition: String? = null
 ) {
     fun toCached(): CachedAppNotification = CachedAppNotification(
         id = id,
@@ -57,7 +58,8 @@ data class AppNotificationDto(
         timestamp = timestamp,
         isScheduled = is_scheduled ?: false,
         scheduledAt = scheduled_at,
-        status = status ?: "PUBLISHED"
+        status = status ?: "PUBLISHED",
+        triggerCondition = trigger_condition
     )
 }
 
@@ -214,8 +216,8 @@ interface SupabaseApi {
         @Query("order") order: String = "timestamp.desc"
     ): Response<List<AppNotificationDto>>
 
-    @POST("rest/v1/app_notifications")
-    @Headers("Prefer: return=representation")
+    @POST("rest/v1/app_notifications?on_conflict=id")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
     suspend fun createAppNotification(
         @Body item: Map<String, Any>
     ): Response<List<AppNotificationDto>>

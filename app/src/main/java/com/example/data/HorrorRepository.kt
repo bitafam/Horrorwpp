@@ -496,7 +496,8 @@ class HorrorRepository(context: Context) {
                     "image_url" to (notification.imageUrl ?: ""),
                     "timestamp" to notification.timestamp,
                     "is_scheduled" to notification.isScheduled,
-                    "status" to notification.status
+                    "status" to notification.status,
+                    "trigger_condition" to (notification.triggerCondition ?: "")
                 )
                 if (notification.scheduledAt != null) {
                     body["scheduled_at"] = notification.scheduledAt

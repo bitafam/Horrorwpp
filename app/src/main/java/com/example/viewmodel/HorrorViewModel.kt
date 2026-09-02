@@ -18,6 +18,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import org.json.JSONObject
 import org.json.JSONArray
 import com.example.BuildConfig
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 
 enum class AppMode {
     USER, ADMIN_LOGIN, ADMIN_PANEL, NOTIFICATIONS
@@ -255,7 +257,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val now = System.currentTimeMillis()
             var count = 0
-            val all = repository.getAllNotifications()
+            val all = repository.getAllNotificationsAdmin()
             for (n in all) {
                 if (n.isScheduled && n.status == "PENDING_SCHEDULE" && n.scheduledAt != null && n.scheduledAt <= now) {
                     val updated = n.copy(status = "PUBLISHED")
@@ -273,11 +275,39 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             if (count > 0) {
-                repository.insertAutomationLog("SCHEDULED_NOTIFICATIONS", "SUCCESS", "$count اعلان موعد رسیده منتشر شد.")
+                repository.insertAutomationLog("SCHEDULED_NOTIFICATIONS", "SUCCESS", "✅ تعداد $count اعلان موعد رسیده با موفقیت منتشر شد.")
                 loadNotifications()
                 loadAutomationData()
             }
             onComplete?.invoke(count)
+        }
+    }
+
+    fun publishNotificationsForCondition(condition: String) {
+        viewModelScope.launch {
+            val all = repository.getAllNotificationsAdmin()
+            var count = 0
+            for (n in all) {
+                if (n.isScheduled && n.status == "PENDING_SCHEDULE" && n.triggerCondition == condition) {
+                    val updated = n.copy(status = "PUBLISHED")
+                    repository.upsertNotification(updated)
+                    val context = getApplication<Application>()
+                    com.example.util.NotificationHelper.showSystemNotification(
+                        context = context,
+                        notificationId = updated.id.hashCode(),
+                        title = updated.title,
+                        message = updated.message,
+                        imageUrl = updated.imageUrl
+                    )
+                    com.example.util.NotificationHelper.markNotificationAsShown(context, updated.id)
+                    count++
+                }
+            }
+            if (count > 0) {
+                repository.insertAutomationLog("SCHEDULED_NOTIFICATIONS", "SUCCESS", "🔔 تعداد $count اعلان مشروط با موفقیت منتشر شد. شرط: $condition")
+                loadNotifications()
+                loadAutomationData()
+            }
         }
     }
 
@@ -354,6 +384,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                 val logMsg = if (success) "✅ طالع ۱۲ ماه سال با موفقیت تولید و در پایگاه داده ثبت شد." else "خطا در تولید طالع: $msg"
                                 viewModelScope.launch {
                                     repository.insertAutomationLog("AUTO_GRIM_FORTUNES", if (success) "SUCCESS" else "FAILED", logMsg)
+                                    if (success) {
+                                        publishNotificationsForCondition("ON_FORTUNE_PUBLISH")
+                                    }
                                     loadAutomationData()
                                     loadUserData()
                                 }
@@ -367,6 +400,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                 val logMsg = if (success) "✅ $count سناریوی تعاملی با موفقیت خلق و در پایگاه داده ثبت شد." else "خطا در تولید سناریو: $msg"
                                 viewModelScope.launch {
                                     repository.insertAutomationLog("AUTO_SCENARIOS", if (success) "SUCCESS" else "FAILED", logMsg)
+                                    if (success) {
+                                        publishNotificationsForCondition("ON_SCENARIO_TURN1")
+                                    }
                                     loadAutomationData()
                                     loadUserData()
                                 }
@@ -443,6 +479,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                     val logMsg = if (success) "✅ اجرای خودکار سر ساعت $curHour:${String.format("%02d", curMinute)}: طالع ۱۲ ماه با موفقیت تولید شد." else "خطای اجرای خودکار طالع: $msg"
                                     viewModelScope.launch {
                                         repository.insertAutomationLog("AUTO_GRIM_FORTUNES", if (success) "SUCCESS" else "FAILED", logMsg)
+                                        if (success) {
+                                            publishNotificationsForCondition("ON_FORTUNE_PUBLISH")
+                                        }
                                         loadAutomationData()
                                         loadUserData()
                                     }
@@ -462,6 +501,10 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                     val logMsg = if (success) "✅ اجرای خودکار سر ساعت $curHour:${String.format("%02d", curMinute)}: تعداد $count سناریو با موفقیت تولید شد." else "خطای اجرای خودکار سناریو: $msg"
                                     viewModelScope.launch {
                                         repository.insertAutomationLog("AUTO_SCENARIOS", if (success) "SUCCESS" else "FAILED", logMsg)
+                                        if (success) {
+                                            val turn = if (matchFirst) "ON_SCENARIO_TURN1" else "ON_SCENARIO_TURN2"
+                                            publishNotificationsForCondition(turn)
+                                        }
                                         loadAutomationData()
                                         loadUserData()
                                     }
@@ -478,7 +521,67 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val _notificationTemplates = MutableStateFlow<List<NotificationTemplate>>(emptyList())
+    val notificationTemplates: StateFlow<List<NotificationTemplate>> = _notificationTemplates.asStateFlow()
+
+    private fun loadNotificationTemplates() {
+        val json = prefs.getString("notification_templates_json", null)
+        if (json != null) {
+            try {
+                val moshi = Moshi.Builder().add(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory()).build()
+                val type = com.squareup.moshi.Types.newParameterizedType(List::class.java, NotificationTemplate::class.java)
+                val adapter: com.squareup.moshi.JsonAdapter<List<NotificationTemplate>> = moshi.adapter(type)
+                val list = adapter.fromJson(json)
+                if (list != null) {
+                    _notificationTemplates.value = list
+                    return
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HorrorViewModel", "Failed to load notification templates", e)
+            }
+        }
+        // Fallback or default templates
+        val defaults = listOf(
+            NotificationTemplate("temp-1", "⚠️ طالع جدید شما فاش شد!", "هم‌اکنون وارد اپلیکیشن شوید تا طالع شوم و دلهره‌آور ماه خود را بخوانید...", null, "طالع شوم"),
+            NotificationTemplate("temp-2", "🔥 یک سناریوی زنده آغاز شد...", "سرنوشت خود را تغییر دهید؛ آیا می‌توانید از این مخمصه مرگبار جان سالم به در ببرید؟", null, "بازی تعاملی")
+        )
+        _notificationTemplates.value = defaults
+        saveNotificationTemplatesToPrefs(defaults)
+    }
+
+    private fun saveNotificationTemplatesToPrefs(list: List<NotificationTemplate>) {
+        try {
+            val moshi = Moshi.Builder().add(com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory()).build()
+            val type = com.squareup.moshi.Types.newParameterizedType(List::class.java, NotificationTemplate::class.java)
+            val adapter: com.squareup.moshi.JsonAdapter<List<NotificationTemplate>> = moshi.adapter(type)
+            val json = adapter.toJson(list)
+            prefs.edit().putString("notification_templates_json", json).apply()
+        } catch (e: Exception) {
+            android.util.Log.e("HorrorViewModel", "Failed to save notification templates", e)
+        }
+    }
+
+    fun addNotificationTemplate(title: String, message: String, imageUrl: String?, category: String) {
+        val newTemplate = NotificationTemplate(
+            id = java.util.UUID.randomUUID().toString(),
+            title = title,
+            message = message,
+            imageUrl = imageUrl,
+            category = category
+        )
+        val updated = _notificationTemplates.value + newTemplate
+        _notificationTemplates.value = updated
+        saveNotificationTemplatesToPrefs(updated)
+    }
+
+    fun deleteNotificationTemplate(id: String) {
+        val updated = _notificationTemplates.value.filter { it.id != id }
+        _notificationTemplates.value = updated
+        saveNotificationTemplatesToPrefs(updated)
+    }
+
     init {
+        loadNotificationTemplates()
         // Observe network state continuously
         viewModelScope.launch {
             NetworkUtils.observeNetworkState(application).collect { isConnected ->
@@ -1130,6 +1233,12 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val saved = repository.createUserSubmission(newSub)
                 _adminSubmissions.value = listOf(saved) + _adminSubmissions.value
+                com.example.util.NotificationHelper.showSystemNotification(
+                    context = getApplication(),
+                    notificationId = newSub.id.hashCode(),
+                    title = "📥 روایت جدید ثبت شد!",
+                    message = "روایتی با عنوان «${newSub.title}» توسط ${newSub.author_name} ارسال شد و منتظر تایید شماست."
+                )
                 onResult(true)
             } catch (e: Exception) {
                 _errorMessage.value = "خطا در ارسال داستان به سرور: ${e.localizedMessage}"
@@ -1466,7 +1575,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     val sub = _adminSubmissions.value.find { it.id == id }
                     if (sub != null && sub.status == "PUBLISHED") {
                         try {
-                            val updated = sub.copy(status = "DRAFT")
+                            val updated = sub.copy(status = "PENDING")
                             repository.saveUserSubmission(updated)
                         } catch (e: Exception) {
                             android.util.Log.e("BulkDraftSub", "Failed to draft submission: $id", e)

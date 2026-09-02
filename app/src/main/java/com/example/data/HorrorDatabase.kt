@@ -71,7 +71,8 @@ data class CachedAppNotification(
     val timestamp: Long,
     val isScheduled: Boolean = false,
     val scheduledAt: Long? = null,
-    val status: String = "PUBLISHED"
+    val status: String = "PUBLISHED",
+    val triggerCondition: String? = null
 )
 
 @Dao
@@ -165,7 +166,7 @@ interface HorrorDao {
         CachedUserSubmission::class,
         CachedAppNotification::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class HorrorDatabase : RoomDatabase() {

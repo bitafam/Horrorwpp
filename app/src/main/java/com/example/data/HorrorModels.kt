@@ -318,3 +318,12 @@ data class AutomationLog(
     @Json(name = "created_at") val createdAt: String? = null
 )
 
+@JsonClass(generateAdapter = true)
+data class NotificationTemplate(
+    val id: String,
+    val title: String,
+    val message: String,
+    val imageUrl: String? = null,
+    val category: String = "عمومی"
+)
+

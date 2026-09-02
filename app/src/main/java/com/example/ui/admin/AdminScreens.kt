@@ -448,6 +448,7 @@ fun ExactTimePickerCard(
 @Composable
 fun AdminNotificationsTab(viewModel: HorrorViewModel) {
     val notifications by viewModel.adminNotificationsList.collectAsState()
+    val templates by viewModel.notificationTemplates.collectAsState()
     
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
@@ -463,6 +464,8 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
         mutableIntStateOf((cal.get(java.util.Calendar.MINUTE) + 2) % 60)
     }
     var useExactTimeMode by remember { mutableStateOf(false) }
+    var useConditionScheduling by remember { mutableStateOf(false) }
+    var selectedCondition by remember { mutableStateOf("ON_FORTUNE_PUBLISH") }
     var actionFeedback by remember { mutableStateOf<String?>(null) }
     var isCheckingEdge by remember { mutableStateOf(false) }
     
@@ -529,22 +532,103 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                     )
                 )
                 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    Button(
-                        onClick = { title = "داستان ترسناک جدید!"; message = "روایتی واقعی و دلهره‌آور در عمارت ثبت شد، هم‌اکنون بخوانید." },
-                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("قالب داستان", fontSize = 11.sp)
+                // Templates Manager Title
+                Text("قالب‌های ارسال اعلان", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
+                
+                // Horizontal scrolling list of custom and system templates
+                androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(templates.size) { index ->
+                        val temp = templates[index]
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                            modifier = Modifier
+                                .width(200.dp)
+                                .border(1.dp, BloodCrimson.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = temp.category,
+                                        color = BloodGlow,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    // Only allow deleting non-system templates (IDs not starting with temp-)
+                                    if (!temp.id.startsWith("temp-")) {
+                                        IconButton(
+                                            onClick = { viewModel.deleteNotificationTemplate(temp.id) },
+                                            modifier = Modifier.size(16.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "حذف قالب",
+                                                tint = BloodCrimson,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                                Text(
+                                    text = temp.title,
+                                    color = SpectralWhite,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = temp.message,
+                                    color = MutedAsh,
+                                    fontSize = 10.sp,
+                                    maxLines = 2
+                                )
+                                Button(
+                                    onClick = {
+                                        title = temp.title
+                                        message = temp.message
+                                        imageUrl = temp.imageUrl ?: ""
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                                    shape = RoundedCornerShape(4.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(24.dp)
+                                ) {
+                                    Text("اعمال قالب", fontSize = 9.sp, color = SpectralWhite)
+                                }
+                            }
+                        }
                     }
-                    Button(
-                        onClick = { title = "طالع‌بینی شوم ماه!"; message = "پیش‌گویی‌های تاریک برای متولدین این ماه آشکار شد." },
-                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                }
+
+                // Save Current Fields as Custom Template button
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            if (title.isNotBlank() && message.isNotBlank()) {
+                                viewModel.addNotificationTemplate(title, message, imageUrl.ifBlank { null }, "شخصی")
+                                actionFeedback = "قالب شخصی با موفقیت ذخیره شد."
+                            } else {
+                                actionFeedback = "برای ذخیره قالب، عنوان و متن الزامی است."
+                            }
+                        },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.weight(1f)
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text("قالب طالع", fontSize = 11.sp)
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(14.dp), tint = SpectralWhite)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("ذخیره به عنوان قالب شخصی جدید", fontSize = 11.sp, color = SpectralWhite)
                     }
                 }
 
@@ -559,7 +643,9 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                     Column {
                         Text("زمان‌بندی ارسال اعلان", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
                         Text(
-                            if (isScheduled) "ارسال دقیق سر موعد تعیین‌شده" else "ارسال و پوش فوری برای همه کاربران",
+                            if (isScheduled) {
+                                if (useConditionScheduling) "ارسال خودکار مشروط به انتشار محتوا" else "ارسال دقیق سر موعد زمانی تعیین‌شده"
+                            } else "ارسال و پوش فوری برای همه کاربران",
                             color = MutedAsh,
                             fontSize = 11.sp
                         )
@@ -583,64 +669,120 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("انتخاب دقیق دقیقه و ساعت ارسال (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            
-                            // Quick Presets
+                            // Sub-Selector: Time-based vs Condition-based
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
+                                Button(
+                                    onClick = { useConditionScheduling = false },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (!useConditionScheduling) BloodCrimson else CryptCard
+                                    ),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("بر اساس ساعت و زمان", fontSize = 11.sp, color = SpectralWhite)
+                                }
+                                Button(
+                                    onClick = { useConditionScheduling = true },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (useConditionScheduling) BloodCrimson else CryptCard
+                                    ),
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text("بر اساس شرط انتشار", fontSize = 11.sp, color = SpectralWhite)
+                                }
+                            }
+
+                            if (useConditionScheduling) {
+                                Text("انتخاب شرط ارسال خودکار اعلان:", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 listOf(
-                                    Pair("+2 دقیقه", 2),
-                                    Pair("+5 دقیقه", 5),
-                                    Pair("+15 دقیقه", 15),
-                                    Pair("+1 ساعت", 60),
-                                    Pair("+2 ساعت", 120)
-                                ).forEach { (label, mins) ->
-                                    val isSel = !useExactTimeMode && scheduleMinutesOffset == mins
-                                    Box(
+                                    Pair("ON_FORTUNE_PUBLISH", "همان لحظه که طالع ۱۲ ماه منتشر شد"),
+                                    Pair("ON_SCENARIO_TURN1", "هروقت سناریو دور اول منتشر شد"),
+                                    Pair("ON_SCENARIO_TURN2", "هروقت سناریو دور دوم منتشر شد")
+                                ).forEach { (cond, label) ->
+                                    val isSel = selectedCondition == cond
+                                    Row(
                                         modifier = Modifier
-                                            .weight(1f)
+                                            .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSel) BloodCrimson else CryptCard)
-                                            .clickable {
-                                                useExactTimeMode = false
-                                                scheduleMinutesOffset = mins
-                                            }
-                                            .padding(vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
+                                            .background(if (isSel) BloodCrimson.copy(alpha = 0.2f) else Color.Transparent)
+                                            .border(1.dp, if (isSel) BloodCrimson else Color.Transparent, RoundedCornerShape(8.dp))
+                                            .clickable { selectedCondition = cond }
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text(label, color = if (isSel) SpectralWhite else MutedAsh, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        RadioButton(
+                                            selected = isSel,
+                                            onClick = { selectedCondition = cond },
+                                            colors = RadioButtonDefaults.colors(selectedColor = BloodGlow, unselectedColor = MutedAsh)
+                                        )
+                                        Text(label, color = SpectralWhite, fontSize = 12.sp)
                                     }
                                 }
-                            }
-
-                            // Exact Time Picker component
-                            ExactTimePickerCard(
-                                title = "یا تعیین ساعت و دقیقه دلخواه:",
-                                hour = customHour,
-                                minute = customMinute,
-                                onTimeChanged = { h, m ->
-                                    useExactTimeMode = true
-                                    customHour = h
-                                    customMinute = m
-                                }
-                            )
-
-                            val targetTime = if (useExactTimeMode) {
-                                val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
-                                cal.set(java.util.Calendar.HOUR_OF_DAY, customHour)
-                                cal.set(java.util.Calendar.MINUTE, customMinute)
-                                cal.set(java.util.Calendar.SECOND, 0)
-                                if (cal.timeInMillis < System.currentTimeMillis()) {
-                                    cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
-                                }
-                                cal.timeInMillis
                             } else {
-                                System.currentTimeMillis() + (scheduleMinutesOffset * 60 * 1000L)
+                                Text("انتخاب دقیق دقیقه و ساعت ارسال (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                
+                                // Quick Presets
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(
+                                        Pair("+2 دقیقه", 2),
+                                        Pair("+5 دقیقه", 5),
+                                        Pair("+15 دقیقه", 15),
+                                        Pair("+1 ساعت", 60),
+                                        Pair("+2 ساعت", 120)
+                                    ).forEach { (label, mins) ->
+                                        val isSel = !useExactTimeMode && scheduleMinutesOffset == mins
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSel) BloodCrimson else CryptCard)
+                                                .clickable {
+                                                    useExactTimeMode = false
+                                                    scheduleMinutesOffset = mins
+                                                }
+                                                .padding(vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(label, color = if (isSel) SpectralWhite else MutedAsh, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+
+                                // Exact Time Picker component
+                                ExactTimePickerCard(
+                                    title = "یا تعیین ساعت و دقیقه دلخواه:",
+                                    hour = customHour,
+                                    minute = customMinute,
+                                    onTimeChanged = { h, m ->
+                                        useExactTimeMode = true
+                                        customHour = h
+                                        customMinute = m
+                                    }
+                                )
+
+                                val targetTime = if (useExactTimeMode) {
+                                    val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+                                    cal.set(java.util.Calendar.HOUR_OF_DAY, customHour)
+                                    cal.set(java.util.Calendar.MINUTE, customMinute)
+                                    cal.set(java.util.Calendar.SECOND, 0)
+                                    if (cal.timeInMillis < System.currentTimeMillis()) {
+                                        cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                    }
+                                    cal.timeInMillis
+                                } else {
+                                    System.currentTimeMillis() + (scheduleMinutesOffset * 60 * 1000L)
+                                }
+                                val targetDate = java.text.SimpleDateFormat("HH:mm - yyyy/MM/dd", java.util.Locale.getDefault()).format(java.util.Date(targetTime))
+                                Text("موعد دقیق انتشار: $targetDate", color = BloodGlow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
-                            val targetDate = java.text.SimpleDateFormat("HH:mm - yyyy/MM/dd", java.util.Locale.getDefault()).format(java.util.Date(targetTime))
-                            Text("موعد دقیق انتشار: $targetDate", color = BloodGlow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -649,7 +791,7 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                     onClick = {
                         if (title.isBlank() || message.isBlank()) return@Button
                         val now = System.currentTimeMillis()
-                        val scheduledAtMillis = if (isScheduled) {
+                        val scheduledAtMillis = if (isScheduled && !useConditionScheduling) {
                             if (useExactTimeMode) {
                                 val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
                                 cal.set(java.util.Calendar.HOUR_OF_DAY, customHour)
@@ -671,10 +813,15 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                             timestamp = now,
                             isScheduled = isScheduled,
                             scheduledAt = scheduledAtMillis,
-                            status = if (isScheduled) "PENDING_SCHEDULE" else "PUBLISHED"
+                            status = if (isScheduled) "PENDING_SCHEDULE" else "PUBLISHED",
+                            triggerCondition = if (isScheduled && useConditionScheduling) selectedCondition else null
                         )
                         viewModel.upsertNotification(notification)
-                        actionFeedback = if (isScheduled) "اعلان با موفقیت برای موعد دقیق زمان‌بندی شد." else "اعلان فوراً برای همه کاربران ارسال شد."
+                        actionFeedback = if (isScheduled) {
+                            if (useConditionScheduling) "اعلان مشروط با موفقیت برای شرط انتشار زمان‌بندی گردید." else "اعلان با موفقیت برای موعد دقیق زمان‌بندی شد."
+                        } else {
+                            "اعلان فوراً برای همه کاربران ارسال شد."
+                        }
                         title = ""
                         message = ""
                         imageUrl = ""
@@ -990,6 +1137,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
         // ==========================================
         var fortuneHour by remember { mutableIntStateOf(fortuneConfig.schedule_hour_1) }
         var fortuneMinute by remember { mutableIntStateOf(fortuneConfig.schedule_minute_1) }
+        var fortunePromptInput by remember(fortuneConfig) { mutableStateOf(fortuneConfig.custom_prompt ?: "") }
         LaunchedEffect(fortuneConfig) {
             fortuneHour = fortuneConfig.schedule_hour_1
             fortuneMinute = fortuneConfig.schedule_minute_1
@@ -1018,7 +1166,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     Switch(
                         checked = fortuneConfig.is_active,
                         onCheckedChange = { active ->
-                            viewModel.saveAutomationConfig(fortuneConfig.copy(is_active = active, schedule_hour_1 = fortuneHour, schedule_minute_1 = fortuneMinute)) {
+                            viewModel.saveAutomationConfig(fortuneConfig.copy(is_active = active, schedule_hour_1 = fortuneHour, schedule_minute_1 = fortuneMinute, custom_prompt = fortunePromptInput.ifBlank { null })) {
                                 feedbackMsg = "تنظیمات تولید طالع ذخیره شد."
                             }
                         },
@@ -1034,12 +1182,27 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     onTimeChanged = { h, m ->
                         fortuneHour = h
                         fortuneMinute = m
-                        viewModel.saveAutomationConfig(fortuneConfig.copy(schedule_hour_1 = h, schedule_minute_1 = m))
                     }
                 )
 
+                // Custom Prompt Input for Fortune
+                OutlinedTextField(
+                    value = fortunePromptInput,
+                    onValueChange = { fortunePromptInput = it },
+                    label = { Text("فرمان (پرامپت) سفارشی تولید طالع ۱۲ ماه", color = MutedAsh) },
+                    placeholder = { Text("پرامپت دلخواه خود را وارد کنید...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    maxLines = 4,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
                 Text(
-                    text = "طالع هر ۱۲ ماه سال، رأس ساعت ${String.format("%02d", fortuneHour)}:${String.format("%02d", fortuneMinute)} به وقت تهران تولید و جایگزین می‌شود.",
+                    text = "طالع هر ۱۲ ماه سال، رأس ساعت ${String.format("%02d", fortuneHour)}:${String.format("%02d", fortuneMinute)} به وقت تهران با فرمان فوق تولید و جایگزین می‌شود.",
                     color = BloodGlow,
                     fontSize = 11.sp
                 )
@@ -1056,23 +1219,45 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         fontWeight = FontWeight.Bold
                     )
 
-                    Button(
-                        onClick = {
-                            runningTask = "auto-grim-fortunes"
-                            viewModel.triggerEdgeFunction("auto-grim-fortunes") { success, msg ->
-                                runningTask = null
-                                feedbackMsg = msg
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        if (runningTask == "auto-grim-fortunes") {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
-                        } else {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                viewModel.saveAutomationConfig(
+                                    fortuneConfig.copy(
+                                        schedule_hour_1 = fortuneHour,
+                                        schedule_minute_1 = fortuneMinute,
+                                        custom_prompt = fortunePromptInput.ifBlank { null }
+                                    )
+                                ) {
+                                    feedbackMsg = "تنظیمات طالع با موفقیت ذخیره شد."
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("تولید و تست فوری", fontSize = 11.sp)
+                            Text("ذخیره تنظیمات", fontSize = 11.sp)
+                        }
+
+                        Button(
+                            onClick = {
+                                runningTask = "auto-grim-fortunes"
+                                viewModel.triggerEdgeFunction("auto-grim-fortunes") { success, msg ->
+                                    runningTask = null
+                                    feedbackMsg = msg
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            if (runningTask == "auto-grim-fortunes") {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("تولید و تست فوری", fontSize = 11.sp)
+                            }
                         }
                     }
                 }
@@ -1088,6 +1273,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
         var scenHour2 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_2) }
         var scenMinute2 by remember { mutableIntStateOf(scenarioConfig.schedule_minute_2) }
         var scenBatchCount by remember { mutableIntStateOf(scenarioConfig.batch_count) }
+        var scenarioPromptInput by remember(scenarioConfig) { mutableStateOf(scenarioConfig.custom_prompt ?: "") }
 
         LaunchedEffect(scenarioConfig) {
             scenarioFreq = scenarioConfig.frequency
@@ -1129,7 +1315,8 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                     schedule_minute_1 = scenMinute1,
                                     schedule_hour_2 = scenHour2,
                                     schedule_minute_2 = scenMinute2,
-                                    batch_count = scenBatchCount
+                                    batch_count = scenBatchCount,
+                                    custom_prompt = scenarioPromptInput.ifBlank { null }
                                 )
                             ) {
                                 feedbackMsg = "تنظیمات سناریوی خودکار ذخیره شد."
@@ -1155,7 +1342,6 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                     .background(if (isSel) BloodCrimson else CryptCardElevated)
                                     .clickable {
                                         scenBatchCount = c
-                                        viewModel.saveAutomationConfig(scenarioConfig.copy(batch_count = c))
                                     }
                                     .padding(horizontal = 14.dp, vertical = 6.dp)
                             ) {
@@ -1182,7 +1368,6 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                 .background(if (isOnce) BloodCrimson else CryptCardElevated)
                                 .clickable {
                                     scenarioFreq = "DAILY"
-                                    viewModel.saveAutomationConfig(scenarioConfig.copy(frequency = "DAILY"))
                                 }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
@@ -1195,7 +1380,6 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                 .background(if (isTwice) BloodCrimson else CryptCardElevated)
                                 .clickable {
                                     scenarioFreq = "TWICE_DAILY"
-                                    viewModel.saveAutomationConfig(scenarioConfig.copy(frequency = "TWICE_DAILY"))
                                 }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
@@ -1212,7 +1396,6 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     onTimeChanged = { h, m ->
                         scenHour1 = h
                         scenMinute1 = m
-                        viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_1 = h, schedule_minute_1 = m))
                     }
                 )
 
@@ -1224,10 +1407,25 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         onTimeChanged = { h, m ->
                             scenHour2 = h
                             scenMinute2 = m
-                            viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_2 = h, schedule_minute_2 = m))
                         }
                     )
                 }
+
+                // Custom Prompt Input for Scenario
+                OutlinedTextField(
+                    value = scenarioPromptInput,
+                    onValueChange = { scenarioPromptInput = it },
+                    label = { Text("فرمان (پرامپت) سفارشی تولید سناریو", color = MutedAsh) },
+                    placeholder = { Text("پرامپت دلخواه خود را وارد کنید...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    maxLines = 4,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1245,23 +1443,49 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         fontWeight = FontWeight.Bold
                     )
 
-                    Button(
-                        onClick = {
-                            runningTask = "auto-scenarios"
-                            viewModel.triggerEdgeFunction("auto-scenarios") { success, msg ->
-                                runningTask = null
-                                feedbackMsg = msg
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        if (runningTask == "auto-scenarios") {
-                            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
-                        } else {
-                            Icon(Icons.Default.AltRoute, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = {
+                                viewModel.saveAutomationConfig(
+                                    scenarioConfig.copy(
+                                        frequency = scenarioFreq,
+                                        schedule_hour_1 = scenHour1,
+                                        schedule_minute_1 = scenMinute1,
+                                        schedule_hour_2 = scenHour2,
+                                        schedule_minute_2 = scenMinute2,
+                                        batch_count = scenBatchCount,
+                                        custom_prompt = scenarioPromptInput.ifBlank { null }
+                                    )
+                                ) {
+                                    feedbackMsg = "تنظیمات سناریو با موفقیت ذخیره شد."
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("تولید سناریو فوری", fontSize = 11.sp)
+                            Text("ذخیره تنظیمات", fontSize = 11.sp)
+                        }
+
+                        Button(
+                            onClick = {
+                                runningTask = "auto-scenarios"
+                                viewModel.triggerEdgeFunction("auto-scenarios") { success, msg ->
+                                    runningTask = null
+                                    feedbackMsg = msg
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            if (runningTask == "auto-scenarios") {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
+                            } else {
+                                Icon(Icons.Default.AltRoute, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("تولید سناریو فوری", fontSize = 11.sp)
+                            }
                         }
                     }
                 }
@@ -2009,7 +2233,7 @@ fun AdminStoriesManagerTab(
                             submission = sub,
                             onPublishWithPoster = { submissionToPublish = sub },
                             onToggleStatus = {
-                                val next = if (sub.status == "PUBLISHED") "DRAFT" else "PUBLISHED"
+                                val next = if (sub.status == "PUBLISHED") "PENDING" else "PUBLISHED"
                                 viewModel.updateSubmissionStatus(sub.id, next, null) {}
                             },
                             onDelete = { viewModel.deleteSubmission(sub.id) {} },
