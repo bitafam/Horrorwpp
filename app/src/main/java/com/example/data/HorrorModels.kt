@@ -283,3 +283,36 @@ object ScenarioParser {
     }
 }
 
+@JsonClass(generateAdapter = true)
+data class AppSetting(
+    val key: String,
+    val value: String,
+    val description: String? = null,
+    @Json(name = "updated_at") val updatedAt: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AutomationConfig(
+    val id: String, // 'SCHEDULED_NOTIFICATIONS', 'AUTO_GRIM_FORTUNES', 'AUTO_SCENARIOS'
+    val is_active: Boolean = false,
+    val frequency: String = "DAILY", // 'HOURLY', 'DAILY', 'TWICE_DAILY'
+    val schedule_hour_1: Int = 0, // 0 to 23
+    val schedule_hour_2: Int = 12, // 0 to 23
+    val batch_count: Int = 1,
+    val custom_prompt: String? = null,
+    val last_run_at: String? = null,
+    val next_run_at: String? = null,
+    val last_status: String? = null, // 'SUCCESS', 'FAILED', 'PENDING'
+    val last_log: String? = null,
+    @Json(name = "updated_at") val updatedAt: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AutomationLog(
+    val id: String,
+    val task_type: String,
+    val status: String,
+    val message: String,
+    @Json(name = "created_at") val createdAt: String? = null
+)
+

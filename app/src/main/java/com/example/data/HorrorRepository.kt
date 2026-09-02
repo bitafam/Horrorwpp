@@ -453,7 +453,11 @@ class HorrorRepository(context: Context) {
                     for (item in cachedList) {
                         dao.upsertNotification(item)
                     }
-                    return@withContext cachedList
+                    val now = System.currentTimeMillis()
+                    // Filter out pending future scheduled notifications for regular users
+                    return@withContext cachedList.filter { 
+                        it.status == "PUBLISHED" || (!it.isScheduled && (it.scheduledAt == null || it.scheduledAt <= now)) 
+                    }
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getAllNotifications exception", e)
@@ -462,17 +466,41 @@ class HorrorRepository(context: Context) {
         dao.getAllNotifications()
     }
 
+    suspend fun getAllNotificationsAdmin(): List<CachedAppNotification> = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val resp = api.getAppNotifications()
+                if (resp.isSuccessful && resp.body() != null) {
+                    val dtos = resp.body()!!
+                    val cachedList = dtos.map { it.toCached() }
+                    for (item in cachedList) {
+                        dao.upsertNotification(item)
+                    }
+                    return@withContext cachedList
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "getAllNotificationsAdmin exception", e)
+            }
+        }
+        dao.getAllNotificationsAdmin()
+    }
+
     suspend fun upsertNotification(notification: CachedAppNotification) = withContext(Dispatchers.IO) {
         dao.upsertNotification(notification)
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val body = mapOf(
+                val body = mutableMapOf<String, Any>(
                     "id" to notification.id,
                     "title" to notification.title,
                     "message" to notification.message,
                     "image_url" to (notification.imageUrl ?: ""),
-                    "timestamp" to notification.timestamp
+                    "timestamp" to notification.timestamp,
+                    "is_scheduled" to notification.isScheduled,
+                    "status" to notification.status
                 )
+                if (notification.scheduledAt != null) {
+                    body["scheduled_at"] = notification.scheduledAt
+                }
                 api.createAppNotification(body)
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "upsertNotification exception", e)
@@ -488,6 +516,113 @@ class HorrorRepository(context: Context) {
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "deleteNotification exception", e)
             }
+        }
+    }
+
+    // SYSTEM / APP SETTINGS (Stored in Supabase DB)
+    suspend fun getAppSettings(): List<AppSetting> = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val resp = api.getAppSettings()
+                if (resp.isSuccessful && resp.body() != null) {
+                    return@withContext resp.body()!!
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "getAppSettings exception", e)
+            }
+        }
+        emptyList()
+    }
+
+    suspend fun saveAppSetting(key: String, value: String, description: String? = null): Boolean = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val item = mapOf(
+                    "key" to key,
+                    "value" to value,
+                    "description" to (description ?: "")
+                )
+                val resp = api.upsertAppSetting(item)
+                return@withContext resp.isSuccessful
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "saveAppSetting exception", e)
+            }
+        }
+        false
+    }
+
+    // AUTOMATION CONFIGS
+    suspend fun getAutomationConfigs(): List<AutomationConfig> = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val resp = api.getAutomationConfigs()
+                if (resp.isSuccessful && resp.body() != null) {
+                    return@withContext resp.body()!!
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "getAutomationConfigs exception", e)
+            }
+        }
+        emptyList()
+    }
+
+    suspend fun saveAutomationConfig(config: AutomationConfig): Boolean = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val item = mutableMapOf<String, Any>(
+                    "id" to config.id,
+                    "is_active" to config.is_active,
+                    "frequency" to config.frequency,
+                    "schedule_hour_1" to config.schedule_hour_1,
+                    "schedule_hour_2" to config.schedule_hour_2,
+                    "batch_count" to config.batch_count
+                )
+                config.custom_prompt?.let { item["custom_prompt"] = it }
+                val resp = api.upsertAutomationConfig(item)
+                return@withContext resp.isSuccessful
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "saveAutomationConfig exception", e)
+            }
+        }
+        false
+    }
+
+    // AUTOMATION LOGS
+    suspend fun getAutomationLogs(): List<AutomationLog> = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val resp = api.getAutomationLogs()
+                if (resp.isSuccessful && resp.body() != null) {
+                    return@withContext resp.body()!!
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "getAutomationLogs exception", e)
+            }
+        }
+        emptyList()
+    }
+
+    // TRIGGER EDGE FUNCTIONS
+    suspend fun triggerEdgeFunction(functionName: String): Pair<Boolean, String> = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) {
+            return@withContext Pair(false, "تنظیمات Supabase برقرار نیست.")
+        }
+        try {
+            val resp = when (functionName) {
+                "scheduled-notifications" -> api.triggerScheduledNotifications()
+                "auto-grim-fortunes" -> api.triggerAutoGrimFortunes()
+                "auto-scenarios" -> api.triggerAutoScenarios()
+                else -> return@withContext Pair(false, "فانکشن ناشناخته است.")
+            }
+            if (resp.isSuccessful) {
+                val text = resp.body()?.string() ?: "عملیات با موفقیت فراخوانی شد."
+                return@withContext Pair(true, text)
+            } else {
+                val err = resp.errorBody()?.string() ?: "خطای کد ${resp.code()}"
+                return@withContext Pair(false, "خطا در فراخوانی فانکشن ($err)")
+            }
+        } catch (e: Exception) {
+            return@withContext Pair(false, "استثنا در ارتباط: ${e.localizedMessage}")
         }
     }
 

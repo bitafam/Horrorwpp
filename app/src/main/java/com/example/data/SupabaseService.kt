@@ -44,14 +44,20 @@ data class AppNotificationDto(
     val title: String,
     val message: String,
     @Json(name = "image_url") val image_url: String?,
-    val timestamp: Long
+    val timestamp: Long,
+    @Json(name = "is_scheduled") val is_scheduled: Boolean? = false,
+    @Json(name = "scheduled_at") val scheduled_at: Long? = null,
+    val status: String? = "PUBLISHED"
 ) {
     fun toCached(): CachedAppNotification = CachedAppNotification(
         id = id,
         title = title,
         message = message,
         imageUrl = image_url,
-        timestamp = timestamp
+        timestamp = timestamp,
+        isScheduled = is_scheduled ?: false,
+        scheduledAt = scheduled_at,
+        status = status ?: "PUBLISHED"
     )
 }
 
@@ -285,6 +291,49 @@ interface SupabaseApi {
         @Header("Authorization") authHeader: String,
         @Body body: AiGenerationRequest
     ): Response<AiGenerationResponse>
+
+    // APP SETTINGS (Stored in Supabase)
+    @GET("rest/v1/app_settings")
+    suspend fun getAppSettings(): Response<List<AppSetting>>
+
+    @POST("rest/v1/app_settings?on_conflict=key")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertAppSetting(
+        @Body item: Map<String, Any>
+    ): Response<List<AppSetting>>
+
+    // AUTOMATION CONFIGS
+    @GET("rest/v1/automation_configs")
+    suspend fun getAutomationConfigs(): Response<List<AutomationConfig>>
+
+    @POST("rest/v1/automation_configs?on_conflict=id")
+    @Headers("Prefer: resolution=merge-duplicates,return=representation")
+    suspend fun upsertAutomationConfig(
+        @Body item: Map<String, Any>
+    ): Response<List<AutomationConfig>>
+
+    // AUTOMATION LOGS
+    @GET("rest/v1/automation_logs")
+    suspend fun getAutomationLogs(
+        @Query("order") order: String = "created_at.desc",
+        @Query("limit") limit: Int = 30
+    ): Response<List<AutomationLog>>
+
+    // TRIGGER EDGE FUNCTIONS MANUALLY
+    @POST("functions/v1/scheduled-notifications")
+    suspend fun triggerScheduledNotifications(
+        @Header("Authorization") authHeader: String? = null
+    ): Response<ResponseBody>
+
+    @POST("functions/v1/auto-grim-fortunes")
+    suspend fun triggerAutoGrimFortunes(
+        @Header("Authorization") authHeader: String? = null
+    ): Response<ResponseBody>
+
+    @POST("functions/v1/auto-scenarios")
+    suspend fun triggerAutoScenarios(
+        @Header("Authorization") authHeader: String? = null
+    ): Response<ResponseBody>
 }
 
 object SupabaseClientProvider {

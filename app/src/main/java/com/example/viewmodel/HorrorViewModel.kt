@@ -157,10 +157,23 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _notificationsList = MutableStateFlow<List<CachedAppNotification>>(emptyList())
     val notificationsList: StateFlow<List<CachedAppNotification>> = _notificationsList.asStateFlow()
 
+    private val _adminNotificationsList = MutableStateFlow<List<CachedAppNotification>>(emptyList())
+    val adminNotificationsList: StateFlow<List<CachedAppNotification>> = _adminNotificationsList.asStateFlow()
+
+    // Automation States
+    private val _automationConfigs = MutableStateFlow<List<AutomationConfig>>(emptyList())
+    val automationConfigs: StateFlow<List<AutomationConfig>> = _automationConfigs.asStateFlow()
+
+    private val _automationLogs = MutableStateFlow<List<AutomationLog>>(emptyList())
+    val automationLogs: StateFlow<List<AutomationLog>> = _automationLogs.asStateFlow()
+
     fun loadNotifications() {
         viewModelScope.launch {
             val list = repository.getAllNotifications()
             _notificationsList.value = list
+            val adminList = repository.getAllNotificationsAdmin()
+            _adminNotificationsList.value = adminList
+
             val context = getApplication<Application>()
             for (notification in list) {
                 if (!com.example.util.NotificationHelper.isNotificationShown(context, notification.id)) {
@@ -216,15 +229,17 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun upsertNotification(notification: CachedAppNotification) {
         viewModelScope.launch {
             repository.upsertNotification(notification)
-            val context = getApplication<Application>()
-            com.example.util.NotificationHelper.showSystemNotification(
-                context = context,
-                notificationId = notification.id.hashCode(),
-                title = notification.title,
-                message = notification.message,
-                imageUrl = notification.imageUrl
-            )
-            com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
+            if (!notification.isScheduled || notification.status == "PUBLISHED") {
+                val context = getApplication<Application>()
+                com.example.util.NotificationHelper.showSystemNotification(
+                    context = context,
+                    notificationId = notification.id.hashCode(),
+                    title = notification.title,
+                    message = notification.message,
+                    imageUrl = notification.imageUrl
+                )
+                com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
+            }
             loadNotifications()
         }
     }
@@ -233,6 +248,64 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.deleteNotification(id)
             loadNotifications()
+        }
+    }
+
+    fun loadAutomationData() {
+        viewModelScope.launch {
+            try {
+                val configs = repository.getAutomationConfigs()
+                if (configs.isNotEmpty()) {
+                    _automationConfigs.value = configs
+                } else {
+                    _automationConfigs.value = listOf(
+                        AutomationConfig(id = "SCHEDULED_NOTIFICATIONS", is_active = true, frequency = "HOURLY"),
+                        AutomationConfig(id = "AUTO_GRIM_FORTUNES", is_active = false, frequency = "DAILY", schedule_hour_1 = 0),
+                        AutomationConfig(id = "AUTO_SCENARIOS", is_active = false, frequency = "DAILY", schedule_hour_1 = 14, schedule_hour_2 = 22, batch_count = 1)
+                    )
+                }
+                val logs = repository.getAutomationLogs()
+                _automationLogs.value = logs
+
+                val settings = repository.getAppSettings()
+                val remoteKey = settings.find { it.key == "GEMINI_API_KEY" }?.value
+                if (!remoteKey.isNullOrBlank() && _geminiApiKey.value.isBlank()) {
+                    _geminiApiKey.value = remoteKey
+                    prefs.edit().putString(PREF_GEMINI_KEY, remoteKey).apply()
+                }
+                val remoteModel = settings.find { it.key == "GEMINI_MODEL" }?.value
+                if (!remoteModel.isNullOrBlank()) {
+                    _selectedGeminiModel.value = remoteModel
+                    prefs.edit().putString(PREF_GEMINI_MODEL, remoteModel).apply()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HorrorViewModel", "loadAutomationData error: ${e.message}")
+            }
+        }
+    }
+
+    fun saveAutomationConfig(config: AutomationConfig, onResult: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch {
+            val success = repository.saveAutomationConfig(config)
+            if (success) {
+                val updated = _automationConfigs.value.filter { it.id != config.id } + config
+                _automationConfigs.value = updated
+            }
+            onResult?.invoke(success)
+        }
+    }
+
+    fun triggerEdgeFunction(functionName: String, onResult: (Boolean, String) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                val res = repository.triggerEdgeFunction(functionName)
+                loadAutomationData()
+                loadNotifications()
+                onResult(res.first, res.second)
+            } finally {
+                _loading.value = false
+            }
         }
     }
 
@@ -662,11 +735,21 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun setGeminiApiKey(key: String) {
         _geminiApiKey.value = key.trim()
         prefs.edit().putString(PREF_GEMINI_KEY, key.trim()).apply()
+        viewModelScope.launch {
+            try {
+                repository.saveAppSetting("GEMINI_API_KEY", key.trim(), "Google Gemini API Key for Edge Functions and App")
+            } catch (_: Exception) {}
+        }
     }
 
     fun setSelectedGeminiModel(model: String) {
         _selectedGeminiModel.value = model
         prefs.edit().putString(PREF_GEMINI_MODEL, model).apply()
+        viewModelScope.launch {
+            try {
+                repository.saveAppSetting("GEMINI_MODEL", model, "Selected Gemini Model")
+            } catch (_: Exception) {}
+        }
     }
 
     private fun syncAndSeedPrompts(prompts: List<AiPrompt>) {

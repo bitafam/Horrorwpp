@@ -277,6 +277,13 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                     label = { Text("اعلان‌ها", fontSize = 11.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
+                NavigationBarItem(
+                    selected = adminTab == 6,
+                    onClick = { adminTab = 6 },
+                    icon = { Icon(Icons.Default.Bolt, contentDescription = null) },
+                    label = { Text("اتوماسیون", fontSize = 11.sp) },
+                    colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
+                )
             }
         }
     ) { padding ->
@@ -293,81 +300,866 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                 3 -> AdminScenariosTab(viewModel, scenarios)
                 4 -> AdminAiSettingsTab(viewModel)
                 5 -> AdminNotificationsTab(viewModel)
+                6 -> AdminAutomationTab(viewModel)
             }
         }
     }
 }
 
 // ----------------------------------------------------
-// TAB 5: NOTIFICATIONS MANAGER
+// TAB 5: NOTIFICATIONS MANAGER (With Scheduling)
 // ----------------------------------------------------
 @Composable
 fun AdminNotificationsTab(viewModel: HorrorViewModel) {
-    val notifications by viewModel.notificationsList.collectAsState()
+    val notifications by viewModel.adminNotificationsList.collectAsState()
     
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf("") }
+    var isScheduled by remember { mutableStateOf(false) }
+    var scheduleHoursOffset by remember { mutableIntStateOf(1) }
+    var actionFeedback by remember { mutableStateOf<String?>(null) }
+    var isCheckingEdge by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         viewModel.loadNotifications()
     }
     
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        Text("ارسال اعلان جدید", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = message, onValueChange = { message = it }, label = { Text("پیام") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(value = imageUrl, onValueChange = { imageUrl = it }, label = { Text("لینک تصویر (اختیاری)") }, modifier = Modifier.fillMaxWidth())
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { title = "داستان جدید!"; message = "یک داستان ترسناک جدید منتشر شد، آن را بخوانید." }) { Text("قالب داستان") }
-            Button(onClick = { title = "طالع‌بینی جدید!"; message = "طالع شوم ماه جدید منتشر شد." }) { Text("قالب طالع") }
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = {
-                if (title.isBlank() || message.isBlank()) return@Button
-                val notification = CachedAppNotification(
-                    id = java.util.UUID.randomUUID().toString(),
-                    title = title,
-                    message = message,
-                    imageUrl = imageUrl.ifBlank { null },
-                    timestamp = System.currentTimeMillis()
-                )
-                viewModel.upsertNotification(notification)
-                title = ""
-                message = ""
-                imageUrl = ""
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-            modifier = Modifier.fillMaxWidth()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodCrimson.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Text("ارسال اعلان")
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("ارسال یا زمان‌بندی اعلان جدید", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("عنوان اعلان") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
+                OutlinedTextField(
+                    value = message,
+                    onValueChange = { message = it },
+                    label = { Text("متن اعلان") },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
+                OutlinedTextField(
+                    value = imageUrl,
+                    onValueChange = { imageUrl = it },
+                    label = { Text("لینک تصویر پوستر (اختیاری)") },
+                    placeholder = { Text("https://...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = { title = "داستان ترسناک جدید!"; message = "روایتی واقعی و دلهره‌آور در عمارت ثبت شد، هم‌اکنون بخوانید." },
+                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("قالب داستان", fontSize = 11.sp)
+                    }
+                    Button(
+                        onClick = { title = "طالع‌بینی شوم ماه!"; message = "پیش‌گویی‌های تاریک برای متولدین این ماه آشکار شد." },
+                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("قالب طالع", fontSize = 11.sp)
+                    }
+                }
+
+                Divider(color = MutedAsh.copy(alpha = 0.2f))
+
+                // Mode Selector: Instant vs Scheduled
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("زمان‌بندی ارسال اعلان", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                        Text(
+                            if (isScheduled) "ارسال دقیق سر موعد تعیین‌شده" else "ارسال و پوش فوری برای همه کاربران",
+                            color = MutedAsh,
+                            fontSize = 11.sp
+                        )
+                    }
+                    Switch(
+                        checked = isScheduled,
+                        onCheckedChange = { isScheduled = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = SpectralWhite,
+                            checkedTrackColor = BloodCrimson,
+                            uncheckedThumbColor = MutedAsh,
+                            uncheckedTrackColor = CryptCardElevated
+                        )
+                    )
+                }
+
+                if (isScheduled) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("انتخاب زمان موعد ارسال (ساعت آینده):", color = SpectralWhite, fontSize = 12.sp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(1, 2, 4, 8, 12, 24).forEach { h ->
+                                    val isSel = scheduleHoursOffset == h
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSel) BloodCrimson else CryptCard)
+                                            .clickable { scheduleHoursOffset = h }
+                                            .padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("$h ساعت", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            val targetTime = System.currentTimeMillis() + (scheduleHoursOffset * 3600 * 1000L)
+                            val targetDate = java.text.SimpleDateFormat("HH:mm - yyyy/MM/dd", java.util.Locale.getDefault()).format(java.util.Date(targetTime))
+                            Text("موعد انتشار: $targetDate", color = BloodGlow, fontSize = 11.sp)
+                        }
+                    }
+                }
+                
+                Button(
+                    onClick = {
+                        if (title.isBlank() || message.isBlank()) return@Button
+                        val now = System.currentTimeMillis()
+                        val scheduledAtMillis = if (isScheduled) now + (scheduleHoursOffset * 3600 * 1000L) else null
+                        val notification = CachedAppNotification(
+                            id = java.util.UUID.randomUUID().toString(),
+                            title = title,
+                            message = message,
+                            imageUrl = imageUrl.ifBlank { null },
+                            timestamp = now,
+                            isScheduled = isScheduled,
+                            scheduledAt = scheduledAtMillis,
+                            status = if (isScheduled) "PENDING_SCHEDULE" else "PUBLISHED"
+                        )
+                        viewModel.upsertNotification(notification)
+                        actionFeedback = if (isScheduled) "اعلان زمان‌بندی شد و در صف انتشار قرار گرفت." else "اعلان فوراً برای همه کاربران ارسال شد."
+                        title = ""
+                        message = ""
+                        imageUrl = ""
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Icon(if (isScheduled) Icons.Default.Schedule else Icons.Default.Send, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(if (isScheduled) "ثبت زمان‌بندی اعلان" else "ارسال فوری اعلان", fontWeight = FontWeight.Bold)
+                }
+
+                if (actionFeedback != null) {
+                    Text(actionFeedback!!, color = SuccessNeon, fontSize = 12.sp)
+                }
+            }
+        }
+
+        // Edge Function Sync Trigger
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("بررسی اعلان‌های زمان‌بندی (Edge)", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
+                    Text("فراخوانی دستی Edge Function برای انتشار اعلان‌های موعد رسیده", color = MutedAsh, fontSize = 11.sp)
+                }
+                Button(
+                    onClick = {
+                        isCheckingEdge = true
+                        viewModel.triggerEdgeFunction("scheduled-notifications") { success, msg ->
+                            isCheckingEdge = false
+                            actionFeedback = msg
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    if (isCheckingEdge) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = SpectralWhite)
+                    } else {
+                        Text("بررسی سرور", fontSize = 11.sp, color = SpectralWhite)
+                    }
+                }
+            }
         }
         
-        Spacer(modifier = Modifier.height(24.dp))
-        Text("اعلان‌های ارسالی", color = MutedAsh, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
+        Text("اعلان‌های ثبت شده در سامانه (${notifications.size})", color = MutedAsh, fontWeight = FontWeight.Bold)
         
-        notifications.forEach { notification ->
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                colors = CardDefaults.cardColors(containerColor = CryptCardElevated)
-            ) {
-                Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(notification.title, color = SpectralWhite, fontWeight = FontWeight.Bold)
-                        Text(notification.message, color = MutedAsh, fontSize = 12.sp)
+        if (notifications.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                Text("هیچ اعلانی ثبت نشده است.", color = MutedAsh)
+            }
+        } else {
+            notifications.forEach { notification ->
+                val isPending = notification.isScheduled && notification.status == "PENDING_SCHEDULE"
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            1.dp,
+                            if (isPending) WarningAmber.copy(alpha = 0.6f) else MutedAsh.copy(alpha = 0.2f),
+                            RoundedCornerShape(12.dp)
+                        ),
+                    colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(notification.title, color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                if (isPending) {
+                                    Badge(containerColor = WarningAmber) {
+                                        Text("در انتظار موعد", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(2.dp))
+                                    }
+                                } else {
+                                    Badge(containerColor = SuccessNeon) {
+                                        Text("منتشر شده", color = Color.Black, fontSize = 10.sp, modifier = Modifier.padding(2.dp))
+                                    }
+                                }
+                            }
+                            Text(notification.message, color = MutedAsh, fontSize = 12.sp)
+                            if (notification.scheduledAt != null) {
+                                val sDate = java.text.SimpleDateFormat("HH:mm - yyyy/MM/dd", java.util.Locale.getDefault()).format(java.util.Date(notification.scheduledAt))
+                                Text("زمان موعد: $sDate", color = BloodGlow, fontSize = 10.sp)
+                            }
+                        }
+                        IconButton(onClick = { viewModel.deleteNotification(notification.id) }) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = BloodCrimson)
+                        }
                     }
-                    IconButton(onClick = { viewModel.deleteNotification(notification.id) }) {
-                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red)
+                }
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------
+// TAB 6: AUTOMATION & EDGE FUNCTIONS (Independent Tasks)
+// ----------------------------------------------------
+@Composable
+fun AdminAutomationTab(viewModel: HorrorViewModel) {
+    val automationConfigs by viewModel.automationConfigs.collectAsState()
+    val automationLogs by viewModel.automationLogs.collectAsState()
+    val currentApiKey by viewModel.geminiApiKey.collectAsState()
+    val currentModel by viewModel.selectedGeminiModel.collectAsState()
+
+    var inputKey by remember { mutableStateOf("") }
+    var showKey by remember { mutableStateOf(false) }
+    var feedbackMsg by remember { mutableStateOf<String?>(null) }
+    var runningTask by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        viewModel.loadAutomationData()
+    }
+
+    LaunchedEffect(currentApiKey) {
+        inputKey = currentApiKey
+    }
+
+    val notifConfig = automationConfigs.find { it.id == "SCHEDULED_NOTIFICATIONS" } ?: AutomationConfig(id = "SCHEDULED_NOTIFICATIONS", is_active = true, frequency = "HOURLY")
+    val fortuneConfig = automationConfigs.find { it.id == "AUTO_GRIM_FORTUNES" } ?: AutomationConfig(id = "AUTO_GRIM_FORTUNES", is_active = false, frequency = "DAILY", schedule_hour_1 = 0)
+    val scenarioConfig = automationConfigs.find { it.id == "AUTO_SCENARIOS" } ?: AutomationConfig(id = "AUTO_SCENARIOS", is_active = false, frequency = "TWICE_DAILY", schedule_hour_1 = 14, schedule_hour_2 = 22, batch_count = 1)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "مرکز اتوماسیون هوشمند و Edge Functions",
+            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = BloodGlow)
+        )
+        Text(
+            text = "هر یک از بخش‌های سه‌گانه زیر کاملاً مستقل و مجزا فعالیت می‌کنند و کلید Gemini در پایگاه‌داده دیتابیس Supabase به صورت امن نگهداری می‌شود.",
+            color = MutedAsh,
+            style = MaterialTheme.typography.bodySmall
+        )
+
+        // GEMINI API KEY & MODEL IN DB
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodCrimson.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Key, contentDescription = null, tint = BloodGlow)
+                    Text("کلید هوش مصنوعی در پایگاه داده (Supabase Secrets)", fontWeight = FontWeight.Bold, color = SpectralWhite)
+                }
+                Text(
+                    "کلید ثبت‌شده در این فیلد مستقیماً در جدول app_settings دیتابیس ذخیره شده و فانکشن‌های سروری مستقلاً از آن استفاده می‌کنند.",
+                    color = MutedAsh,
+                    fontSize = 11.sp
+                )
+
+                OutlinedTextField(
+                    value = inputKey,
+                    onValueChange = { inputKey = it },
+                    label = { Text("Gemini API Key") },
+                    placeholder = { Text("AIzaSy...") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
+                    trailingIcon = {
+                        IconButton(onClick = { showKey = !showKey }) {
+                            Icon(
+                                imageVector = if (showKey) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = null,
+                                tint = MutedAsh
+                            )
+                        }
+                    },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = BloodGlow,
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = {
+                            viewModel.setGeminiApiKey(inputKey)
+                            feedbackMsg = "کلید Gemini با موفقیت در دیتابیس Supabase ذخیره گردید."
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ذخیره در دیتابیس", fontSize = 12.sp)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            viewModel.setSelectedGeminiModel(
+                                if (currentModel == "gemini-2.5-flash") "gemini-1.5-flash" else "gemini-2.5-flash"
+                            )
+                        },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("مدل: $currentModel", fontSize = 11.sp, color = SpectralWhite)
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 1. SCHEDULED NOTIFICATIONS AUTOMATION
+        // ==========================================
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, if (notifConfig.is_active) SuccessNeon.copy(alpha = 0.5f) else MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = if (notifConfig.is_active) SuccessNeon else MutedAsh)
+                        Column {
+                            Text("۱. زمان‌بندی ارسال نوتیفیکیشن‌ها", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                            Text("بررسی دقیق سر ساعت و پوش نوتیفیکیشن", color = MutedAsh, fontSize = 11.sp)
+                        }
+                    }
+                    Switch(
+                        checked = notifConfig.is_active,
+                        onCheckedChange = { active ->
+                            viewModel.saveAutomationConfig(notifConfig.copy(is_active = active)) {
+                                feedbackMsg = "تنظیمات نوتیفیکیشن خودکار ذخیره شد."
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = SpectralWhite, checkedTrackColor = SuccessNeon)
+                    )
+                }
+
+                Text(
+                    text = "فانکشن scheduled-notifications هر ۵ تا ۱۵ دقیقه اجرا شده و اعلان‌هایی که موعد آن‌ها فرا رسیده را منتشر می‌کند.",
+                    color = MutedAsh,
+                    fontSize = 11.sp
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "وضعیت: " + (if (notifConfig.is_active) "فعال در سرور" else "غیرفعال"),
+                        color = if (notifConfig.is_active) SuccessNeon else WarningAmber,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Button(
+                        onClick = {
+                            runningTask = "scheduled-notifications"
+                            viewModel.triggerEdgeFunction("scheduled-notifications") { success, msg ->
+                                runningTask = null
+                                feedbackMsg = msg
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        if (runningTask == "scheduled-notifications") {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
+                        } else {
+                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("تست و اجرای فوری", fontSize = 11.sp, color = SpectralWhite)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 2. AUTO GRIM FORTUNES AUTOMATION (24 Hours)
+        // ==========================================
+        var fortuneHour by remember { mutableIntStateOf(fortuneConfig.schedule_hour_1) }
+        LaunchedEffect(fortuneConfig) { fortuneHour = fortuneConfig.schedule_hour_1 }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, if (fortuneConfig.is_active) BloodGlow.copy(alpha = 0.5f) else MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = if (fortuneConfig.is_active) BloodGlow else MutedAsh)
+                        Column {
+                            Text("۲. تولید خودکار طالع شوم ۱۲ ماه", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                            Text("هر ۲۴ ساعت سر ساعت مشخص", color = MutedAsh, fontSize = 11.sp)
+                        }
+                    }
+                    Switch(
+                        checked = fortuneConfig.is_active,
+                        onCheckedChange = { active ->
+                            viewModel.saveAutomationConfig(fortuneConfig.copy(is_active = active, schedule_hour_1 = fortuneHour)) {
+                                feedbackMsg = "تنظیمات تولید طالع ذخیره شد."
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = SpectralWhite, checkedTrackColor = BloodCrimson)
+                    )
+                }
+
+                // Hour Picker
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("ساعت اجرای خودکار در شبانه‌روز (ساعت ۰۰:۰۰ تا ۲۳:۰۰):", color = SpectralWhite, fontSize = 12.sp)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(0, 6, 8, 12, 18, 22).forEach { h ->
+                                val isSel = fortuneHour == h
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSel) BloodCrimson else CryptCard)
+                                        .clickable {
+                                            fortuneHour = h
+                                            viewModel.saveAutomationConfig(fortuneConfig.copy(schedule_hour_1 = h))
+                                        }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("$h:00", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                        Text("طالع هر ۱۲ ماه سال، رأس ساعت $fortuneHour:00 بامداد/روز تولید و در دیتابیس جایگزین می‌شود.", color = BloodGlow, fontSize = 11.sp)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "وضعیت: " + (if (fortuneConfig.is_active) "فعال در ساعت $fortuneHour:00" else "غیرفعال"),
+                        color = if (fortuneConfig.is_active) SuccessNeon else WarningAmber,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Button(
+                        onClick = {
+                            runningTask = "auto-grim-fortunes"
+                            viewModel.triggerEdgeFunction("auto-grim-fortunes") { success, msg ->
+                                runningTask = null
+                                feedbackMsg = msg
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        if (runningTask == "auto-grim-fortunes") {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
+                        } else {
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("تولید و تست فوری", fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // ==========================================
+        // 3. AUTO SCENARIOS AUTOMATION (1 or 2 per day)
+        // ==========================================
+        var scenarioFreq by remember { mutableStateOf(scenarioConfig.frequency) }
+        var scenHour1 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_1) }
+        var scenHour2 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_2) }
+        var scenBatchCount by remember { mutableIntStateOf(scenarioConfig.batch_count) }
+
+        LaunchedEffect(scenarioConfig) {
+            scenarioFreq = scenarioConfig.frequency
+            scenHour1 = scenarioConfig.schedule_hour_1
+            scenHour2 = scenarioConfig.schedule_hour_2
+            scenBatchCount = scenarioConfig.batch_count
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, if (scenarioConfig.is_active) BloodGlow.copy(alpha = 0.5f) else MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.AltRoute, contentDescription = null, tint = if (scenarioConfig.is_active) BloodGlow else MutedAsh)
+                        Column {
+                            Text("۳. تولید خودکار سناریوهای تعاملی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                            Text("تنظیم تعداد، ۱ یا ۲ بار در روز با ساعت‌های مجزا", color = MutedAsh, fontSize = 11.sp)
+                        }
+                    }
+                    Switch(
+                        checked = scenarioConfig.is_active,
+                        onCheckedChange = { active ->
+                            viewModel.saveAutomationConfig(
+                                scenarioConfig.copy(
+                                    is_active = active,
+                                    frequency = scenarioFreq,
+                                    schedule_hour_1 = scenHour1,
+                                    schedule_hour_2 = scenHour2,
+                                    batch_count = scenBatchCount
+                                )
+                            ) {
+                                feedbackMsg = "تنظیمات سناریوی خودکار ذخیره شد."
+                            }
+                        },
+                        colors = SwitchDefaults.colors(checkedThumbColor = SpectralWhite, checkedTrackColor = BloodCrimson)
+                    )
+                }
+
+                // Batch Count Selector
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("تعداد سناریو در هر نوبت:", color = SpectralWhite, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(1, 2, 3).forEach { c ->
+                            val isSel = scenBatchCount == c
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) BloodCrimson else CryptCardElevated)
+                                    .clickable {
+                                        scenBatchCount = c
+                                        viewModel.saveAutomationConfig(scenarioConfig.copy(batch_count = c))
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text("$c سناریو", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                // Frequency Selector: Once a day vs Twice a day
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("تناوب انتشار در روز:", color = SpectralWhite, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val isOnce = scenarioFreq == "DAILY"
+                        val isTwice = scenarioFreq == "TWICE_DAILY"
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isOnce) BloodCrimson else CryptCardElevated)
+                                .clickable {
+                                    scenarioFreq = "DAILY"
+                                    viewModel.saveAutomationConfig(scenarioConfig.copy(frequency = "DAILY"))
+                                }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("۱ بار در روز", color = if (isOnce) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isTwice) BloodCrimson else CryptCardElevated)
+                                .clickable {
+                                    scenarioFreq = "TWICE_DAILY"
+                                    viewModel.saveAutomationConfig(scenarioConfig.copy(frequency = "TWICE_DAILY"))
+                                }
+                                .padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("۲ بار در روز", color = if (isTwice) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                // Hour Pickers
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("ساعت نوبت اول (مثلاً ظهر یا بعدازظهر):", color = SpectralWhite, fontSize = 11.sp)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(10, 12, 14, 16, 18).forEach { h ->
+                                val isSel = scenHour1 == h
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(if (isSel) BloodCrimson else CryptCard)
+                                        .clickable {
+                                            scenHour1 = h
+                                            viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_1 = h))
+                                        }
+                                        .padding(vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("$h:00", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp)
+                                }
+                            }
+                        }
+
+                        if (scenarioFreq == "TWICE_DAILY") {
+                            Text("ساعت نوبت دوم (مثلاً شب هنگام):", color = SpectralWhite, fontSize = 11.sp)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                listOf(20, 21, 22, 23, 0).forEach { h ->
+                                    val isSel = scenHour2 == h
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSel) BloodCrimson else CryptCard)
+                                            .clickable {
+                                                scenHour2 = h
+                                                viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_2 = h))
+                                            }
+                                            .padding(vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("$h:00", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "وضعیت: " + if (scenarioConfig.is_active) {
+                            if (scenarioFreq == "TWICE_DAILY") "فعال در ساعت $scenHour1:00 و $scenHour2:00" else "فعال در ساعت $scenHour1:00"
+                        } else "غیرفعال",
+                        color = if (scenarioConfig.is_active) SuccessNeon else WarningAmber,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Button(
+                        onClick = {
+                            runningTask = "auto-scenarios"
+                            viewModel.triggerEdgeFunction("auto-scenarios") { success, msg ->
+                                runningTask = null
+                                feedbackMsg = msg
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        if (runningTask == "auto-scenarios") {
+                            CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
+                        } else {
+                            Icon(Icons.Default.AltRoute, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("تولید سناریو فوری", fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (feedbackMsg != null) {
+            Surface(
+                color = CryptCardElevated,
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BloodGlow.copy(alpha = 0.4f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = feedbackMsg!!,
+                    color = SpectralWhite,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+
+        // ==========================================
+        // AUTOMATION LOGS VIEWER
+        // ==========================================
+        Text("تاریخچه آخرین اجراها و لاگ‌های خودکار (${automationLogs.size})", fontWeight = FontWeight.Bold, color = SpectralWhite)
+
+        if (automationLogs.isEmpty()) {
+            Box(modifier = Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                Text("هنوز لاگی ثبت نشده است. با اجرای تست، لاگ‌ها ظاهر خواهند شد.", color = MutedAsh, fontSize = 12.sp)
+            }
+        } else {
+            automationLogs.take(15).forEach { log ->
+                val isSuccess = log.status == "SUCCESS"
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, if (isSuccess) SuccessNeon.copy(alpha = 0.3f) else BloodCrimson.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                    colors = CardDefaults.cardColors(containerColor = CryptCard),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                text = when (log.task_type) {
+                                    "SCHEDULED_NOTIFICATIONS" -> "اعلان‌های زمان‌بندی‌شده"
+                                    "AUTO_GRIM_FORTUNES" -> "تولید خودکار طالع شوم"
+                                    "AUTO_SCENARIOS" -> "تولید خودکار سناریوها"
+                                    else -> log.task_type
+                                },
+                                fontWeight = FontWeight.Bold,
+                                color = SpectralWhite,
+                                fontSize = 13.sp
+                            )
+                            Badge(containerColor = if (isSuccess) SuccessNeon else BloodCrimson) {
+                                Text(if (isSuccess) "موفق" else "ناموفق", color = Color.Black, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(2.dp))
+                            }
+                        }
+                        Text(log.message, color = MutedAsh, fontSize = 11.sp)
+                        if (log.createdAt != null) {
+                            Text(log.createdAt, color = BloodGlow.copy(alpha = 0.7f), fontSize = 10.sp)
+                        }
                     }
                 }
             }

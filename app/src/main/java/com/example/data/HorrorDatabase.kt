@@ -68,7 +68,10 @@ data class CachedAppNotification(
     val title: String,
     val message: String,
     val imageUrl: String?,
-    val timestamp: Long
+    val timestamp: Long,
+    val isScheduled: Boolean = false,
+    val scheduledAt: Long? = null,
+    val status: String = "PUBLISHED"
 )
 
 @Dao
@@ -141,8 +144,11 @@ interface HorrorDao {
     suspend fun deleteUserSubmission(id: String)
 
     // Notifications
-    @Query("SELECT * FROM cached_app_notifications ORDER BY timestamp DESC")
+    @Query("SELECT * FROM cached_app_notifications WHERE status = 'PUBLISHED' OR isScheduled = 0 ORDER BY timestamp DESC")
     suspend fun getAllNotifications(): List<CachedAppNotification>
+
+    @Query("SELECT * FROM cached_app_notifications ORDER BY timestamp DESC")
+    suspend fun getAllNotificationsAdmin(): List<CachedAppNotification>
 
     @Upsert
     suspend fun upsertNotification(item: CachedAppNotification)
@@ -159,7 +165,7 @@ interface HorrorDao {
         CachedUserSubmission::class,
         CachedAppNotification::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class HorrorDatabase : RoomDatabase() {

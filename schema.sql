@@ -341,16 +341,80 @@ GRANT EXECUTE ON FUNCTION public.submit_story_rating(UUID, NUMERIC) TO anon, aut
 GRANT EXECUTE ON FUNCTION public.increment_submission_view(UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_submission_rating(UUID, NUMERIC) TO anon, authenticated;
 
--- =========================================================
--- MIGRATION SCRIPT (برای اضافه کردن سریع به دیتابیس موجود در Supabase)
--- =========================================================
-/*
-ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS cover_image_url TEXT;
-ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS tags TEXT;
-ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS rating NUMERIC(3,2) DEFAULT 5.0;
-ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS rating_count INTEGER DEFAULT 1;
-ALTER TABLE public.user_story_submissions ADD COLUMN IF NOT EXISTS view_count INTEGER DEFAULT 1;
+-- ====================================================================
+-- AUTOMATION, CRON & EDGE FUNCTIONS SCHEMA
+-- ====================================================================
 
-DROP POLICY IF EXISTS "Allow public read published user stories" ON public.user_story_submissions;
-CREATE POLICY "Allow public read published user stories" ON public.user_story_submissions FOR SELECT USING (status = 'PUBLISHED' OR public.is_admin());
-*/
+CREATE TABLE IF NOT EXISTS public.app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.app_notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    image_url TEXT,
+    timestamp BIGINT NOT NULL,
+    is_scheduled BOOLEAN DEFAULT FALSE,
+    scheduled_at BIGINT,
+    status TEXT NOT NULL DEFAULT 'PUBLISHED' CHECK (status IN ('PUBLISHED', 'PENDING_SCHEDULE', 'CANCELLED')),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.automation_configs (
+    id TEXT PRIMARY KEY,
+    is_active BOOLEAN NOT NULL DEFAULT FALSE,
+    frequency TEXT NOT NULL DEFAULT 'DAILY' CHECK (frequency IN ('HOURLY', 'DAILY', 'TWICE_DAILY')),
+    schedule_hour_1 INTEGER NOT NULL DEFAULT 0 CHECK (schedule_hour_1 BETWEEN 0 AND 23),
+    schedule_hour_2 INTEGER NOT NULL DEFAULT 12 CHECK (schedule_hour_2 BETWEEN 0 AND 23),
+    batch_count INTEGER NOT NULL DEFAULT 1 CHECK (batch_count BETWEEN 1 AND 10),
+    custom_prompt TEXT,
+    last_run_at TIMESTAMPTZ,
+    next_run_at TIMESTAMPTZ,
+    last_status TEXT,
+    last_log TEXT,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.automation_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_type TEXT NOT NULL,
+    status TEXT NOT NULL CHECK (status IN ('SUCCESS', 'FAILED', 'PENDING')),
+    message TEXT NOT NULL,
+    details JSONB,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+INSERT INTO public.app_settings (key, value, description)
+VALUES 
+    ('GEMINI_API_KEY', '', 'Google AI Studio Gemini API Key for Edge Functions'),
+    ('GEMINI_MODEL', 'gemini-2.5-flash', 'Active Gemini Model for auto generations')
+ON CONFLICT (key) DO NOTHING;
+
+INSERT INTO public.automation_configs (id, is_active, frequency, schedule_hour_1, schedule_hour_2, batch_count, custom_prompt)
+VALUES 
+    ('SCHEDULED_NOTIFICATIONS', TRUE, 'HOURLY', 0, 0, 1, 'بررسی و انتشار اعلان‌های زمان‌بندی‌شده سر موعد'),
+    ('AUTO_GRIM_FORTUNES', FALSE, 'DAILY', 0, 0, 12, 'یک طالع‌بین تاریک و باستانی گوتیک شو و دقیقاً ۱۲ طالع شوم و دلهره‌آور، یکی برای هر ماه سال شمسی تولید کن.'),
+    ('AUTO_SCENARIOS', FALSE, 'TWICE_DAILY', 14, 22, 1, 'یک سناریوی چند مرحله‌ای ترسناک گوتیک به همراه جزئیات برای بازی تعاملی بساز.')
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.automation_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.automation_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read app_settings" ON public.app_settings FOR SELECT USING (true);
+CREATE POLICY "Allow all manage app_settings" ON public.app_settings ALL USING (true);
+
+CREATE POLICY "Allow public read published notifications" ON public.app_notifications FOR SELECT USING (status = 'PUBLISHED' OR is_scheduled = false);
+CREATE POLICY "Allow all manage notifications" ON public.app_notifications ALL USING (true);
+
+CREATE POLICY "Allow all read automation_configs" ON public.automation_configs FOR SELECT USING (true);
+CREATE POLICY "Allow all manage automation_configs" ON public.automation_configs ALL USING (true);
+
+CREATE POLICY "Allow all read automation_logs" ON public.automation_logs FOR SELECT USING (true);
+CREATE POLICY "Allow all insert automation_logs" ON public.automation_logs FOR INSERT WITH CHECK (true);
+

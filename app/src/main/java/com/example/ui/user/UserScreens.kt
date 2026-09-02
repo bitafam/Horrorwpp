@@ -3911,6 +3911,43 @@ fun NotificationsScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .clickable { showGuideDialog = true },
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1528))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsActive,
+                            contentDescription = null,
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "راهنمای دریافت ۱۰۰٪ اعلان‌ها (شیائومی و سامسونگ)",
+                                color = Color(0xFFDEC595),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "جهت فعال‌سازی شروع خودکار (Autostart) و حذف محدودیت باتری برای دریافت قطعی اعلان کلیک کنید.",
+                                color = Color(0xFFB0A8C0),
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+
             items(notifications) { notification ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
