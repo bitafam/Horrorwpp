@@ -3055,12 +3055,12 @@ fun StoryReaderScreen(
         }
     }
 
-    val sharedPrefs = remember(context) { context.getSharedPreferences("horror_house_user_ratings", android.content.Context.MODE_PRIVATE) }
+    val existingVote = remember(story.id) { viewModel.getUserVote(story.id) }
     var userRatingGiven by remember(story.id) {
-        mutableIntStateOf(sharedPrefs.getFloat("rating_${story.id}", 0f).toInt())
+        mutableIntStateOf(if (existingVote > 0f) existingVote.toInt() else 0)
     }
     var ratingSubmitted by remember(story.id) {
-        mutableStateOf(sharedPrefs.contains("rating_${story.id}"))
+        mutableStateOf(existingVote > 0f)
     }
     
     var showFontMenu by remember { mutableStateOf(false) }
@@ -3443,7 +3443,6 @@ fun StoryReaderScreen(
                                                         android.widget.Toast.LENGTH_LONG
                                                     ).show()
                                                 } else {
-                                                    sharedPrefs.edit().putFloat("rating_${story.id}", star.toFloat()).apply()
                                                     userRatingGiven = star
                                                     ratingSubmitted = true
                                                     HorrorSoundManager.playStarRatingSound(star)

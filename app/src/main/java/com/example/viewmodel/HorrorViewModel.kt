@@ -493,10 +493,10 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
             // Immediate optimistic UI update
             if (target != null) {
-                val safeRating = if (target.rating <= 0f) 5.0f else target.rating
-                val safeCount = if (target.rating_count <= 0) 1 else target.rating_count
+                val safeCount = target.rating_count.coerceAtLeast(0)
+                val safeRating = if (safeCount == 0) 0f else target.rating
                 val newCount = safeCount + 1
-                val newRating = ((safeRating * safeCount) + userRating) / newCount
+                val newRating = if (safeCount == 0) userRating else (((safeRating * safeCount) + userRating) / newCount)
                 val roundedRating = kotlin.math.round(newRating * 10f) / 10.0f
                 val updatedTarget = target.copy(rating = roundedRating, rating_count = newCount)
 
@@ -558,10 +558,10 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             val currentSubmissions = _userSubmissionsList.value
             val target = currentSubmissions.find { it.id == submissionId }
             if (target != null) {
-                val safeRating = if (target.rating <= 0f) 5.0f else target.rating
-                val safeCount = if (target.rating_count <= 0) 1 else target.rating_count
+                val safeCount = target.rating_count.coerceAtLeast(0)
+                val safeRating = if (safeCount == 0) 0f else target.rating
                 val newCount = safeCount + 1
-                val newRating = ((safeRating * safeCount) + userRating) / newCount
+                val newRating = if (safeCount == 0) userRating else (((safeRating * safeCount) + userRating) / newCount)
                 val roundedRating = kotlin.math.round(newRating * 10f) / 10.0f
                 val updatedTarget = target.copy(rating = roundedRating, rating_count = newCount)
 
