@@ -444,18 +444,20 @@ class HorrorRepository(context: Context) {
 
     // NOTIFICATIONS
     suspend fun getAllNotifications(): List<CachedAppNotification> = withContext(Dispatchers.IO) {
+        val localList = dao.getAllNotifications()
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.getAppNotifications()
                 if (resp.isSuccessful && resp.body() != null) {
                     val dtos = resp.body()!!
-                    val cachedList = dtos.map { it.toCached() }
-                    for (item in cachedList) {
+                    val remoteList = dtos.map { it.toCached() }
+                    for (item in remoteList) {
                         dao.upsertNotification(item)
                     }
+                    val combined = (remoteList + localList).distinctBy { it.id }.sortedByDescending { it.timestamp }
                     val now = System.currentTimeMillis()
                     // Filter out pending future scheduled notifications for regular users
-                    return@withContext cachedList.filter { 
+                    return@withContext combined.filter { 
                         it.status == "PUBLISHED" || (!it.isScheduled && (it.scheduledAt == null || it.scheduledAt <= now)) 
                     }
                 }
@@ -463,26 +465,28 @@ class HorrorRepository(context: Context) {
                 android.util.Log.e("SupabaseError", "getAllNotifications exception", e)
             }
         }
-        dao.getAllNotifications()
+        localList
     }
 
     suspend fun getAllNotificationsAdmin(): List<CachedAppNotification> = withContext(Dispatchers.IO) {
+        val localList = dao.getAllNotificationsAdmin()
         if (SupabaseClientProvider.isConfigured) {
             try {
                 val resp = api.getAppNotifications()
                 if (resp.isSuccessful && resp.body() != null) {
                     val dtos = resp.body()!!
-                    val cachedList = dtos.map { it.toCached() }
-                    for (item in cachedList) {
+                    val remoteList = dtos.map { it.toCached() }
+                    for (item in remoteList) {
                         dao.upsertNotification(item)
                     }
-                    return@withContext cachedList
+                    val combined = (remoteList + localList).distinctBy { it.id }.sortedByDescending { it.timestamp }
+                    return@withContext combined
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getAllNotificationsAdmin exception", e)
             }
         }
-        dao.getAllNotificationsAdmin()
+        localList
     }
 
     suspend fun upsertNotification(notification: CachedAppNotification) = withContext(Dispatchers.IO) {

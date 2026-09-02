@@ -411,7 +411,7 @@ CREATE POLICY "Allow public read app_settings" ON public.app_settings FOR SELECT
 CREATE POLICY "Allow all manage app_settings" ON public.app_settings ALL USING (true);
 
 CREATE POLICY "Allow public read published notifications" ON public.app_notifications FOR SELECT USING (status = 'PUBLISHED' OR is_scheduled = false);
-CREATE POLICY "Allow all manage notifications" ON public.app_notifications ALL USING (true);
+CREATE POLICY "Allow all manage notifications" ON public.app_notifications FOR ALL USING (true);
 
 CREATE POLICY "Allow all read automation_configs" ON public.automation_configs FOR SELECT USING (true);
 CREATE POLICY "Allow all manage automation_configs" ON public.automation_configs ALL USING (true);
