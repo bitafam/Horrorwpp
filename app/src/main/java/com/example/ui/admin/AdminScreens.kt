@@ -307,6 +307,142 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
 }
 
 // ----------------------------------------------------
+// EXACT TIME PICKER COMPONENT (Minute & Hour Precision)
+// ----------------------------------------------------
+@Composable
+fun ExactTimePickerCard(
+    title: String,
+    hour: Int,
+    minute: Int,
+    onTimeChanged: (Int, Int) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(title, color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Surface(
+                    color = Color(0xFF1E0E2B),
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BloodGlow.copy(alpha = 0.6f))
+                ) {
+                    Text(
+                        text = "${String.format("%02d", hour)}:${String.format("%02d", minute)}",
+                        color = SpectralWhite,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            // Quick Preset Buttons based on current Iran Time
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+                val curH = cal.get(java.util.Calendar.HOUR_OF_DAY)
+                val curM = cal.get(java.util.Calendar.MINUTE)
+
+                listOf(
+                    Pair("+2 دقیقه", 2),
+                    Pair("+5 دقیقه", 5),
+                    Pair("+15 دقیقه", 15),
+                    Pair("+1 ساعت", 60)
+                ).forEach { (label, addMins) ->
+                    val totalM = curM + addMins
+                    val newH = (curH + totalM / 60) % 24
+                    val newM = totalM % 60
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFF2A1538))
+                            .clickable {
+                                onTimeChanged(newH, newM)
+                            }
+                            .padding(vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(label, color = BloodGlow, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            // Adjust Hours and Minutes
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Hour controls
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("ساعت (۰۰ - ۲۳)", color = MutedAsh, fontSize = 10.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { onTimeChanged(if (hour <= 0) 23 else hour - 1, minute) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = SpectralWhite, modifier = Modifier.size(16.dp))
+                        }
+                        Text("${String.format("%02d", hour)}", color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        IconButton(
+                            onClick = { onTimeChanged((hour + 1) % 24, minute) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = SpectralWhite, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+
+                Divider(
+                    modifier = Modifier
+                        .height(32.dp)
+                        .width(1.dp),
+                    color = MutedAsh.copy(alpha = 0.3f)
+                )
+
+                // Minute controls
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("دقیقه (۰۰ - ۵۹)", color = MutedAsh, fontSize = 10.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = { onTimeChanged(hour, if (minute <= 0) 59 else minute - 1) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Remove, contentDescription = null, tint = SpectralWhite, modifier = Modifier.size(16.dp))
+                        }
+                        Text("${String.format("%02d", minute)}", color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        IconButton(
+                            onClick = { onTimeChanged(hour, (minute + 1) % 60) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, tint = SpectralWhite, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ----------------------------------------------------
 // TAB 5: NOTIFICATIONS MANAGER (With Scheduling)
 // ----------------------------------------------------
 @Composable
@@ -317,7 +453,16 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
     var message by remember { mutableStateOf("") }
     var imageUrl by remember { mutableStateOf("") }
     var isScheduled by remember { mutableStateOf(false) }
-    var scheduleHoursOffset by remember { mutableIntStateOf(1) }
+    var scheduleMinutesOffset by remember { mutableIntStateOf(2) }
+    var customHour by remember {
+        val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+        mutableIntStateOf(cal.get(java.util.Calendar.HOUR_OF_DAY))
+    }
+    var customMinute by remember {
+        val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+        mutableIntStateOf((cal.get(java.util.Calendar.MINUTE) + 2) % 60)
+    }
+    var useExactTimeMode by remember { mutableStateOf(false) }
     var actionFeedback by remember { mutableStateOf<String?>(null) }
     var isCheckingEdge by remember { mutableStateOf(false) }
     
@@ -437,30 +582,65 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                         colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("انتخاب زمان موعد ارسال (ساعت آینده):", color = SpectralWhite, fontSize = 12.sp)
+                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("انتخاب دقیق دقیقه و ساعت ارسال (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            
+                            // Quick Presets
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                listOf(1, 2, 4, 8, 12, 24).forEach { h ->
-                                    val isSel = scheduleHoursOffset == h
+                                listOf(
+                                    Pair("+2 دقیقه", 2),
+                                    Pair("+5 دقیقه", 5),
+                                    Pair("+15 دقیقه", 15),
+                                    Pair("+1 ساعت", 60),
+                                    Pair("+2 ساعت", 120)
+                                ).forEach { (label, mins) ->
+                                    val isSel = !useExactTimeMode && scheduleMinutesOffset == mins
                                     Box(
                                         modifier = Modifier
                                             .weight(1f)
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(if (isSel) BloodCrimson else CryptCard)
-                                            .clickable { scheduleHoursOffset = h }
+                                            .clickable {
+                                                useExactTimeMode = false
+                                                scheduleMinutesOffset = mins
+                                            }
                                             .padding(vertical = 8.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        Text("$h ساعت", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text(label, color = if (isSel) SpectralWhite else MutedAsh, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
-                            val targetTime = System.currentTimeMillis() + (scheduleHoursOffset * 3600 * 1000L)
+
+                            // Exact Time Picker component
+                            ExactTimePickerCard(
+                                title = "یا تعیین ساعت و دقیقه دلخواه:",
+                                hour = customHour,
+                                minute = customMinute,
+                                onTimeChanged = { h, m ->
+                                    useExactTimeMode = true
+                                    customHour = h
+                                    customMinute = m
+                                }
+                            )
+
+                            val targetTime = if (useExactTimeMode) {
+                                val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+                                cal.set(java.util.Calendar.HOUR_OF_DAY, customHour)
+                                cal.set(java.util.Calendar.MINUTE, customMinute)
+                                cal.set(java.util.Calendar.SECOND, 0)
+                                if (cal.timeInMillis < System.currentTimeMillis()) {
+                                    cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                }
+                                cal.timeInMillis
+                            } else {
+                                System.currentTimeMillis() + (scheduleMinutesOffset * 60 * 1000L)
+                            }
                             val targetDate = java.text.SimpleDateFormat("HH:mm - yyyy/MM/dd", java.util.Locale.getDefault()).format(java.util.Date(targetTime))
-                            Text("موعد انتشار: $targetDate", color = BloodGlow, fontSize = 11.sp)
+                            Text("موعد دقیق انتشار: $targetDate", color = BloodGlow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -469,7 +649,20 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                     onClick = {
                         if (title.isBlank() || message.isBlank()) return@Button
                         val now = System.currentTimeMillis()
-                        val scheduledAtMillis = if (isScheduled) now + (scheduleHoursOffset * 3600 * 1000L) else null
+                        val scheduledAtMillis = if (isScheduled) {
+                            if (useExactTimeMode) {
+                                val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+                                cal.set(java.util.Calendar.HOUR_OF_DAY, customHour)
+                                cal.set(java.util.Calendar.MINUTE, customMinute)
+                                cal.set(java.util.Calendar.SECOND, 0)
+                                if (cal.timeInMillis < now) {
+                                    cal.add(java.util.Calendar.DAY_OF_YEAR, 1)
+                                }
+                                cal.timeInMillis
+                            } else {
+                                now + (scheduleMinutesOffset * 60 * 1000L)
+                            }
+                        } else null
                         val notification = CachedAppNotification(
                             id = java.util.UUID.randomUUID().toString(),
                             title = title,
@@ -481,7 +674,7 @@ fun AdminNotificationsTab(viewModel: HorrorViewModel) {
                             status = if (isScheduled) "PENDING_SCHEDULE" else "PUBLISHED"
                         )
                         viewModel.upsertNotification(notification)
-                        actionFeedback = if (isScheduled) "اعلان زمان‌بندی شد و در صف انتشار قرار گرفت." else "اعلان فوراً برای همه کاربران ارسال شد."
+                        actionFeedback = if (isScheduled) "اعلان با موفقیت برای موعد دقیق زمان‌بندی شد." else "اعلان فوراً برای همه کاربران ارسال شد."
                         title = ""
                         message = ""
                         imageUrl = ""
@@ -796,7 +989,11 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
         // 2. AUTO GRIM FORTUNES AUTOMATION (24 Hours)
         // ==========================================
         var fortuneHour by remember { mutableIntStateOf(fortuneConfig.schedule_hour_1) }
-        LaunchedEffect(fortuneConfig) { fortuneHour = fortuneConfig.schedule_hour_1 }
+        var fortuneMinute by remember { mutableIntStateOf(fortuneConfig.schedule_minute_1) }
+        LaunchedEffect(fortuneConfig) {
+            fortuneHour = fortuneConfig.schedule_hour_1
+            fortuneMinute = fortuneConfig.schedule_minute_1
+        }
 
         Card(
             modifier = Modifier
@@ -815,13 +1012,13 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = if (fortuneConfig.is_active) BloodGlow else MutedAsh)
                         Column {
                             Text("۲. تولید خودکار طالع شوم ۱۲ ماه", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
-                            Text("هر ۲۴ ساعت سر ساعت مشخص", color = MutedAsh, fontSize = 11.sp)
+                            Text("هر ۲۴ ساعت در دقیقه و ساعت دلخواه", color = MutedAsh, fontSize = 11.sp)
                         }
                     }
                     Switch(
                         checked = fortuneConfig.is_active,
                         onCheckedChange = { active ->
-                            viewModel.saveAutomationConfig(fortuneConfig.copy(is_active = active, schedule_hour_1 = fortuneHour)) {
+                            viewModel.saveAutomationConfig(fortuneConfig.copy(is_active = active, schedule_hour_1 = fortuneHour, schedule_minute_1 = fortuneMinute)) {
                                 feedbackMsg = "تنظیمات تولید طالع ذخیره شد."
                             }
                         },
@@ -829,36 +1026,23 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     )
                 }
 
-                // Hour Picker
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("ساعت اجرای خودکار در شبانه‌روز (ساعت ۰۰:۰۰ تا ۲۳:۰۰):", color = SpectralWhite, fontSize = 12.sp)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(0, 6, 8, 12, 18, 22).forEach { h ->
-                                val isSel = fortuneHour == h
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSel) BloodCrimson else CryptCard)
-                                        .clickable {
-                                            fortuneHour = h
-                                            viewModel.saveAutomationConfig(fortuneConfig.copy(schedule_hour_1 = h))
-                                        }
-                                        .padding(vertical = 8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("$h:00", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                        Text("طالع هر ۱۲ ماه سال، رأس ساعت $fortuneHour:00 بامداد/روز تولید و در دیتابیس جایگزین می‌شود.", color = BloodGlow, fontSize = 11.sp)
+                // Exact Time Picker for Fortune
+                ExactTimePickerCard(
+                    title = "ساعت و دقیقه انتشار خودکار طالع (زمان ایران):",
+                    hour = fortuneHour,
+                    minute = fortuneMinute,
+                    onTimeChanged = { h, m ->
+                        fortuneHour = h
+                        fortuneMinute = m
+                        viewModel.saveAutomationConfig(fortuneConfig.copy(schedule_hour_1 = h, schedule_minute_1 = m))
                     }
-                }
+                )
+
+                Text(
+                    text = "طالع هر ۱۲ ماه سال، رأس ساعت ${String.format("%02d", fortuneHour)}:${String.format("%02d", fortuneMinute)} به وقت تهران تولید و جایگزین می‌شود.",
+                    color = BloodGlow,
+                    fontSize = 11.sp
+                )
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -866,7 +1050,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "وضعیت: " + (if (fortuneConfig.is_active) "فعال در ساعت $fortuneHour:00" else "غیرفعال"),
+                        text = "وضعیت: " + (if (fortuneConfig.is_active) "فعال در ساعت ${String.format("%02d", fortuneHour)}:${String.format("%02d", fortuneMinute)}" else "غیرفعال"),
                         color = if (fortuneConfig.is_active) SuccessNeon else WarningAmber,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -900,13 +1084,17 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
         // ==========================================
         var scenarioFreq by remember { mutableStateOf(scenarioConfig.frequency) }
         var scenHour1 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_1) }
+        var scenMinute1 by remember { mutableIntStateOf(scenarioConfig.schedule_minute_1) }
         var scenHour2 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_2) }
+        var scenMinute2 by remember { mutableIntStateOf(scenarioConfig.schedule_minute_2) }
         var scenBatchCount by remember { mutableIntStateOf(scenarioConfig.batch_count) }
 
         LaunchedEffect(scenarioConfig) {
             scenarioFreq = scenarioConfig.frequency
             scenHour1 = scenarioConfig.schedule_hour_1
+            scenMinute1 = scenarioConfig.schedule_minute_1
             scenHour2 = scenarioConfig.schedule_hour_2
+            scenMinute2 = scenarioConfig.schedule_minute_2
             scenBatchCount = scenarioConfig.batch_count
         }
 
@@ -927,7 +1115,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         Icon(Icons.Default.AltRoute, contentDescription = null, tint = if (scenarioConfig.is_active) BloodGlow else MutedAsh)
                         Column {
                             Text("۳. تولید خودکار سناریوهای تعاملی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
-                            Text("تنظیم تعداد، ۱ یا ۲ بار در روز با ساعت‌های مجزا", color = MutedAsh, fontSize = 11.sp)
+                            Text("تنظیم تعداد، با ساعت و دقیقه دقیق نوبت‌ها", color = MutedAsh, fontSize = 11.sp)
                         }
                     }
                     Switch(
@@ -938,7 +1126,9 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                     is_active = active,
                                     frequency = scenarioFreq,
                                     schedule_hour_1 = scenHour1,
+                                    schedule_minute_1 = scenMinute1,
                                     schedule_hour_2 = scenHour2,
+                                    schedule_minute_2 = scenMinute2,
                                     batch_count = scenBatchCount
                                 )
                             ) {
@@ -1014,57 +1204,29 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     }
                 }
 
-                // Hour Pickers
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("ساعت نوبت اول (مثلاً ظهر یا بعدازظهر):", color = SpectralWhite, fontSize = 11.sp)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            listOf(10, 12, 14, 16, 18).forEach { h ->
-                                val isSel = scenHour1 == h
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSel) BloodCrimson else CryptCard)
-                                        .clickable {
-                                            scenHour1 = h
-                                            viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_1 = h))
-                                        }
-                                        .padding(vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("$h:00", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp)
-                                }
-                            }
-                        }
-
-                        if (scenarioFreq == "TWICE_DAILY") {
-                            Text("ساعت نوبت دوم (مثلاً شب هنگام):", color = SpectralWhite, fontSize = 11.sp)
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                listOf(20, 21, 22, 23, 0).forEach { h ->
-                                    val isSel = scenHour2 == h
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSel) BloodCrimson else CryptCard)
-                                            .clickable {
-                                                scenHour2 = h
-                                                viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_2 = h))
-                                            }
-                                            .padding(vertical = 6.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text("$h:00", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp)
-                                    }
-                                }
-                            }
-                        }
+                // Exact Time Pickers for Scenario Turn 1 & Turn 2
+                ExactTimePickerCard(
+                    title = "ساعت و دقیقه نوبت اول:",
+                    hour = scenHour1,
+                    minute = scenMinute1,
+                    onTimeChanged = { h, m ->
+                        scenHour1 = h
+                        scenMinute1 = m
+                        viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_1 = h, schedule_minute_1 = m))
                     }
+                )
+
+                if (scenarioFreq == "TWICE_DAILY") {
+                    ExactTimePickerCard(
+                        title = "ساعت و دقیقه نوبت دوم:",
+                        hour = scenHour2,
+                        minute = scenMinute2,
+                        onTimeChanged = { h, m ->
+                            scenHour2 = h
+                            scenMinute2 = m
+                            viewModel.saveAutomationConfig(scenarioConfig.copy(schedule_hour_2 = h, schedule_minute_2 = m))
+                        }
+                    )
                 }
 
                 Row(
@@ -1072,9 +1234,11 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val time1Str = "${String.format("%02d", scenHour1)}:${String.format("%02d", scenMinute1)}"
+                    val time2Str = "${String.format("%02d", scenHour2)}:${String.format("%02d", scenMinute2)}"
                     Text(
                         text = "وضعیت: " + if (scenarioConfig.is_active) {
-                            if (scenarioFreq == "TWICE_DAILY") "فعال در ساعت $scenHour1:00 و $scenHour2:00" else "فعال در ساعت $scenHour1:00"
+                            if (scenarioFreq == "TWICE_DAILY") "فعال در ساعت $time1Str و $time2Str" else "فعال در ساعت $time1Str"
                         } else "غیرفعال",
                         color = if (scenarioConfig.is_active) SuccessNeon else WarningAmber,
                         fontSize = 12.sp,

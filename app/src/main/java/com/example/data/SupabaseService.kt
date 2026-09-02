@@ -319,6 +319,12 @@ interface SupabaseApi {
         @Query("limit") limit: Int = 30
     ): Response<List<AutomationLog>>
 
+    @POST("rest/v1/automation_logs")
+    @Headers("Prefer: return=representation")
+    suspend fun insertAutomationLog(
+        @Body item: Map<String, Any>
+    ): Response<List<AutomationLog>>
+
     // TRIGGER EDGE FUNCTIONS MANUALLY
     @POST("functions/v1/scheduled-notifications")
     suspend fun triggerScheduledNotifications(

@@ -574,7 +574,9 @@ class HorrorRepository(context: Context) {
                     "is_active" to config.is_active,
                     "frequency" to config.frequency,
                     "schedule_hour_1" to config.schedule_hour_1,
+                    "schedule_minute_1" to config.schedule_minute_1,
                     "schedule_hour_2" to config.schedule_hour_2,
+                    "schedule_minute_2" to config.schedule_minute_2,
                     "batch_count" to config.batch_count
                 )
                 config.custom_prompt?.let { item["custom_prompt"] = it }
@@ -600,6 +602,23 @@ class HorrorRepository(context: Context) {
             }
         }
         emptyList()
+    }
+
+    suspend fun insertAutomationLog(taskType: String, status: String, message: String): Boolean = withContext(Dispatchers.IO) {
+        if (SupabaseClientProvider.isConfigured) {
+            try {
+                val item = mapOf<String, Any>(
+                    "task_type" to taskType,
+                    "status" to status,
+                    "message" to message
+                )
+                val resp = api.insertAutomationLog(item)
+                return@withContext resp.isSuccessful
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "insertAutomationLog exception", e)
+            }
+        }
+        false
     }
 
     // TRIGGER EDGE FUNCTIONS

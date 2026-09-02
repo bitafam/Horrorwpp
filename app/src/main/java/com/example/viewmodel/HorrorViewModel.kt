@@ -251,6 +251,36 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun checkAndPublishDueNotifications(onComplete: ((Int) -> Unit)? = null) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            var count = 0
+            val all = repository.getAllNotifications()
+            for (n in all) {
+                if (n.isScheduled && n.status == "PENDING_SCHEDULE" && n.scheduledAt != null && n.scheduledAt <= now) {
+                    val updated = n.copy(status = "PUBLISHED")
+                    repository.upsertNotification(updated)
+                    val context = getApplication<Application>()
+                    com.example.util.NotificationHelper.showSystemNotification(
+                        context = context,
+                        notificationId = updated.id.hashCode(),
+                        title = updated.title,
+                        message = updated.message,
+                        imageUrl = updated.imageUrl
+                    )
+                    com.example.util.NotificationHelper.markNotificationAsShown(context, updated.id)
+                    count++
+                }
+            }
+            if (count > 0) {
+                repository.insertAutomationLog("SCHEDULED_NOTIFICATIONS", "SUCCESS", "$count اعلان موعد رسیده منتشر شد.")
+                loadNotifications()
+                loadAutomationData()
+            }
+            onComplete?.invoke(count)
+        }
+    }
+
     fun loadAutomationData() {
         viewModelScope.launch {
             try {
@@ -260,8 +290,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 } else {
                     _automationConfigs.value = listOf(
                         AutomationConfig(id = "SCHEDULED_NOTIFICATIONS", is_active = true, frequency = "HOURLY"),
-                        AutomationConfig(id = "AUTO_GRIM_FORTUNES", is_active = false, frequency = "DAILY", schedule_hour_1 = 0),
-                        AutomationConfig(id = "AUTO_SCENARIOS", is_active = false, frequency = "DAILY", schedule_hour_1 = 14, schedule_hour_2 = 22, batch_count = 1)
+                        AutomationConfig(id = "AUTO_GRIM_FORTUNES", is_active = false, frequency = "DAILY", schedule_hour_1 = 0, schedule_minute_1 = 0),
+                        AutomationConfig(id = "AUTO_SCENARIOS", is_active = false, frequency = "DAILY", schedule_hour_1 = 14, schedule_minute_1 = 0, schedule_hour_2 = 22, schedule_minute_2 = 0, batch_count = 1)
                     )
                 }
                 val logs = repository.getAutomationLogs()
@@ -300,9 +330,54 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             _loading.value = true
             try {
                 val res = repository.triggerEdgeFunction(functionName)
-                loadAutomationData()
-                loadNotifications()
-                onResult(res.first, res.second)
+                if (res.first) {
+                    loadAutomationData()
+                    loadNotifications()
+                    onResult(true, res.second)
+                } else {
+                    // Fallback to local AI / DB execution if Edge Function is not deployed or returns 404
+                    when (functionName) {
+                        "scheduled-notifications" -> {
+                            checkAndPublishDueNotifications { count ->
+                                val msg = if (count > 0) "✅ $count اعلان موعد رسیده با موفقیت منتشر شد." else "بررسی انجام شد: هیچ اعلان موعد رسیده‌ای در صف انتظار نبود."
+                                viewModelScope.launch {
+                                    repository.insertAutomationLog("SCHEDULED_NOTIFICATIONS", "SUCCESS", msg)
+                                    loadAutomationData()
+                                    loadNotifications()
+                                }
+                                onResult(true, msg)
+                            }
+                        }
+                        "auto-grim-fortunes" -> {
+                            val gfConfig = _automationConfigs.value.find { it.id == "AUTO_GRIM_FORTUNES" }
+                            generateGrimFortunesWithAI(gfConfig?.custom_prompt) { success, msg, count ->
+                                val logMsg = if (success) "✅ طالع ۱۲ ماه سال با موفقیت تولید و در پایگاه داده ثبت شد." else "خطا در تولید طالع: $msg"
+                                viewModelScope.launch {
+                                    repository.insertAutomationLog("AUTO_GRIM_FORTUNES", if (success) "SUCCESS" else "FAILED", logMsg)
+                                    loadAutomationData()
+                                    loadUserData()
+                                }
+                                onResult(success, logMsg)
+                            }
+                        }
+                        "auto-scenarios" -> {
+                            val scenConfig = _automationConfigs.value.find { it.id == "AUTO_SCENARIOS" }
+                            val count = scenConfig?.batch_count ?: 1
+                            generateScenariosWithAI(count, scenConfig?.custom_prompt) { success, msg ->
+                                val logMsg = if (success) "✅ $count سناریوی تعاملی با موفقیت خلق و در پایگاه داده ثبت شد." else "خطا در تولید سناریو: $msg"
+                                viewModelScope.launch {
+                                    repository.insertAutomationLog("AUTO_SCENARIOS", if (success) "SUCCESS" else "FAILED", logMsg)
+                                    loadAutomationData()
+                                    loadUserData()
+                                }
+                                onResult(success, logMsg)
+                            }
+                        }
+                        else -> onResult(false, res.second)
+                    }
+                }
+            } catch (e: Exception) {
+                onResult(false, "استثنا در اجرا: ${e.localizedMessage}")
             } finally {
                 _loading.value = false
             }
@@ -323,6 +398,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private var realtimeNotificationJob: kotlinx.coroutines.Job? = null
+    private var lastTriggeredFortuneMinuteKey: String? = null
+    private var lastTriggeredScenarioMinuteKey: String? = null
 
     fun startRealtimeNotificationObserver() {
         realtimeNotificationJob?.cancel()
@@ -330,6 +407,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             while (true) {
                 if (NetworkUtils.isOnline(getApplication())) {
                     try {
+                        // 1. Check & publish any due scheduled notifications
+                        checkAndPublishDueNotifications()
+
                         val list = repository.getAllNotifications()
                         _notificationsList.value = list
                         val context = getApplication<Application>()
@@ -345,11 +425,55 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                 com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
                             }
                         }
+
+                        // 2. Check minute-level automation schedule in Asia/Tehran timezone
+                        val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Tehran"))
+                        val curHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+                        val curMinute = cal.get(java.util.Calendar.MINUTE)
+                        val curDayOfYear = cal.get(java.util.Calendar.DAY_OF_YEAR)
+                        val minuteKey = "$curDayOfYear-$curHour-$curMinute"
+
+                        val configs = _automationConfigs.value
+                        val fortuneConfig = configs.find { it.id == "AUTO_GRIM_FORTUNES" }
+                        if (fortuneConfig != null && fortuneConfig.is_active) {
+                            if (curHour == fortuneConfig.schedule_hour_1 && curMinute == fortuneConfig.schedule_minute_1 && lastTriggeredFortuneMinuteKey != minuteKey) {
+                                lastTriggeredFortuneMinuteKey = minuteKey
+                                android.util.Log.i("HorrorAutomation", "Auto triggering Grim Fortunes at Iran time: $curHour:$curMinute")
+                                generateGrimFortunesWithAI(fortuneConfig.custom_prompt) { success, msg, _ ->
+                                    val logMsg = if (success) "✅ اجرای خودکار سر ساعت $curHour:${String.format("%02d", curMinute)}: طالع ۱۲ ماه با موفقیت تولید شد." else "خطای اجرای خودکار طالع: $msg"
+                                    viewModelScope.launch {
+                                        repository.insertAutomationLog("AUTO_GRIM_FORTUNES", if (success) "SUCCESS" else "FAILED", logMsg)
+                                        loadAutomationData()
+                                        loadUserData()
+                                    }
+                                }
+                            }
+                        }
+
+                        val scenarioConfig = configs.find { it.id == "AUTO_SCENARIOS" }
+                        if (scenarioConfig != null && scenarioConfig.is_active) {
+                            val matchFirst = curHour == scenarioConfig.schedule_hour_1 && curMinute == scenarioConfig.schedule_minute_1
+                            val matchSecond = scenarioConfig.frequency == "TWICE_DAILY" && curHour == scenarioConfig.schedule_hour_2 && curMinute == scenarioConfig.schedule_minute_2
+                            if ((matchFirst || matchSecond) && lastTriggeredScenarioMinuteKey != minuteKey) {
+                                lastTriggeredScenarioMinuteKey = minuteKey
+                                val count = scenarioConfig.batch_count
+                                android.util.Log.i("HorrorAutomation", "Auto triggering Scenarios at Iran time: $curHour:$curMinute")
+                                generateScenariosWithAI(count, scenarioConfig.custom_prompt) { success, msg ->
+                                    val logMsg = if (success) "✅ اجرای خودکار سر ساعت $curHour:${String.format("%02d", curMinute)}: تعداد $count سناریو با موفقیت تولید شد." else "خطای اجرای خودکار سناریو: $msg"
+                                    viewModelScope.launch {
+                                        repository.insertAutomationLog("AUTO_SCENARIOS", if (success) "SUCCESS" else "FAILED", logMsg)
+                                        loadAutomationData()
+                                        loadUserData()
+                                    }
+                                }
+                            }
+                        }
+
                     } catch (e: Exception) {
                         android.util.Log.e("HorrorViewModel", "Realtime notification poll error: ${e.message}")
                     }
                 }
-                kotlinx.coroutines.delay(8_000) // Poll every 8 seconds while app is active
+                kotlinx.coroutines.delay(10_000) // Poll every 10 seconds while app is active
             }
         }
     }

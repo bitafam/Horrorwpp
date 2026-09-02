@@ -297,7 +297,9 @@ data class AutomationConfig(
     val is_active: Boolean = false,
     val frequency: String = "DAILY", // 'HOURLY', 'DAILY', 'TWICE_DAILY'
     val schedule_hour_1: Int = 0, // 0 to 23
+    val schedule_minute_1: Int = 0, // 0 to 59
     val schedule_hour_2: Int = 12, // 0 to 23
+    val schedule_minute_2: Int = 0, // 0 to 59
     val batch_count: Int = 1,
     val custom_prompt: String? = null,
     val last_run_at: String? = null,
