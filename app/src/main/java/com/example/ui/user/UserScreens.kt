@@ -3858,9 +3858,27 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
 @Composable
 fun NotificationsScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
     val notifications by viewModel.notificationsList.collectAsState()
-    
+    var showGuideDialog by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+        onResult = {}
+    )
+
     LaunchedEffect(Unit) {
         viewModel.loadNotifications()
+    }
+
+    if (showGuideDialog) {
+        com.example.ui.components.NotificationGuideDialog(
+            onDismiss = { showGuideDialog = false },
+            onRequestPostNotifications = {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        )
     }
 
     Scaffold(
@@ -3870,6 +3888,15 @@ fun NotificationsScreen(viewModel: HorrorViewModel, onBack: () -> Unit) {
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showGuideDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "راهنمای تنظیمات اعلان",
+                            tint = Color(0xFFDEC595)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF0F0918))

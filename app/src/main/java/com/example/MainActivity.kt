@@ -25,6 +25,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 
+import com.example.ui.components.NotificationGuideDialog
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 class MainActivity : ComponentActivity() {
     private val viewModel: HorrorViewModel by viewModels()
 
@@ -44,16 +49,45 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HorrorAppRoot(viewModel: HorrorViewModel) {
     val context = LocalContext.current
+    var showGuideDialog by remember { mutableStateOf(false) }
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
-        onResult = {}
+        onResult = { isGranted ->
+            if (isGranted) {
+                viewModel.loadNotifications()
+            }
+        }
     )
+
     LaunchedEffect(Unit) {
+        viewModel.scheduleNotificationSync()
+        viewModel.loadNotifications()
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            val hasNotifPermission = androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+            if (!hasNotifPermission) {
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                showGuideDialog = true
+            }
         }
     }
-    
+
+    if (showGuideDialog) {
+        NotificationGuideDialog(
+            onDismiss = { showGuideDialog = false },
+            onRequestPostNotifications = {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        )
+    }
+
     val appMode by viewModel.appMode.collectAsState()
 
     when (appMode) {

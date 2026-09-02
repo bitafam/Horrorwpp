@@ -159,60 +159,69 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun loadNotifications() {
         viewModelScope.launch {
-            _notificationsList.value = repository.getAllNotifications()
+            val list = repository.getAllNotifications()
+            _notificationsList.value = list
+            val context = getApplication<Application>()
+            for (notification in list) {
+                if (!com.example.util.NotificationHelper.isNotificationShown(context, notification.id)) {
+                    com.example.util.NotificationHelper.showSystemNotification(
+                        context = context,
+                        notificationId = notification.id.hashCode(),
+                        title = notification.title,
+                        message = notification.message,
+                        imageUrl = notification.imageUrl
+                    )
+                    com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
+                }
+            }
+        }
+    }
+
+    fun scheduleNotificationSync() {
+        try {
+            val context = getApplication<Application>()
+            com.example.util.NotificationHelper.createNotificationChannel(context)
+            val workManager = androidx.work.WorkManager.getInstance(context)
+
+            val oneTimeRequest = androidx.work.OneTimeWorkRequestBuilder<com.example.util.NotificationWorker>().build()
+            workManager.enqueueUniqueWork(
+                "ImmediateNotificationSync",
+                androidx.work.ExistingWorkPolicy.REPLACE,
+                oneTimeRequest
+            )
+
+            val constraints = androidx.work.Constraints.Builder()
+                .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                .build()
+
+            val periodicRequest = androidx.work.PeriodicWorkRequestBuilder<com.example.util.NotificationWorker>(
+                15, java.util.concurrent.TimeUnit.MINUTES
+            ).setConstraints(constraints).build()
+
+            workManager.enqueueUniquePeriodicWork(
+                "PeriodicNotificationSync",
+                androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+                periodicRequest
+            )
+        } catch (e: Exception) {
+            android.util.Log.e("HorrorViewModel", "Error scheduling WorkManager: ${e.message}")
         }
     }
 
     fun upsertNotification(notification: CachedAppNotification) {
         viewModelScope.launch {
             repository.upsertNotification(notification)
-            loadNotifications()
-            showSystemNotification(notification.title, notification.message, notification.imageUrl)
-        }
-    }
-
-    private fun showSystemNotification(title: String, message: String, imageUrl: String?) {
-        try {
             val context = getApplication<Application>()
-            val channelId = "horror_notifications_channel"
-            val notificationManager = context.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val channel = android.app.NotificationChannel(
-                    channelId,
-                    "اعلان‌های عمارت ارواح",
-                    android.app.NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "اعلان‌های رسمی و ترسناک عمارت"
-                    enableVibration(true)
-                }
-                notificationManager.createNotificationChannel(channel)
-            }
-            val builder = androidx.core.app.NotificationCompat.Builder(context, channelId)
-                .setSmallIcon(android.R.drawable.ic_menu_agenda)
-                .setContentTitle("🕯️ $title")
-                .setContentText(message)
-                .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(message))
-                .setAutoCancel(true)
-                .setColor(android.graphics.Color.parseColor("#B8143F"))
-                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MAX)
-
-            if (!imageUrl.isNullOrBlank()) {
-                try {
-                    val url = java.net.URL(imageUrl)
-                    val bitmap = android.graphics.BitmapFactory.decodeStream(url.openConnection().getInputStream())
-                    if (bitmap != null) {
-                        builder.setStyle(
-                            androidx.core.app.NotificationCompat.BigPictureStyle()
-                                .bigPicture(bitmap)
-                                .bigLargeIcon(null as android.graphics.Bitmap?)
-                                .setSummaryText(message)
-                        )
-                    }
-                } catch (_: Exception) {}
-            }
-
-            notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
-        } catch (_: Exception) {}
+            com.example.util.NotificationHelper.showSystemNotification(
+                context = context,
+                notificationId = notification.id.hashCode(),
+                title = notification.title,
+                message = notification.message,
+                imageUrl = notification.imageUrl
+            )
+            com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
+            loadNotifications()
+        }
     }
 
     fun deleteNotification(id: String) {
