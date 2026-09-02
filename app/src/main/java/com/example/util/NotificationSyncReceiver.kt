@@ -29,8 +29,15 @@ class NotificationSyncReceiver : BroadcastReceiver() {
             android.util.Log.e("NotificationSyncReceiver", "WorkManager enqueue failed: ${e.message}")
         }
 
-        // 2. Direct Sync in background coroutine
+        // 2. Direct Sync in background coroutine with WakeLock
         val pendingResult = goAsync()
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        val wakeLock = powerManager?.newWakeLock(
+            android.os.PowerManager.PARTIAL_WAKE_LOCK,
+            "HorrorHouse::NotificationSyncWakeLock"
+        )
+        wakeLock?.acquire(30_000L) // 30 seconds max wake lock
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val repository = HorrorRepository(context.applicationContext)
@@ -51,6 +58,11 @@ class NotificationSyncReceiver : BroadcastReceiver() {
             } catch (e: Exception) {
                 android.util.Log.e("NotificationSyncReceiver", "Direct sync failed: ${e.message}")
             } finally {
+                try {
+                    if (wakeLock?.isHeld == true) {
+                        wakeLock.release()
+                    }
+                } catch (_: Exception) {}
                 pendingResult.finish()
             }
         }
@@ -76,7 +88,7 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
 
-                val intervalMillis = 15 * 60 * 1000L // 15 minutes
+                val intervalMillis = 15 * 60 * 1000L // 15 minutes (battery friendly)
                 val triggerAtMillis = System.currentTimeMillis() + intervalMillis
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

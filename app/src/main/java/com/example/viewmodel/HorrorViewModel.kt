@@ -249,6 +249,38 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         _errorMessage.value = null
     }
 
+    private var realtimeNotificationJob: kotlinx.coroutines.Job? = null
+
+    fun startRealtimeNotificationObserver() {
+        realtimeNotificationJob?.cancel()
+        realtimeNotificationJob = viewModelScope.launch {
+            while (true) {
+                if (NetworkUtils.isOnline(getApplication())) {
+                    try {
+                        val list = repository.getAllNotifications()
+                        _notificationsList.value = list
+                        val context = getApplication<Application>()
+                        for (notification in list) {
+                            if (!com.example.util.NotificationHelper.isNotificationShown(context, notification.id)) {
+                                com.example.util.NotificationHelper.showSystemNotification(
+                                    context = context,
+                                    notificationId = notification.id.hashCode(),
+                                    title = notification.title,
+                                    message = notification.message,
+                                    imageUrl = notification.imageUrl
+                                )
+                                com.example.util.NotificationHelper.markNotificationAsShown(context, notification.id)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("HorrorViewModel", "Realtime notification poll error: ${e.message}")
+                    }
+                }
+                kotlinx.coroutines.delay(8_000) // Poll every 8 seconds while app is active
+            }
+        }
+    }
+
     init {
         // Observe network state continuously
         viewModelScope.launch {
@@ -269,6 +301,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         _isSupabaseConnected.value = SupabaseClientProvider.isConfigured
 
         loadUserData()
+        scheduleNotificationSync()
+        loadNotifications()
+        startRealtimeNotificationObserver()
     }
 
     fun setAppMode(mode: AppMode) {

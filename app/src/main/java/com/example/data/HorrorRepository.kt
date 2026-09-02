@@ -11,6 +11,17 @@ class HorrorRepository(context: Context) {
     private val api: SupabaseApi
         get() = SupabaseClientProvider.api
 
+    init {
+        if (!SupabaseClientProvider.isConfigured) {
+            val prefs = context.getSharedPreferences("horror_house_admin_prefs", Context.MODE_PRIVATE)
+            val savedUrl = prefs.getString("supabase_url", null)
+            val savedKey = prefs.getString("supabase_anon_key", null)
+            if (!savedUrl.isNullOrBlank() && !savedKey.isNullOrBlank()) {
+                SupabaseClientProvider.configure(savedUrl, savedKey)
+            }
+        }
+    }
+
     // GRIM FORTUNES
     suspend fun getGrimFortunes(forceRefresh: Boolean = false): List<GrimFortune> = withContext(Dispatchers.IO) {
         val cached = dao.getPublishedGrimFortunes()

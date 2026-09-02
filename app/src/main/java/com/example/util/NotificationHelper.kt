@@ -21,19 +21,30 @@ object NotificationHelper {
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "اعلان‌های مهم، جدیدترین داستان‌ها و اخبار عمارت"
-                enableVibration(true)
-                vibrationPattern = longArrayOf(0, 500, 250, 500)
-                enableLights(true)
-                lightColor = Color.RED
-                lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+            val existing = notificationManager.getNotificationChannel(CHANNEL_ID)
+            if (existing == null) {
+                val audioAttributes = android.media.AudioAttributes.Builder()
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                    .build()
+                val defaultSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+
+                val channel = NotificationChannel(
+                    CHANNEL_ID,
+                    CHANNEL_NAME,
+                    NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "اعلان‌های مهم، جدیدترین داستان‌ها و اخبار عمارت"
+                    enableVibration(true)
+                    vibrationPattern = longArrayOf(0, 500, 250, 500)
+                    enableLights(true)
+                    lightColor = Color.RED
+                    setSound(defaultSoundUri, audioAttributes)
+                    lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                    setShowBadge(true)
+                }
+                notificationManager.createNotificationChannel(channel)
             }
-            notificationManager.createNotificationChannel(channel)
         }
     }
 
@@ -45,6 +56,8 @@ object NotificationHelper {
         imageUrl: String? = null
     ) {
         try {
+            createNotificationChannel(context)
+
             // Check POST_NOTIFICATIONS permission on Android 13+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (ContextCompat.checkSelfPermission(
@@ -57,8 +70,6 @@ object NotificationHelper {
                 }
             }
 
-            createNotificationChannel(context)
-
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
@@ -69,13 +80,18 @@ object NotificationHelper {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
+            val defaultSoundUri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+
             val builder = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("🕯️ $title")
                 .setContentText(message)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(message))
                 .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setSound(defaultSoundUri)
+                .setVibrate(longArrayOf(0, 500, 250, 500))
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent)
                 .setColor(Color.parseColor("#B8143F"))
