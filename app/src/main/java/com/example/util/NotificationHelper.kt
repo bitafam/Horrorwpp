@@ -127,4 +127,14 @@ object NotificationHelper {
         val prefs = context.getSharedPreferences(PREF_SHOWN_NOTIFICATIONS, Context.MODE_PRIVATE)
         return prefs.getBoolean("shown_$notificationId", false)
     }
+
+    fun isSubmissionNotified(context: Context, submissionId: String): Boolean {
+        val prefs = context.getSharedPreferences("notified_submissions", Context.MODE_PRIVATE)
+        return prefs.getBoolean("notified_$submissionId", false)
+    }
+
+    fun markSubmissionNotified(context: Context, submissionId: String) {
+        val prefs = context.getSharedPreferences("notified_submissions", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("notified_$submissionId", true).apply()
+    }
 }

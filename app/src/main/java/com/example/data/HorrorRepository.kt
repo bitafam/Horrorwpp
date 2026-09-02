@@ -575,9 +575,7 @@ class HorrorRepository(context: Context) {
                     "is_active" to config.is_active,
                     "frequency" to config.frequency,
                     "schedule_hour_1" to config.schedule_hour_1,
-                    "schedule_minute_1" to config.schedule_minute_1,
                     "schedule_hour_2" to config.schedule_hour_2,
-                    "schedule_minute_2" to config.schedule_minute_2,
                     "batch_count" to config.batch_count
                 )
                 config.custom_prompt?.let { item["custom_prompt"] = it }

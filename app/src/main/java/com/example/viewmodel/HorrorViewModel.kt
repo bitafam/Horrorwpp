@@ -512,6 +512,31 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                             }
                         }
 
+                        // Check and notify admin of new user submissions
+                        val isUserAdmin = prefs.getBoolean("is_admin", false)
+                        if (isUserAdmin) {
+                            try {
+                                val submissions = repository.getAllUserSubmissionsAdmin()
+                                for (sub in submissions) {
+                                    if (sub.status == "PENDING" && !com.example.util.NotificationHelper.isSubmissionNotified(context, sub.id)) {
+                                        com.example.util.NotificationHelper.showSystemNotification(
+                                            context = context,
+                                            notificationId = sub.id.hashCode(),
+                                            title = "📥 روایت جدید ثبت شد!",
+                                            message = "روایتی با عنوان «${sub.title}» توسط ${sub.author_name} ارسال شد و منتظر تایید شماست."
+                                        )
+                                        com.example.util.NotificationHelper.markSubmissionNotified(context, sub.id)
+                                        // Auto refresh active admin submissions flow if on screen
+                                        if (_appMode.value == AppMode.ADMIN_PANEL) {
+                                            loadAdminData()
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                android.util.Log.e("HorrorViewModel", "Failed to check submissions for admin", e)
+                            }
+                        }
+
                     } catch (e: Exception) {
                         android.util.Log.e("HorrorViewModel", "Realtime notification poll error: ${e.message}")
                     }
@@ -609,6 +634,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun setAppMode(mode: AppMode) {
         _appMode.value = mode
         if (mode == AppMode.ADMIN_PANEL) {
+            prefs.edit().putBoolean("is_admin", true).apply()
             loadAdminData()
         }
     }

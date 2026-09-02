@@ -55,6 +55,24 @@ class NotificationSyncReceiver : BroadcastReceiver() {
                         NotificationHelper.markNotificationAsShown(context.applicationContext, notification.id)
                     }
                 }
+
+                // Check and notify admin of new user submissions in background
+                val prefs = context.applicationContext.getSharedPreferences("horror_admin_prefs", Context.MODE_PRIVATE)
+                val isUserAdmin = prefs.getBoolean("is_admin", false)
+                if (isUserAdmin) {
+                    val submissions = repository.getAllUserSubmissionsAdmin()
+                    for (sub in submissions) {
+                        if (sub.status == "PENDING" && !NotificationHelper.isSubmissionNotified(context.applicationContext, sub.id)) {
+                            NotificationHelper.showSystemNotification(
+                                context = context.applicationContext,
+                                notificationId = sub.id.hashCode(),
+                                title = "📥 روایت جدید ثبت شد!",
+                                message = "روایتی با عنوان «${sub.title}» توسط ${sub.author_name} ارسال شد و منتظر تایید شماست."
+                            )
+                            NotificationHelper.markSubmissionNotified(context.applicationContext, sub.id)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 android.util.Log.e("NotificationSyncReceiver", "Direct sync failed: ${e.message}")
             } finally {

@@ -1136,11 +1136,8 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
         // 2. AUTO GRIM FORTUNES AUTOMATION (24 Hours)
         // ==========================================
         var fortuneHour by remember { mutableIntStateOf(fortuneConfig.schedule_hour_1) }
-        var fortuneMinute by remember { mutableIntStateOf(fortuneConfig.schedule_minute_1) }
-        var fortunePromptInput by remember(fortuneConfig) { mutableStateOf(fortuneConfig.custom_prompt ?: "") }
         LaunchedEffect(fortuneConfig) {
             fortuneHour = fortuneConfig.schedule_hour_1
-            fortuneMinute = fortuneConfig.schedule_minute_1
         }
 
         Card(
@@ -1160,13 +1157,13 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = if (fortuneConfig.is_active) BloodGlow else MutedAsh)
                         Column {
                             Text("۲. تولید خودکار طالع شوم ۱۲ ماه", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
-                            Text("هر ۲۴ ساعت در دقیقه و ساعت دلخواه", color = MutedAsh, fontSize = 11.sp)
+                            Text("هر ۲۴ ساعت در ساعت دلخواه", color = MutedAsh, fontSize = 11.sp)
                         }
                     }
                     Switch(
                         checked = fortuneConfig.is_active,
                         onCheckedChange = { active ->
-                            viewModel.saveAutomationConfig(fortuneConfig.copy(is_active = active, schedule_hour_1 = fortuneHour, schedule_minute_1 = fortuneMinute, custom_prompt = fortunePromptInput.ifBlank { null })) {
+                            viewModel.saveAutomationConfig(fortuneConfig.copy(is_active = active, schedule_hour_1 = fortuneHour)) {
                                 feedbackMsg = "تنظیمات تولید طالع ذخیره شد."
                             }
                         },
@@ -1174,35 +1171,43 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     )
                 }
 
-                // Exact Time Picker for Fortune
-                ExactTimePickerCard(
-                    title = "ساعت و دقیقه انتشار خودکار طالع (زمان ایران):",
-                    hour = fortuneHour,
-                    minute = fortuneMinute,
-                    onTimeChanged = { h, m ->
-                        fortuneHour = h
-                        fortuneMinute = m
-                    }
-                )
-
-                // Custom Prompt Input for Fortune
-                OutlinedTextField(
-                    value = fortunePromptInput,
-                    onValueChange = { fortunePromptInput = it },
-                    label = { Text("فرمان (پرامپت) سفارشی تولید طالع ۱۲ ماه", color = MutedAsh) },
-                    placeholder = { Text("پرامپت دلخواه خود را وارد کنید...") },
+                // Hour Picker for Fortune
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    maxLines = 4,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BloodGlow,
-                        focusedTextColor = SpectralWhite,
-                        unfocusedTextColor = SpectralWhite
-                    )
-                )
+                    colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("ساعت انتشار خودکار طالع (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            IconButton(
+                                onClick = { fortuneHour = if (fortuneHour <= 0) 23 else fortuneHour - 1 },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = null, tint = SpectralWhite)
+                            }
+                            Text(
+                                text = String.format("%02d:00", fortuneHour),
+                                color = BloodGlow,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            IconButton(
+                                onClick = { fortuneHour = (fortuneHour + 1) % 24 },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = SpectralWhite)
+                            }
+                        }
+                    }
+                }
 
                 Text(
-                    text = "طالع هر ۱۲ ماه سال، رأس ساعت ${String.format("%02d", fortuneHour)}:${String.format("%02d", fortuneMinute)} به وقت تهران با فرمان فوق تولید و جایگزین می‌شود.",
+                    text = "طالع هر ۱۲ ماه سال، رأس ساعت ${String.format("%02d", fortuneHour)}:۰۰ به وقت تهران با پرامپت کلی بخش طالع‌ها تولید و جایگزین می‌شود.",
                     color = BloodGlow,
                     fontSize = 11.sp
                 )
@@ -1213,7 +1218,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "وضعیت: " + (if (fortuneConfig.is_active) "فعال در ساعت ${String.format("%02d", fortuneHour)}:${String.format("%02d", fortuneMinute)}" else "غیرفعال"),
+                        text = "وضعیت: " + (if (fortuneConfig.is_active) "فعال در ساعت ${String.format("%02d", fortuneHour)}:۰۰" else "غیرفعال"),
                         color = if (fortuneConfig.is_active) SuccessNeon else WarningAmber,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
@@ -1224,9 +1229,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                             onClick = {
                                 viewModel.saveAutomationConfig(
                                     fortuneConfig.copy(
-                                        schedule_hour_1 = fortuneHour,
-                                        schedule_minute_1 = fortuneMinute,
-                                        custom_prompt = fortunePromptInput.ifBlank { null }
+                                        schedule_hour_1 = fortuneHour
                                     )
                                 ) {
                                     feedbackMsg = "تنظیمات طالع با موفقیت ذخیره شد."
@@ -1269,18 +1272,13 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
         // ==========================================
         var scenarioFreq by remember { mutableStateOf(scenarioConfig.frequency) }
         var scenHour1 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_1) }
-        var scenMinute1 by remember { mutableIntStateOf(scenarioConfig.schedule_minute_1) }
         var scenHour2 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_2) }
-        var scenMinute2 by remember { mutableIntStateOf(scenarioConfig.schedule_minute_2) }
         var scenBatchCount by remember { mutableIntStateOf(scenarioConfig.batch_count) }
-        var scenarioPromptInput by remember(scenarioConfig) { mutableStateOf(scenarioConfig.custom_prompt ?: "") }
 
         LaunchedEffect(scenarioConfig) {
             scenarioFreq = scenarioConfig.frequency
             scenHour1 = scenarioConfig.schedule_hour_1
-            scenMinute1 = scenarioConfig.schedule_minute_1
             scenHour2 = scenarioConfig.schedule_hour_2
-            scenMinute2 = scenarioConfig.schedule_minute_2
             scenBatchCount = scenarioConfig.batch_count
         }
 
@@ -1301,7 +1299,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         Icon(Icons.Default.AltRoute, contentDescription = null, tint = if (scenarioConfig.is_active) BloodGlow else MutedAsh)
                         Column {
                             Text("۳. تولید خودکار سناریوهای تعاملی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
-                            Text("تنظیم تعداد، با ساعت و دقیقه دقیق نوبت‌ها", color = MutedAsh, fontSize = 11.sp)
+                            Text("تنظیم تعداد، با ساعت دقیق نوبت‌ها", color = MutedAsh, fontSize = 11.sp)
                         }
                     }
                     Switch(
@@ -1312,11 +1310,8 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                     is_active = active,
                                     frequency = scenarioFreq,
                                     schedule_hour_1 = scenHour1,
-                                    schedule_minute_1 = scenMinute1,
                                     schedule_hour_2 = scenHour2,
-                                    schedule_minute_2 = scenMinute2,
-                                    batch_count = scenBatchCount,
-                                    custom_prompt = scenarioPromptInput.ifBlank { null }
+                                    batch_count = scenBatchCount
                                 )
                             ) {
                                 feedbackMsg = "تنظیمات سناریوی خودکار ذخیره شد."
@@ -1388,43 +1383,86 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     }
                 }
 
-                // Exact Time Pickers for Scenario Turn 1 & Turn 2
-                ExactTimePickerCard(
-                    title = "ساعت و دقیقه نوبت اول:",
-                    hour = scenHour1,
-                    minute = scenMinute1,
-                    onTimeChanged = { h, m ->
-                        scenHour1 = h
-                        scenMinute1 = m
-                    }
-                )
-
-                if (scenarioFreq == "TWICE_DAILY") {
-                    ExactTimePickerCard(
-                        title = "ساعت و دقیقه نوبت دوم:",
-                        hour = scenHour2,
-                        minute = scenMinute2,
-                        onTimeChanged = { h, m ->
-                            scenHour2 = h
-                            scenMinute2 = m
+                // Hour Picker 1 for Scenario
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("ساعت نوبت اول (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            IconButton(
+                                onClick = { scenHour1 = if (scenHour1 <= 0) 23 else scenHour1 - 1 },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = null, tint = SpectralWhite)
+                            }
+                            Text(
+                                text = String.format("%02d:00", scenHour1),
+                                color = BloodGlow,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            IconButton(
+                                onClick = { scenHour1 = (scenHour1 + 1) % 24 },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = null, tint = SpectralWhite)
+                            }
                         }
-                    )
+                    }
                 }
 
-                // Custom Prompt Input for Scenario
-                OutlinedTextField(
-                    value = scenarioPromptInput,
-                    onValueChange = { scenarioPromptInput = it },
-                    label = { Text("فرمان (پرامپت) سفارشی تولید سناریو", color = MutedAsh) },
-                    placeholder = { Text("پرامپت دلخواه خود را وارد کنید...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    maxLines = 4,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = BloodGlow,
-                        focusedTextColor = SpectralWhite,
-                        unfocusedTextColor = SpectralWhite
-                    )
+                if (scenarioFreq == "TWICE_DAILY") {
+                    // Hour Picker 2 for Scenario
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("ساعت نوبت دوم (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                IconButton(
+                                    onClick = { scenHour2 = if (scenHour2 <= 0) 23 else scenHour2 - 1 },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Remove, contentDescription = null, tint = SpectralWhite)
+                                }
+                                Text(
+                                    text = String.format("%02d:00", scenHour2),
+                                    color = BloodGlow,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                IconButton(
+                                    onClick = { scenHour2 = (scenHour2 + 1) % 24 },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Add, contentDescription = null, tint = SpectralWhite)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Text(
+                    text = if (scenarioFreq == "TWICE_DAILY") {
+                        "سناریوهای بازی، رأس ساعت‌های ${String.format("%02d", scenHour1)}:۰۰ و ${String.format("%02d", scenHour2)}:۰۰ به وقت تهران با پرامپت کلی بخش سناریوها تولید می‌شوند."
+                    } else {
+                        "سناریوهای بازی، رأس ساعت ${String.format("%02d", scenHour1)}:۰۰ به وقت تهران با پرامپت کلی بخش سناریوها تولید می‌شوند."
+                    },
+                    color = BloodGlow,
+                    fontSize = 11.sp
                 )
 
                 Row(
@@ -1432,8 +1470,8 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val time1Str = "${String.format("%02d", scenHour1)}:${String.format("%02d", scenMinute1)}"
-                    val time2Str = "${String.format("%02d", scenHour2)}:${String.format("%02d", scenMinute2)}"
+                    val time1Str = "${String.format("%02d", scenHour1)}:۰۰"
+                    val time2Str = "${String.format("%02d", scenHour2)}:۰۰"
                     Text(
                         text = "وضعیت: " + if (scenarioConfig.is_active) {
                             if (scenarioFreq == "TWICE_DAILY") "فعال در ساعت $time1Str و $time2Str" else "فعال در ساعت $time1Str"
@@ -1450,11 +1488,8 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                     scenarioConfig.copy(
                                         frequency = scenarioFreq,
                                         schedule_hour_1 = scenHour1,
-                                        schedule_minute_1 = scenMinute1,
                                         schedule_hour_2 = scenHour2,
-                                        schedule_minute_2 = scenMinute2,
-                                        batch_count = scenBatchCount,
-                                        custom_prompt = scenarioPromptInput.ifBlank { null }
+                                        batch_count = scenBatchCount
                                     )
                                 ) {
                                     feedbackMsg = "تنظیمات سناریو با موفقیت ذخیره شد."
