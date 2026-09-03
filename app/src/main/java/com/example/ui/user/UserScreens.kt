@@ -3689,8 +3689,9 @@ fun InteractiveGamePlay(
                     )
                     if (endingState == null) {
                         Text(
-                            text = "مرحله ${currentStageIdx + 1} از $totalStages",
-                            color = Color(0xFF8B8496),
+                            text = "صحنه ${currentStageIdx + 1} از $totalStages",
+                            color = Color(0xFFDEC595),
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 11.sp
                         )
                     }
@@ -3816,7 +3817,7 @@ fun InteractiveGamePlay(
                                 border = BorderStroke(0.5.dp, Color(0xFFB8143F))
                             ) {
                                 Text(
-                                    text = "مرحله ${currentStage.stageNumber}",
+                                    text = "صحنه ${currentStage.stageNumber}",
                                     color = Color(0xFFDEC595),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
@@ -3833,7 +3834,7 @@ fun InteractiveGamePlay(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(
-                                    text = "نتیجه انتخاب پیشین: $previousChoiceMade",
+                                    text = "نتیجه پاسخ قبلی: $previousChoiceMade",
                                     color = Color(0xFFDEC595),
                                     fontSize = 11.sp,
                                     modifier = Modifier.padding(8.dp)
@@ -3864,7 +3865,7 @@ fun InteractiveGamePlay(
                     .padding(bottom = 8.dp)
             ) {
                 Text(
-                    text = "ـ تصمیم شما برای بقا در این مرحله چیست؟ ـ",
+                    text = "ـ پاسخ و تصمیم شما برای این صحنه: ـ",
                     color = Color(0xFFDEC595),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
@@ -3881,11 +3882,11 @@ fun InteractiveGamePlay(
                             if (choice.isDeath) {
                                 com.example.util.HorrorSoundManager.playDeathSound()
                                 endingState = "DEAD"
-                                endingNarrative = choice.outcomeText ?: "تصمیم شوم «${choice.text}» شما را به تله مرگبار ارواح کشاند و کشته شدید!"
+                                endingNarrative = choice.outcomeText ?: "پاسخ «${choice.text}» شما را به تله مرگبار ارواح کشاند و کشته شدید!"
                             } else if (choice.isVictory) {
                                 com.example.util.HorrorSoundManager.playVictorySound()
                                 endingState = "SURVIVED"
-                                endingNarrative = choice.outcomeText ?: "شما با انتخاب «${choice.text}» با موفقیت نجات یافتید و طلسم را باطل کردید!"
+                                endingNarrative = choice.outcomeText ?: "شما با پاسخ هوشمندانه «${choice.text}» با موفقیت نجات یافتید و طلسم را باطل کردید!"
                             } else {
                                 com.example.util.HorrorSoundManager.playScenarioChoiceSound()
                                 // Progress to next stage
@@ -3897,7 +3898,7 @@ fun InteractiveGamePlay(
                                     // If no more stages in scenario, conclude with survival or allow AI extension
                                     com.example.util.HorrorSoundManager.playVictorySound()
                                     endingState = "SURVIVED"
-                                    endingNarrative = choice.outcomeText ?: "شما با گذر موفق از تمامی دالان‌ها و تله‌های عمارت وحشت جان سالم به در بردید!"
+                                    endingNarrative = choice.outcomeText ?: "شما با گذر موفق از تمامی صحنه‌ها و تله‌های عمارت وحشت جان سالم به در بردید!"
                                 }
                             }
                         }
@@ -3909,14 +3910,15 @@ fun InteractiveGamePlay(
                     OutlinedButton(
                         onClick = {
                             isGeneratingNextAI = true
-                            val prompt = "تو بازی‌گردان سناریوی وحشت گوتیک هستی. نام سناریو: ${scenario.title}.\n" +
-                                    "بازیکن تا مرحله ${currentStageIdx + 1} پیش رفته و تصمیم اخیرش این بود: ${currentStage.narrative}\n" +
-                                    "یک مرحله خطرناک بعدی به زبان فارسی بنویس با فرمت زیر:\n" +
-                                    "---مرحله ${currentStageIdx + 2}---\n" +
-                                    "روایت: [توصیف موقعیت بعدی]\n" +
-                                    "گزینه ۱: [متن دکمه اول] -> [نتیجه]\n" +
-                                    "گزینه ۲: [متن دکمه دوم (تله مرگ)] -> [مرگ]\n" +
-                                    "گزینه ۳: [متن دکمه سوم] -> [بقا یا ادامه]"
+                            val prompt = "تو طراح سناریوهای تعاملی وحشت گوتیک هستی. نام سناریو: ${scenario.title}.\n" +
+                                    "داستان تا صحنه ${currentStageIdx + 1}: ${currentStage.narrative}\n" +
+                                    "پاسخ/تصمیم اخیر بازیکن: ${previousChoiceMade ?: currentStage.choices.firstOrNull()?.text ?: "پیشروی در تاریکی"}\n\n" +
+                                    "یک صحنه خطرناک بعدی (${currentStageIdx + 2}) با داستان جذاب و ۳ پاسخ/گزینه کاملاً اختصاصی و مرتبط با این صحنه به زبان فارسی بنویس:\n\n" +
+                                    "---صحنه ${currentStageIdx + 2}---\n" +
+                                    "روایت: [داستان و توصیف موقعیت جدید]\n" +
+                                    "گزینه ۱: [پاسخ اول متناسب با این صحنه] -> [نتیجه یا ادامه]\n" +
+                                    "گزینه ۲: [پاسخ دوم متناسب با این صحنه (تله مرگ)] -> [مرگ]\n" +
+                                    "گزینه ۳: [پاسخ سوم متناسب با این صحنه] -> [بقا یا نجات]"
 
                             viewModel.generateAILore(prompt) { aiResponse ->
                                 isGeneratingNextAI = false
@@ -3925,11 +3927,11 @@ fun InteractiveGamePlay(
                                     if (newStages.isNotEmpty()) {
                                         val nextStage = newStages[0].copy(
                                             stageNumber = dynamicStages.size + 1,
-                                            stageTitle = "گذرگاه عمیق‌تر عمارت (مرحله ${dynamicStages.size + 1})"
+                                            stageTitle = "صحنه ${dynamicStages.size + 1}: ادامه ماجرای شوم"
                                         )
                                         dynamicStages = dynamicStages + nextStage
                                         currentStageIdx = dynamicStages.size - 1
-                                        previousChoiceMade = "ادامه مسیر در عمق تاریکی با هدایت هوش مصنوعی..."
+                                        previousChoiceMade = "ورود به صحنه بعدی بر اساس تصمیم قبلی شما..."
                                     }
                                 }
                             }
@@ -3946,11 +3948,11 @@ fun InteractiveGamePlay(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("در حال احضار مرحله بعدی...", color = Color(0xFFDEC595), fontSize = 11.sp)
+                            Text("در حال نگارش صحنه و گزینه‌های بعدی...", color = Color(0xFFDEC595), fontSize = 11.sp)
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("احضار مرحلهٔ بعدی ناشناخته با AI", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("احضار صحنهٔ بعدی ناشناخته با AI", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

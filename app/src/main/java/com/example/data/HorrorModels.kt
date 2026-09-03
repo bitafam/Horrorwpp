@@ -140,31 +140,42 @@ data class ScenarioParsedStage(
 object ScenarioParser {
     fun parse(rawDescription: String, scenarioTitle: String): List<ScenarioParsedStage> {
         val stages = mutableListOf<ScenarioParsedStage>()
-        val stageDelimiters = listOf("---مرحله", "==مرحله", "مرحله ", "صحنه ", "گام ")
         
-        val hasExplicitStages = rawDescription.contains("مرحله") || rawDescription.contains("---") || rawDescription.contains("===")
+        // Regex pattern to capture scene/stage separators:
+        // Examples: ---صحنه ۱---, ===صحنه ۲===, ### صحنه ۳, صحنه ۱:, مرحله ۱:, گام ۱:, فصل ۱:, Scene 1:, Stage 1:
+        val stageSplitRegex = Regex(
+            "(?:---|===|###|##|#|\\[|\\()?\\s*(?:صحنه|مرحله|بخش|فصل|گام|Scene|Stage)\\s*(\\d+|[۰-۹]+|[یک|دو|سه|چهار|پنج|اول|دوم|سوم|چهارم|پنجم]+)[\\s:\n\\-—=\\]\\)]*",
+            RegexOption.IGNORE_CASE
+        )
+
+        val hasExplicitStages = rawDescription.contains("صحنه") || rawDescription.contains("مرحله") ||
+                rawDescription.contains("---") || rawDescription.contains("===") || rawDescription.contains("###")
 
         if (hasExplicitStages) {
-            // Split by stage separators
-            val stageBlocks = rawDescription.split(Regex("(?:---|===)?\\s*مرحله\\s*(\\d+)[:\\-—=]*|---\\s*صحنه\\s*(\\d+)[:\\-—=]*"))
+            val rawBlocks = rawDescription.split(stageSplitRegex)
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
 
-            if (stageBlocks.size > 1) {
-                var introText = ""
-                val actualBlocks = mutableListOf<String>()
-                stageBlocks.forEach { blk ->
-                    if (!blk.contains("گزینه") && !blk.contains("۱-") && !blk.contains("1-") && (blk.contains("مطلب") || blk.startsWith("عنوان"))) {
+            if (rawBlocks.size > 1) {
+                var introHeader = ""
+                val sceneBlocks = mutableListOf<String>()
+                rawBlocks.forEach { blk ->
+                    val isJustHeader = !blk.contains("گزینه") && !blk.contains("پاسخ") && !blk.contains("انتخاب") &&
+                            !blk.contains("۱-") && !blk.contains("1-") && !blk.contains("1.") && !blk.contains("الف)") &&
+                            (blk.startsWith("عنوان") || blk.contains("مطلب اصلی") || blk.length < 35)
+
+                    if (isJustHeader && sceneBlocks.isEmpty()) {
                         val clean = blk.replace(Regex("^(?:عنوان|مطلب اصلی|مطلب)\\s*[:\\-]?.*"), "").trim()
-                        if (clean.isNotBlank()) introText = clean
+                        if (clean.isNotBlank()) introHeader = clean
                     } else {
-                        actualBlocks.add(blk)
+                        sceneBlocks.add(blk)
                     }
                 }
-                val blocksToProcess = if (actualBlocks.isNotEmpty()) actualBlocks else stageBlocks
+
+                val blocksToProcess = if (sceneBlocks.isNotEmpty()) sceneBlocks else rawBlocks
                 blocksToProcess.forEachIndexed { index, block ->
                     val stageNum = index + 1
-                    val blockToParse = if (stageNum == 1 && introText.isNotBlank()) "$introText\n\n$block" else block
+                    val blockToParse = if (stageNum == 1 && introHeader.isNotBlank()) "$introHeader\n\n$block" else block
                     val parsed = parseSingleBlock(stageNum, blockToParse, scenarioTitle)
                     stages.add(parsed)
                 }
@@ -172,32 +183,30 @@ object ScenarioParser {
                 stages.add(parseSingleBlock(1, rawDescription, scenarioTitle))
             }
         } else {
-            // Single block: parse choices and create multi-step progression
             stages.add(parseSingleBlock(1, rawDescription, scenarioTitle))
         }
 
-        // If only 1 stage was extracted, create continuation steps so the user can play multi-stage
+        // If only 1 stage was extracted and has choices, enrich into progressive 3-stage game so the user experiences scene transitions
         if (stages.size == 1) {
             val s1 = stages[0]
             if (s1.choices.size >= 2) {
-                // Add rich procedural stages 2 and 3 if not fully provided
                 val stage2 = ScenarioParsedStage(
                     stageNumber = 2,
-                    stageTitle = "دالان نجواهای پنهان",
-                    narrative = "با اتخاذ این تصمیم، به دالانی عمیق‌تر از عمارت شوم کشانده شدید. هوا سنگین و بوی خاک نمناک فضا را پر کرده است. ناگهان دو درب با نشانه‌های طلسم‌شده در برابرتان پدیدار می‌شوند.",
+                    stageTitle = "صحنه ۲: دالان نجواهای پنهان",
+                    narrative = "با اتخاذ این تصمیم، وارد دالانی عمیق‌تر از عمارت شوم شدید. بوی کهنگی و خاک نمناک فضا را پر کرده و صدای سایه‌های متحرک به گوش می‌رسد. ناگهان دو مسیر با نشانه‌های طلسم‌شده در برابرتان پدیدار می‌شوند.",
                     choices = listOf(
-                        ScenarioParsedChoice(1, "درب با نشان اژدهای خونین را باز کن", "تله مرگبار باز شد و ارواح به شما حمله کردند!", nextStageIndex = 3, isDeath = true),
-                        ScenarioParsedChoice(2, "درب با کلید نقره‌ای را انتخاب کن", "راه به سمت برج دیده‌بانی باز شد...", nextStageIndex = 3, isDeath = false),
+                        ScenarioParsedChoice(1, "درب با نشان اژدهای خونین را باز کن", "تله مرگبار فعال شد و اسیر ارواح شدید!", nextStageIndex = 3, isDeath = true),
+                        ScenarioParsedChoice(2, "درب با کلید نقره‌ای را انتخاب کن", "راه به سوی برج دیده‌بانی باز شد...", nextStageIndex = 3, isDeath = false),
                         ScenarioParsedChoice(3, "به آرامی از دالان عقب‌نشینی کن", "سایه شما را محاصره کرد و در تاریکی گرفتار شدید!", isDeath = true)
                     )
                 )
                 val stage3 = ScenarioParsedStage(
                     stageNumber = 3,
-                    stageTitle = "مواجهه با طلسم نهایی",
+                    stageTitle = "صحنه ۳: مواجهه با طلسم نهایی",
                     narrative = "به اتاق مرکزی و محراب باستانی عمارت رسیدید. نبض دیوارهای سنگی شنیده می‌شود و روح کاتب باستانی در انتظار آخرین انتخاب شماست.",
                     choices = listOf(
-                        ScenarioParsedChoice(1, "طلسم باستانی را با خون کتیبه بشکن", "شما پیروز شدید و از عمارت با سلامت گریختید!", isVictory = true),
-                        ScenarioParsedChoice(2, "به محراب تعظیم کن و تسلیم نجوا شو", "روح شما برای همیشه به دیوار عمارت دوخته شد!", isDeath = true)
+                        ScenarioParsedChoice(1, "طلسم باستانی را با نور کتیبه بشکن", "شما پیروز شدید و با سلامت از عمارت گریختید!", isVictory = true),
+                        ScenarioParsedChoice(2, "به محراب تعظیم کن و تسلیم شو", "روح شما برای همیشه در عمارت اسیر شد!", isDeath = true)
                     )
                 )
                 return listOf(s1, stage2, stage3)
@@ -207,7 +216,7 @@ object ScenarioParser {
         return if (stages.isNotEmpty()) stages else listOf(
             ScenarioParsedStage(
                 stageNumber = 1,
-                stageTitle = scenarioTitle,
+                stageTitle = "صحنه ۱: $scenarioTitle",
                 narrative = rawDescription,
                 choices = listOf(
                     ScenarioParsedChoice(1, "پیشروی به سمت ناشناخته‌ها", "وارد دالان تاریک شدید...", nextStageIndex = 2),
@@ -224,15 +233,23 @@ object ScenarioParser {
 
         var choiceCounter = 1
 
-        for (line in lines) {
-            val isChoiceLine = line.matches(Regex("^(?:گزینه\\s*\\d*|\\d+[\\.\\-]|[-*•]|[الف-ی][\\-\\)])\\s*[:\\-]?\\s*.+")) ||
-                    line.contains("گزینه") || line.startsWith("۱-") || line.startsWith("۲-") || line.startsWith("۳-") ||
-                    line.startsWith("1-") || line.startsWith("2-") || line.startsWith("3-") || line.startsWith("الف)") || line.startsWith("ب)")
+        val choicePrefixRegex = Regex(
+            "^(?:گزینه\\s*\\d*|پاسخ\\s*\\d*|انتخاب\\s*\\d*|اقدام\\s*\\d*|تصمیم\\s*\\d*|\\d+[\\.\\-]|[-*•]|\\[\\d+\\]|[الف-ی][\\-\\)])\\s*[:\\-]?\\s*",
+            RegexOption.IGNORE_CASE
+        )
 
-            if (isChoiceLine) {
+        for (line in lines) {
+            val isChoiceLine = line.matches(Regex("^(?:گزینه|پاسخ|انتخاب|اقدام|تصمیم|\\d+[\\.\\-]|[-*•]|\\[\\d+\\]|[الف-ی][\\-\\)]).+")) ||
+                    line.contains("گزینه") || line.contains("پاسخ") || line.contains("انتخاب") ||
+                    line.startsWith("۱-") || line.startsWith("۲-") || line.startsWith("۳-") || line.startsWith("۴-") ||
+                    line.startsWith("1-") || line.startsWith("2-") || line.startsWith("3-") || line.startsWith("4-") ||
+                    line.startsWith("1.") || line.startsWith("2.") || line.startsWith("3.") || line.startsWith("4.") ||
+                    line.startsWith("الف)") || line.startsWith("ب)") || line.startsWith("ج)") || line.startsWith("د)")
+
+            if (isChoiceLine && !line.startsWith("عنوان") && !line.startsWith("روایت:") && !line.startsWith("داستان:") && !line.startsWith("شرح:")) {
                 // Extract choice text and possible outcome
                 var clean = line
-                    .replace(Regex("^(?:گزینه\\s*\\d*|\\d+[\\.\\-]|[-*•]|[الف-ی][\\-\\)])\\s*[:\\-]?"), "")
+                    .replace(choicePrefixRegex, "")
                     .replace("#", "")
                     .replace("*", "")
                     .trim()
@@ -241,17 +258,19 @@ object ScenarioParser {
                 var isDeath = false
                 var isVictory = false
 
-                if (clean.contains("->") || clean.contains("=>") || clean.contains("←") || clean.contains("—")) {
-                    val parts = clean.split(Regex("(?:->|=>|←|—)"))
+                if (clean.contains("->") || clean.contains("=>") || clean.contains("←") || clean.contains("—") || clean.contains("–")) {
+                    val parts = clean.split(Regex("(?:->|=>|←|—|–)"))
                     clean = parts[0].trim()
                     outcome = parts.drop(1).joinToString(" - ").trim()
                 }
 
                 val lowerLine = line.lowercase() + " " + (outcome ?: "").lowercase()
-                if (lowerLine.contains("مرگ") || lowerLine.contains("تله") || lowerLine.contains("هلاکت") || lowerLine.contains("کشته") || lowerLine.contains("اسیر")) {
+                if (lowerLine.contains("مرگ") || lowerLine.contains("تله") || lowerLine.contains("هلاکت") ||
+                    lowerLine.contains("کشته") || lowerLine.contains("اسیر") || lowerLine.contains("نابودی")) {
                     isDeath = true
                 }
-                if (lowerLine.contains("بقا") || lowerLine.contains("نجات") || lowerLine.contains("پیروز") || lowerLine.contains("رهایی") || lowerLine.contains("فرار موفق")) {
+                if (lowerLine.contains("بقا") || lowerLine.contains("نجات") || lowerLine.contains("پیروز") ||
+                    lowerLine.contains("رهایی") || lowerLine.contains("فرار موفق") || lowerLine.contains("پیروزی")) {
                     isVictory = true
                 }
 
@@ -268,8 +287,12 @@ object ScenarioParser {
                     )
                 }
             } else {
-                if (!line.startsWith("عنوان:") && !line.startsWith("عنوان") && !line.startsWith("---") && !line.startsWith("===")) {
-                    val cleanNarrative = line.replace("روایت:", "").replace("روایت", "").trim()
+                if (!line.startsWith("عنوان:") && !line.startsWith("عنوان") && !line.startsWith("---") && !line.startsWith("===") && !line.startsWith("###")) {
+                    val cleanNarrative = line
+                        .replace(Regex("^(?:روایت|داستان|شرح صحنه|شرح موقعیت|ماجرا)\\s*[:\\-]?"), "")
+                        .replace("#", "")
+                        .replace("*", "")
+                        .trim()
                     if (cleanNarrative.isNotBlank()) {
                         narrativeLines.add(cleanNarrative)
                     }
@@ -277,18 +300,29 @@ object ScenarioParser {
             }
         }
 
-        // If no choices were explicitly detected from text lines, extract options or provide default choices
+        // Context-aware fallback choices for the scene if none detected
         if (choices.isEmpty()) {
-            choices.add(ScenarioParsedChoice(1, "پیشروی به عمق دالان تاریک", "به دالان بعدی راه یافتید...", nextStageIndex = stageNum + 1))
-            choices.add(ScenarioParsedChoice(2, "بررسی اشیای مرموز روی دیوار", "طلسم قدیمی فعال شد!", isDeath = true))
-            choices.add(ScenarioParsedChoice(3, "تلاش برای باز کردن دریچه مخفی", "دریچه راه خروج را نشان داد...", nextStageIndex = stageNum + 1, isVictory = stageNum >= 3))
+            val narrativeSample = narrativeLines.joinToString(" ")
+            if (narrativeSample.contains("کتاب") || narrativeSample.contains("کتیبه")) {
+                choices.add(ScenarioParsedChoice(1, "بررسی دقیق کتیبه و طلسم‌های باستانی", "طلسم نجات آشکار شد...", nextStageIndex = stageNum + 1))
+                choices.add(ScenarioParsedChoice(2, "نادیده گرفتن کتیبه و حرکت به دالان بعدی", "صدای قدم‌های نامرئی نزدیک‌تر شد...", nextStageIndex = stageNum + 1))
+                choices.add(ScenarioParsedChoice(3, "لمس مستقیم جوهر سیاه کتیبه", "سم طلسم به خون شما نفوذ کرد!", isDeath = true))
+            } else if (narrativeSample.contains("آینه") || narrativeSample.contains("انعکاس")) {
+                choices.add(ScenarioParsedChoice(1, "خیره شدن به تصویر و خواندن ورد تطهیر", "تصویر شیطانی ناپدید شد...", nextStageIndex = stageNum + 1))
+                choices.add(ScenarioParsedChoice(2, "شکستن آینه با مشعل سنگی", "تکه‌های آینه درگاه خروج را نشان دادند...", nextStageIndex = stageNum + 1))
+                choices.add(ScenarioParsedChoice(3, "دست کشیدن روی سطح شیشه‌ای آینه", "دست شما درون آینه کشیده شد و اسیر گشتید!", isDeath = true))
+            } else {
+                choices.add(ScenarioParsedChoice(1, "پیشروی هوشیارانه در این صحنه با مشعل", "مسیر امن برای صحنه بعد گشوده شد...", nextStageIndex = stageNum + 1))
+                choices.add(ScenarioParsedChoice(2, "جستجو و بررسی نشانه‌های مرموز صحنه", "کشف رازهای پنهان...", nextStageIndex = stageNum + 1))
+                choices.add(ScenarioParsedChoice(3, "دویدن سراسیمه به سمت تاریکی", "در تله مرگبار سقوط کردید!", isDeath = true))
+            }
         }
 
         val narrative = if (narrativeLines.isNotEmpty()) narrativeLines.joinToString("\n\n") else block
 
         return ScenarioParsedStage(
             stageNumber = stageNum,
-            stageTitle = "مرحله $stageNum: $scenarioTitle",
+            stageTitle = "صحنه $stageNum: $scenarioTitle",
             narrative = narrative,
             choices = choices
         )

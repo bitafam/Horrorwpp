@@ -3003,15 +3003,107 @@ fun AdminScenariosTab(
     if (showAddDialog) {
         var title by remember { mutableStateOf("") }
         var description by remember { mutableStateOf("") }
+        var isGeneratingSingleAI by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
             containerColor = CryptCardElevated,
-            title = { Text("افزودن سناریوی وحشت دستی", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("خلق سناریو با صحنه‌ها و پاسخ‌های اختصاصی", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("عنوان سناریو") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(10.dp))
-                    OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("توصیف موقعیت و گزینه‌ها") }, modifier = Modifier.fillMaxWidth(), minLines = 5, shape = RoundedCornerShape(10.dp))
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        text = "داستان و پاسخ‌های کاربر را بر اساس هر صحنه تعریف کنید. با جابجایی صحنه‌ها، گزینه‌های همان صحنه به کاربر نمایش داده می‌شود.",
+                        color = MutedAsh,
+                        fontSize = 11.sp
+                    )
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                description = "---صحنه ۱---\n" +
+                                        "روایت: شما وارد دالان تاریک و سرد عمارت شدید. در انتهای راهرو سایه‌ای متحرک دیده می‌شود.\n" +
+                                        "گزینه ۱: مشعل را روشن کن و آرام جلو برو -> روشن شدن دالان و کشف تالار کهن\n" +
+                                        "گزینه ۲: پشت ستون سنگی پنهان شو -> عبور سایه و باز شدن درگاه مخفی\n" +
+                                        "گزینه ۳: به سمت سایه فریاد بزن و حمله کن -> به دام افتادن در تله تاریکی (مرگ)\n\n" +
+                                        "---صحنه ۲---\n" +
+                                        "روایت: در تالار کهن، کتابچه‌ای با خط زرین روی محراب قرار دارد. نجواهایی از دیوارها شنیده می‌شود.\n" +
+                                        "گزینه ۱: ورد طلسم‌شکن را با صدای رسا بخوان -> خنثی شدن طلسم عمارت\n" +
+                                        "گزینه ۲: صندوقچه عتیقه کنار محراب را باز کن -> کشف گنجینه باستانی\n" +
+                                        "گزینه ۳: به نجواها گوش بسپار و تسلیم شو -> اسیر شدن روح در محراب (مرگ)\n\n" +
+                                        "---صحنه ۳---\n" +
+                                        "روایت: دروازه خروجی عمارت پدیدار شد اما کلید دروازه در دست مجسمه ساحر است.\n" +
+                                        "گزینه ۱: کلید زرین را با ذکر تطهیر از دست مجسمه بردار -> نجات پیروزمندانه از عمارت (بقا)\n" +
+                                        "گزینه ۲: با مشعل به دروازه چوبی بکوب -> شکستن قفل و فرار به سوی جنگل (بقا)"
+                                if (title.isBlank()) title = "راز طلسم سایه‌ها"
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("درج قالب نمونه صحنه‌ها", fontSize = 11.sp, color = SpectralWhite)
+                        }
+
+                        Button(
+                            onClick = {
+                                isGeneratingSingleAI = true
+                                val topic = if (title.isNotBlank()) "درباره موضوع «$title»" else "با موضوعی دلهره‌آور و ماورایی"
+                                val prompt = "${viewModel.scenarioPrompt.value}\n\nلطفاً ۱ سناریوی کامل با داستان جذاب و تمام صحنه‌ها (صحنه ۱، صحنه ۲، صحنه ۳) $topic به زبان فارسی بنویس."
+                                viewModel.generateAILore(prompt) { resp ->
+                                    isGeneratingSingleAI = false
+                                    if (!resp.startsWith("خطا")) {
+                                        val lines = resp.lines().map { it.trim() }.filter { it.isNotBlank() }
+                                        val extractedTitle = lines.firstOrNull { it.contains("عنوان:") }
+                                            ?.replace("عنوان:", "")?.replace("#", "")?.replace("*", "")?.trim()
+                                        if (!extractedTitle.isNullOrBlank()) {
+                                            title = extractedTitle
+                                        }
+                                        description = resp
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            enabled = !isGeneratingSingleAI
+                        ) {
+                            if (isGeneratingSingleAI) {
+                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("تولید با AI...", fontSize = 11.sp)
+                            } else {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("تولید با AI", fontSize = 11.sp)
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text("عنوان سناریو") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it },
+                        label = { Text("متن صحنه‌ها و گزینه‌ها") },
+                        placeholder = { Text("---صحنه ۱---\nروایت: ...\nگزینه ۱: ... -> ...") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 8,
+                        shape = RoundedCornerShape(10.dp)
+                    )
                 }
             },
             confirmButton = {
@@ -3026,7 +3118,7 @@ fun AdminScenariosTab(
                     colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("ذخیره و انتشار")
+                    Text("ذخیره و انتشار سناریو")
                 }
             },
             dismissButton = {
