@@ -33,17 +33,19 @@ serve(async (req) => {
       .eq("id", "AUTO_GRIM_FORTUNES")
       .single();
 
-    // Check manual override query param or body
+    // Check manual override or database cron trigger
     let isManualTrigger = false;
+    let isCronTrigger = false;
     try {
       const body = await req.json().catch(() => ({}));
       if (body?.manual === true) isManualTrigger = true;
+      if (body?.cron === true) isCronTrigger = true;
     } catch {
       // ignore
     }
 
     // Check if active
-    if (!isManualTrigger && config && !config.is_active) {
+    if (!isManualTrigger && !isCronTrigger && config && !config.is_active) {
       return new Response(JSON.stringify({
         success: true,
         message: "اتوماسیون طالع شوم غیرفعال است (is_active = false)."
@@ -52,23 +54,33 @@ serve(async (req) => {
       });
     }
 
-    // Dynamic Iran/Tehran Hour Check
-    // Get current hour in Asia/Tehran timezone
+    // Dynamic Iran/Tehran Hour & Minute Check
     const tehranTimeStr = new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Tehran",
       hour: "numeric",
+      minute: "numeric",
       hour12: false
     }).format(new Date());
-    const currentTehranHour = parseInt(tehranTimeStr, 10);
+
+    const [hourStr, minStr] = tehranTimeStr.split(":");
+    const currentTehranHour = parseInt(hourStr, 10);
+    const currentTehranMinute = parseInt(minStr, 10);
 
     const targetHour = config?.schedule_hour_1 ?? 0;
+    const targetMinute = config?.schedule_minute_1 ?? 0;
 
-    // If automatic cron call and not matching target hour, skip quietly
-    if (!isManualTrigger && config?.is_active && currentTehranHour !== targetHour) {
+    let shouldRunNow = isManualTrigger || isCronTrigger;
+    if (!shouldRunNow && config?.is_active) {
+      if (currentTehranHour === targetHour && Math.abs(currentTehranMinute - targetMinute) <= 2) {
+        shouldRunNow = true;
+      }
+    }
+
+    if (!shouldRunNow) {
       return new Response(JSON.stringify({
         success: true,
         skipped: true,
-        message: `ساعت فعلی ایران (${currentTehranHour}:00) با ساعت تنظیم شده در پنل (${targetHour}:00) مطابقت ندارد. اجرا نادیده گرفته شد.`
+        message: `ساعت فعلی ایران (${currentTehranHour}:${currentTehranMinute}) با زمان تنظیم شده در پنل (${targetHour}:${targetMinute}) مطابقت ندارد. اجرا نادیده گرفته شد.`
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -180,16 +192,7 @@ serve(async (req) => {
       throw new Error(`خطا در ذخیره‌سازی طالع‌ها در پایگاه‌داده: ${upsertErr.message}`);
     }
 
-    // 7. Send an automated notification to app users
-    await supabase.from("app_notifications").insert({
-      title: "🔮 طالع شوم ۱۲ ماه بازنویسی شد",
-      message: "طالع‌های تاریک و پیش‌گویی‌های جدید عمارت وحشت برای تمامی ماه‌های سال منتشر شد. فال خود را بخوانید...",
-      timestamp: Date.now(),
-      status: "PUBLISHED",
-      is_scheduled: false,
-    });
-
-    // 8. Log success
+    // 7. Log success
     const logMsg = `تعداد ${recordsToUpsert.length} طالع شوم با مدل ${modelName} با موفقیت تولید و منتشر شد.`;
     await supabase.from("automation_logs").insert({
       task_type: "AUTO_GRIM_FORTUNES",

@@ -39,31 +39,6 @@ data class SupabaseUser(
 )
 
 @JsonClass(generateAdapter = true)
-data class AppNotificationDto(
-    val id: String,
-    val title: String,
-    val message: String,
-    @Json(name = "image_url") val image_url: String?,
-    val timestamp: Long,
-    @Json(name = "is_scheduled") val is_scheduled: Boolean? = false,
-    @Json(name = "scheduled_at") val scheduled_at: Long? = null,
-    val status: String? = "PUBLISHED",
-    @Json(name = "trigger_condition") val trigger_condition: String? = null
-) {
-    fun toCached(): CachedAppNotification = CachedAppNotification(
-        id = id,
-        title = title,
-        message = message,
-        imageUrl = image_url,
-        timestamp = timestamp,
-        isScheduled = is_scheduled ?: false,
-        scheduledAt = scheduled_at,
-        status = status ?: "PUBLISHED",
-        triggerCondition = trigger_condition
-    )
-}
-
-@JsonClass(generateAdapter = true)
 data class AiGenerationRequest(
     val provider: String,
     val model: String,
@@ -210,23 +185,6 @@ interface SupabaseApi {
         @Body body: Map<String, Any>
     ): Response<ResponseBody>
 
-    @GET("rest/v1/app_notifications")
-    suspend fun getAppNotifications(
-        @Query("select") select: String = "*",
-        @Query("order") order: String = "timestamp.desc"
-    ): Response<List<AppNotificationDto>>
-
-    @POST("rest/v1/app_notifications?on_conflict=id")
-    @Headers("Prefer: resolution=merge-duplicates,return=representation")
-    suspend fun createAppNotification(
-        @Body item: Map<String, Any>
-    ): Response<List<AppNotificationDto>>
-
-    @DELETE("rest/v1/app_notifications")
-    suspend fun deleteAppNotification(
-        @Query("id") idEq: String
-    ): Response<ResponseBody>
-
     @GET("rest/v1/story_reports")
     suspend fun getStoryReports(
         @Query("select") select: String = "*",
@@ -344,18 +302,15 @@ interface SupabaseApi {
     ): Response<List<AutomationLog>>
 
     // TRIGGER EDGE FUNCTIONS MANUALLY
-    @POST("functions/v1/scheduled-notifications")
-    suspend fun triggerScheduledNotifications(
-        @Header("Authorization") authHeader: String? = null
-    ): Response<ResponseBody>
-
     @POST("functions/v1/auto-grim-fortunes")
     suspend fun triggerAutoGrimFortunes(
+        @Body body: Map<String, Boolean> = mapOf("manual" to true),
         @Header("Authorization") authHeader: String? = null
     ): Response<ResponseBody>
 
     @POST("functions/v1/auto-scenarios")
     suspend fun triggerAutoScenarios(
+        @Body body: Map<String, Boolean> = mapOf("manual" to true),
         @Header("Authorization") authHeader: String? = null
     ): Response<ResponseBody>
 }

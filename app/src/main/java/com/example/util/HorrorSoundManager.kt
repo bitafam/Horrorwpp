@@ -44,7 +44,39 @@ object HorrorSoundManager {
     fun playClickSound() {
         if (!_isSoundEnabled.value) return
         scope.launch {
-            playTone(frequency = 220.0, durationMs = 60, amplitude = 0.25f)
+            playHorrorCreak(durationMs = 90, startFreq = 220.0, endFreq = 140.0, amplitude = 0.35f)
+        }
+    }
+
+    /**
+     * Cinematic procedural gothic horror sound effect for scenario clicks and choices.
+     * Features sub-bass crypt thud + dissonant frequency sweep + ominous acoustic beating.
+     * Never sounds like a plain electronic beep.
+     */
+    fun playScenarioChoiceSound() {
+        if (!_isSoundEnabled.value) return
+        scope.launch {
+            playHorrorCreak(
+                durationMs = 280,
+                startFreq = 340.0,
+                endFreq = 95.0,
+                amplitude = 0.55f,
+                addDissonantOvertone = true,
+                addCryptThud = true
+            )
+        }
+    }
+
+    /**
+     * Atmospheric supernatural transition effect when advancing stages or switching scenarios.
+     */
+    fun playScenarioTransitionSound() {
+        if (!_isSoundEnabled.value) return
+        scope.launch {
+            // Sinister two-stage dimensional sweep
+            playHorrorCreak(durationMs = 180, startFreq = 160.0, endFreq = 240.0, amplitude = 0.35f, addDissonantOvertone = true)
+            delay(120)
+            playHorrorCreak(durationMs = 320, startFreq = 240.0, endFreq = 65.0, amplitude = 0.5f, addCryptThud = true)
         }
     }
 
@@ -90,24 +122,106 @@ object HorrorSoundManager {
     fun playDeathSound() {
         if (!_isSoundEnabled.value) return
         scope.launch {
-            playTone(frequency = 180.0, durationMs = 200, amplitude = 0.5f)
-            delay(150)
-            playTone(frequency = 120.0, durationMs = 300, amplitude = 0.6f)
-            delay(200)
-            playTone(frequency = 60.0, durationMs = 600, amplitude = 0.7f)
+            // Terrifying descending doom plunge with deep sub-bass tremor
+            playHorrorCreak(durationMs = 450, startFreq = 220.0, endFreq = 48.0, amplitude = 0.65f, addDissonantOvertone = true, addCryptThud = true)
+            delay(280)
+            playHorrorCreak(durationMs = 700, startFreq = 90.0, endFreq = 35.0, amplitude = 0.7f, addCryptThud = true)
         }
     }
 
     fun playVictorySound() {
         if (!_isSoundEnabled.value) return
         scope.launch {
-            playTone(frequency = 260.0, durationMs = 100, amplitude = 0.3f)
-            delay(90)
-            playTone(frequency = 330.0, durationMs = 120, amplitude = 0.35f)
+            playTone(frequency = 260.0, durationMs = 120, amplitude = 0.3f)
             delay(100)
-            playTone(frequency = 392.0, durationMs = 150, amplitude = 0.4f)
-            delay(120)
-            playTone(frequency = 523.0, durationMs = 350, amplitude = 0.5f)
+            playTone(frequency = 329.6, durationMs = 140, amplitude = 0.35f)
+            delay(110)
+            playTone(frequency = 392.0, durationMs = 180, amplitude = 0.4f)
+            delay(130)
+            playTone(frequency = 523.25, durationMs = 400, amplitude = 0.45f)
+        }
+    }
+
+    /**
+     * Synthesizes rich, atmospheric cinematic horror audio with frequency sweeping,
+     * tritone dissonance (the devil's interval), and low-end sub-bass resonance.
+     */
+    private fun playHorrorCreak(
+        durationMs: Int,
+        startFreq: Double,
+        endFreq: Double,
+        amplitude: Float = 0.4f,
+        addDissonantOvertone: Boolean = false,
+        addCryptThud: Boolean = false
+    ) {
+        try {
+            val sampleRate = 22050
+            val numSamples = (sampleRate * (durationMs / 1000.0)).toInt().coerceAtLeast(1)
+            val buffer = ShortArray(numSamples)
+
+            for (i in 0 until numSamples) {
+                val progress = i.toDouble() / numSamples
+                val currentFreq = startFreq + (endFreq - startFreq) * progress
+                val time = i.toDouble() / sampleRate
+
+                // Envelope with soft attack and smooth decay
+                val envelope = when {
+                    progress < 0.12 -> (progress / 0.12)
+                    progress > 0.65 -> ((1.0 - progress) / 0.35)
+                    else -> 1.0
+                }
+
+                // Primary sweeping horror wave + eerie odd harmonics
+                val baseAngle = 2.0 * Math.PI * currentFreq * time
+                var sampleVal = sin(baseAngle) * 0.55 + sin(baseAngle * 2.1) * 0.25
+
+                // Tritone / minor second dissonance (creates spine-tingling acoustic dread)
+                if (addDissonantOvertone) {
+                    val dissonantFreq = currentFreq * 1.4142 // Square root of 2 = Diminished fifth (Tritone)
+                    sampleVal += sin(2.0 * Math.PI * dissonantFreq * time) * 0.22
+                }
+
+                // Heavy crypt sub-thud (45Hz impact)
+                if (addCryptThud) {
+                    val thudEnvelope = (1.0 - progress).coerceIn(0.0, 1.0)
+                    sampleVal += sin(2.0 * Math.PI * 48.0 * time) * 0.45 * thudEnvelope
+                }
+
+                val finalSample = (sampleVal * Short.MAX_VALUE * amplitude * envelope).toInt()
+                buffer[i] = finalSample.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            }
+
+            val audioTrack = AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_GAME)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(sampleRate)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build()
+                )
+                .setBufferSizeInBytes(buffer.size * 2)
+                .setTransferMode(AudioTrack.MODE_STATIC)
+                .build()
+
+            audioTrack.write(buffer, 0, buffer.size)
+            audioTrack.play()
+
+            scope.launch {
+                delay(durationMs.toLong() + 100)
+                try {
+                    audioTrack.stop()
+                    audioTrack.release()
+                } catch (ignored: Exception) { }
+            }
+        } catch (e: Exception) {
+            // Graceful fallback
+            playTone(startFreq, durationMs, amplitude)
         }
     }
 

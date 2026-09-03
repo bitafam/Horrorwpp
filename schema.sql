@@ -352,19 +352,6 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.app_notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    image_url TEXT,
-    timestamp BIGINT NOT NULL,
-    is_scheduled BOOLEAN DEFAULT FALSE,
-    scheduled_at BIGINT,
-    status TEXT NOT NULL DEFAULT 'PUBLISHED' CHECK (status IN ('PUBLISHED', 'PENDING_SCHEDULE', 'CANCELLED')),
-    trigger_condition TEXT,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
-
 CREATE TABLE IF NOT EXISTS public.automation_configs (
     id TEXT PRIMARY KEY,
     is_active BOOLEAN NOT NULL DEFAULT FALSE,
@@ -397,21 +384,16 @@ ON CONFLICT (key) DO NOTHING;
 
 INSERT INTO public.automation_configs (id, is_active, frequency, schedule_hour_1, schedule_hour_2, batch_count, custom_prompt)
 VALUES 
-    ('SCHEDULED_NOTIFICATIONS', TRUE, 'HOURLY', 0, 0, 1, 'بررسی و انتشار اعلان‌های زمان‌بندی‌شده سر موعد'),
     ('AUTO_GRIM_FORTUNES', FALSE, 'DAILY', 0, 0, 12, 'یک طالع‌بین تاریک و باستانی گوتیک شو و دقیقاً ۱۲ طالع شوم و دلهره‌آور، یکی برای هر ماه سال شمسی تولید کن.'),
     ('AUTO_SCENARIOS', FALSE, 'TWICE_DAILY', 14, 22, 1, 'یک سناریوی چند مرحله‌ای ترسناک گوتیک به همراه جزئیات برای بازی تعاملی بساز.')
 ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.app_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.automation_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.automation_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public read app_settings" ON public.app_settings FOR SELECT USING (true);
 CREATE POLICY "Allow all manage app_settings" ON public.app_settings ALL USING (true);
-
-CREATE POLICY "Allow public read published notifications" ON public.app_notifications FOR SELECT USING (status = 'PUBLISHED' OR is_scheduled = false);
-CREATE POLICY "Allow all manage notifications" ON public.app_notifications FOR ALL USING (true);
 
 CREATE POLICY "Allow all read automation_configs" ON public.automation_configs FOR SELECT USING (true);
 CREATE POLICY "Allow all manage automation_configs" ON public.automation_configs ALL USING (true);

@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "ThreeThirtyThree"
+rootProject.name = "HorrorHouse"
 
 include(":app")

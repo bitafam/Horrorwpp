@@ -62,19 +62,6 @@ data class CachedUserSubmission(
     val createdAt: String? = null
 )
 
-@Entity(tableName = "cached_app_notifications")
-data class CachedAppNotification(
-    @PrimaryKey val id: String,
-    val title: String,
-    val message: String,
-    val imageUrl: String?,
-    val timestamp: Long,
-    val isScheduled: Boolean = false,
-    val scheduledAt: Long? = null,
-    val status: String = "PUBLISHED",
-    val triggerCondition: String? = null
-)
-
 @Dao
 interface HorrorDao {
     // Grim Fortunes
@@ -143,19 +130,6 @@ interface HorrorDao {
 
     @Query("DELETE FROM cached_user_submissions WHERE id = :id")
     suspend fun deleteUserSubmission(id: String)
-
-    // Notifications
-    @Query("SELECT * FROM cached_app_notifications WHERE status = 'PUBLISHED' OR isScheduled = 0 ORDER BY timestamp DESC")
-    suspend fun getAllNotifications(): List<CachedAppNotification>
-
-    @Query("SELECT * FROM cached_app_notifications ORDER BY timestamp DESC")
-    suspend fun getAllNotificationsAdmin(): List<CachedAppNotification>
-
-    @Upsert
-    suspend fun upsertNotification(item: CachedAppNotification)
-
-    @Query("DELETE FROM cached_app_notifications WHERE id = :id")
-    suspend fun deleteNotification(id: String)
 }
 
 @Database(
@@ -163,10 +137,9 @@ interface HorrorDao {
         CachedGrimFortune::class,
         CachedRealStory::class,
         CachedScenario::class,
-        CachedUserSubmission::class,
-        CachedAppNotification::class
+        CachedUserSubmission::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class HorrorDatabase : RoomDatabase() {

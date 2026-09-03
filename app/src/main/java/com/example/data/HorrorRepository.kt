@@ -442,88 +442,6 @@ class HorrorRepository(context: Context) {
         }
     }
 
-    // NOTIFICATIONS
-    suspend fun getAllNotifications(): List<CachedAppNotification> = withContext(Dispatchers.IO) {
-        val localList = dao.getAllNotifications()
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                val resp = api.getAppNotifications()
-                if (resp.isSuccessful && resp.body() != null) {
-                    val dtos = resp.body()!!
-                    val remoteList = dtos.map { it.toCached() }
-                    for (item in remoteList) {
-                        dao.upsertNotification(item)
-                    }
-                    val combined = (remoteList + localList).distinctBy { it.id }.sortedByDescending { it.timestamp }
-                    val now = System.currentTimeMillis()
-                    // Filter out pending future scheduled notifications for regular users
-                    return@withContext combined.filter { 
-                        it.status == "PUBLISHED" || (!it.isScheduled && (it.scheduledAt == null || it.scheduledAt <= now)) 
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "getAllNotifications exception", e)
-            }
-        }
-        localList
-    }
-
-    suspend fun getAllNotificationsAdmin(): List<CachedAppNotification> = withContext(Dispatchers.IO) {
-        val localList = dao.getAllNotificationsAdmin()
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                val resp = api.getAppNotifications()
-                if (resp.isSuccessful && resp.body() != null) {
-                    val dtos = resp.body()!!
-                    val remoteList = dtos.map { it.toCached() }
-                    for (item in remoteList) {
-                        dao.upsertNotification(item)
-                    }
-                    val combined = (remoteList + localList).distinctBy { it.id }.sortedByDescending { it.timestamp }
-                    return@withContext combined
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "getAllNotificationsAdmin exception", e)
-            }
-        }
-        localList
-    }
-
-    suspend fun upsertNotification(notification: CachedAppNotification) = withContext(Dispatchers.IO) {
-        dao.upsertNotification(notification)
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                val body = mutableMapOf<String, Any>(
-                    "id" to notification.id,
-                    "title" to notification.title,
-                    "message" to notification.message,
-                    "image_url" to (notification.imageUrl ?: ""),
-                    "timestamp" to notification.timestamp,
-                    "is_scheduled" to notification.isScheduled,
-                    "status" to notification.status,
-                    "trigger_condition" to (notification.triggerCondition ?: "")
-                )
-                if (notification.scheduledAt != null) {
-                    body["scheduled_at"] = notification.scheduledAt
-                }
-                api.createAppNotification(body)
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "upsertNotification exception", e)
-            }
-        }
-    }
-
-    suspend fun deleteNotification(id: String) = withContext(Dispatchers.IO) {
-        dao.deleteNotification(id)
-        if (SupabaseClientProvider.isConfigured) {
-            try {
-                api.deleteAppNotification(idEq = "eq.$id")
-            } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "deleteNotification exception", e)
-            }
-        }
-    }
-
     // SYSTEM / APP SETTINGS (Stored in Supabase DB)
     suspend fun getAppSettings(): List<AppSetting> = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
@@ -631,7 +549,6 @@ class HorrorRepository(context: Context) {
         }
         try {
             val resp = when (functionName) {
-                "scheduled-notifications" -> api.triggerScheduledNotifications()
                 "auto-grim-fortunes" -> api.triggerAutoGrimFortunes()
                 "auto-scenarios" -> api.triggerAutoScenarios()
                 else -> return@withContext Pair(false, "فانکشن ناشناخته است.")

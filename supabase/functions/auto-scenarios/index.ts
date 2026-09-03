@@ -1,5 +1,6 @@
 // Supabase Edge Function: auto-scenarios
-// Automatically generates and publishes interactive horror scenarios using Gemini
+// Automatically generates and publishes deeply atmospheric, addictive horror scenarios using Gemini
+// Separates narrative text from interactive choices in both database tables and structured format.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.0";
@@ -26,17 +27,19 @@ serve(async (req) => {
       .eq("id", "AUTO_SCENARIOS")
       .single();
 
-    // Check manual override
+    // Check manual or cron triggers
     let isManualTrigger = false;
+    let isCronTrigger = false;
     try {
       const body = await req.json().catch(() => ({}));
       if (body?.manual === true) isManualTrigger = true;
+      if (body?.cron === true) isCronTrigger = true;
     } catch {
       // ignore
     }
 
     // Check if active
-    if (!isManualTrigger && config && !config.is_active) {
+    if (!isManualTrigger && !isCronTrigger && config && !config.is_active) {
       return new Response(JSON.stringify({
         success: true,
         message: "اتوماسیون سناریوها غیرفعال است (is_active = false)."
@@ -45,23 +48,29 @@ serve(async (req) => {
       });
     }
 
-    // Dynamic Iran/Tehran Hour Check
+    // Dynamic Iran/Tehran Hour & Minute Check
     const tehranTimeStr = new Intl.DateTimeFormat("en-US", {
       timeZone: "Asia/Tehran",
       hour: "numeric",
+      minute: "numeric",
       hour12: false
     }).format(new Date());
-    const currentTehranHour = parseInt(tehranTimeStr, 10);
+
+    const [hourStr, minStr] = tehranTimeStr.split(":");
+    const currentTehranHour = parseInt(hourStr, 10);
+    const currentTehranMinute = parseInt(minStr, 10);
 
     const hour1 = config?.schedule_hour_1 ?? 14;
+    const min1 = config?.schedule_minute_1 ?? 0;
     const hour2 = config?.schedule_hour_2 ?? 22;
+    const min2 = config?.schedule_minute_2 ?? 0;
     const freq = config?.frequency ?? "TWICE_DAILY";
 
-    let shouldRunNow = isManualTrigger;
-    if (!isManualTrigger && config?.is_active) {
-      if (freq === "DAILY" && currentTehranHour === hour1) {
-        shouldRunNow = true;
-      } else if (freq === "TWICE_DAILY" && (currentTehranHour === hour1 || currentTehranHour === hour2)) {
+    let shouldRunNow = isManualTrigger || isCronTrigger;
+    if (!shouldRunNow && config?.is_active) {
+      const matchSlot1 = currentTehranHour === hour1 && Math.abs(currentTehranMinute - min1) <= 2;
+      const matchSlot2 = freq === "TWICE_DAILY" && currentTehranHour === hour2 && Math.abs(currentTehranMinute - min2) <= 2;
+      if (matchSlot1 || matchSlot2) {
         shouldRunNow = true;
       }
     }
@@ -70,7 +79,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         success: true,
         skipped: true,
-        message: `ساعت فعلی ایران (${currentTehranHour}:00) زمان نوبت انتشار (${freq === "DAILY" ? hour1 : `${hour1}, ${hour2}`}) نیست. اجرا نادیده گرفته شد.`
+        message: `ساعت فعلی ایران (${currentTehranHour}:${currentTehranMinute}) زمان نوبت انتشار نیست. اجرا نادیده گرفته شد.`
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -93,7 +102,7 @@ serve(async (req) => {
 
     const modelName = dbModel || "gemini-2.5-flash";
 
-    // 3. Fetch Prompt
+    // 3. Creative, Addictive Psychological Horror Prompt
     let promptBase = config?.custom_prompt;
     if (!promptBase) {
       const { data: promptRow } = await supabase
@@ -105,11 +114,27 @@ serve(async (req) => {
     }
 
     const fullPrompt = `${promptBase}\n\n` +
-      `لطفاً تعداد ${batchCount} سناریوی تعاملی ترسناک، دلهره‌آور و چند مرحله‌ای کاملاً مجزا بنویس.\n` +
-      `برای هر سناریو:\n` +
-      `- خط اول با 'عنوان: [نام سناریو]' آغاز شود.\n` +
-      `- مراحل بازی، دوراهی‌ها، انتخاب‌های مرگ و بقا را شرح بده.\n` +
-      `- هر سناریو را دقیقاً با '###سناریو###' از هم جدا کن.`;
+      `تو استاد بزرگ تعلیق، وحشت گوتیک و بازی‌گردان سناریوهای بقای عمارت وحشت هستی.\n` +
+      `وظیفه تو خلق سناریوهایی به شدت اعتیادآور، مرموز، هیجان‌انگیز و لذت‌بخش است که کاربر با خواندن هر انتخاب دچار ضربان قلب بالا و دلهره لذت‌بخش شود.\n\n` +
+      `لطفاً دقیقاً تعداد ${batchCount} سناریوی کاملاً مجزا و اعتیادآور تولید کن.\n` +
+      `قالب هر سناریو باید دقیقاً و بدون کم‌وکاست به شکل زیر باشد تا دیتابیس بتواند متن مطلب را از گزینه‌های قابل انتخاب تفکیک کند:\n\n` +
+      `###سناریو###\n` +
+      `عنوان: [نام جذاب، سینمایی و دلهره‌آور سناریو]\n` +
+      `مطلب اصلی: [فضاسازی عمیق، توصیف صداها، تاریکی و ورود نفس‌گیر به این معمای شوم]\n\n` +
+      `---مرحله ۱: [نام دلهره‌آور صحنه اول]\n` +
+      `روایت: [شرح دقیق موقعیت مرگبار اول و معمای مقابل کاربر]\n` +
+      `گزینه ۱: [متن انتخاب اول] -> [فرجام یا نتیجه پیشروی]\n` +
+      `گزینه ۲: [متن انتخاب دوم] -> [تله شوم یا هلاکت / مرگ]\n` +
+      `گزینه ۳: [متن انتخاب سوم] -> [مسیر پنهان یا بقا]\n\n` +
+      `---مرحله ۲: [نام صحنه دوم]\n` +
+      `روایت: [ادامه نفس‌گیر ماجرا و افزایش فشار روانی بر کاربر]\n` +
+      `گزینه ۱: [متن انتخاب اول] -> [پیامد]\n` +
+      `گزینه ۲: [متن انتخاب دوم] -> [مرگ]\n` +
+      `گزینه ۳: [متن انتخاب سوم] -> [ادامه مسیر]\n\n` +
+      `---مرحله ۳: [نام رویارویی نهایی]\n` +
+      `روایت: [مواجهه پایانی با منشأ شرارت و آزمون سرنوشت روح]\n` +
+      `گزینه ۱: [متن انتخاب نجات‌بخش] -> [شکستن طلسم و نجات کامل / پیروزی]\n` +
+      `گزینه ۲: [متن انتخاب شوم] -> [اسارت ابدی روح در تاریکی / مرگ]`;
 
     // 4. Call Gemini REST API
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -119,8 +144,8 @@ serve(async (req) => {
       body: JSON.stringify({
         contents: [{ parts: [{ text: fullPrompt }] }],
         generationConfig: {
-          temperature: 0.85,
-          maxOutputTokens: 4000,
+          temperature: 0.88,
+          maxOutputTokens: 4500,
         },
       }),
     });
@@ -144,7 +169,6 @@ serve(async (req) => {
       .filter((b: string) => b.length > 30);
 
     if (blocks.length === 0) {
-      // Fallback: entire text as single scenario
       blocks.push(candidateText.trim());
     }
 
@@ -153,13 +177,17 @@ serve(async (req) => {
     for (const block of blocks.slice(0, batchCount)) {
       const lines = block.split("\n").map((l: string) => l.trim()).filter(Boolean);
       let title = "سناریوی تاریک عمارت وحشت";
-      if (lines.length > 0) {
-        const firstLine = lines[0];
-        if (firstLine.includes("عنوان:")) {
-          title = firstLine.replace("عنوان:", "").replace(/[#*]/g, "").trim();
+      let intro = "";
+
+      for (const line of lines) {
+        if (line.startsWith("عنوان:")) {
+          title = line.replace("عنوان:", "").replace(/[#*]/g, "").trim();
+        } else if (line.startsWith("مطلب اصلی:") || line.startsWith("مطلب:")) {
+          intro = line.replace(/^(مطلب اصلی:|مطلب:)/, "").trim();
         }
       }
 
+      // 1. Insert into wrong_choice_scenarios
       const { data: newScen, error: insertErr } = await supabase
         .from("wrong_choice_scenarios")
         .insert({
@@ -170,27 +198,86 @@ serve(async (req) => {
         .select()
         .single();
 
-      if (!insertErr && newScen) {
-        createdScenarios.push(newScen);
+      if (insertErr || !newScen) {
+        console.error("Error inserting scenario:", insertErr);
+        continue;
       }
+
+      // 2. Parse stages and choices to populate wrong_choice_scenes & wrong_choice_choices
+      try {
+        const stageSplits = block.split(/---مرحله\s*\d+[:\s-]*/);
+        let firstSceneId: string | null = null;
+
+        for (let sIdx = 1; sIdx < stageSplits.length; sIdx++) {
+          const stageContent = stageSplits[sIdx].trim();
+          if (!stageContent) continue;
+
+          const stageLines = stageContent.split("\n").map(l => l.trim()).filter(Boolean);
+          let narrativeText = "";
+          const stageChoices: string[] = [];
+
+          for (const sLine of stageLines) {
+            if (sLine.startsWith("گزینه") || sLine.match(/^[0-9۰-۹]+[\.\-]/)) {
+              stageChoices.push(sLine);
+            } else if (!sLine.startsWith("عنوان") && !sLine.startsWith("---")) {
+              const clean = sLine.replace(/^روایت:/, "").trim();
+              if (clean) narrativeText += (narrativeText ? "\n" : "") + clean;
+            }
+          }
+
+          if (!narrativeText && stageLines.length > 0) {
+            narrativeText = stageLines[0];
+          }
+
+          const isEndingStage = sIdx === stageSplits.length - 1;
+
+          // Insert scene
+          const { data: sceneRow } = await supabase
+            .from("wrong_choice_scenes")
+            .insert({
+              scenario_id: newScen.id,
+              scene_text: narrativeText || `مرحله ${sIdx}`,
+              is_ending: isEndingStage,
+              ending_type: isEndingStage ? "CHOICE_DECIDED" : null
+            })
+            .select()
+            .single();
+
+          if (sceneRow) {
+            if (!firstSceneId) firstSceneId = sceneRow.id;
+
+            // Insert choices for this scene
+            for (const cText of stageChoices) {
+              await supabase
+                .from("wrong_choice_choices")
+                .insert({
+                  scene_id: sceneRow.id,
+                  choice_text: cText,
+                });
+            }
+          }
+        }
+
+        // Link initial_scene_id if created
+        if (firstSceneId) {
+          await supabase
+            .from("wrong_choice_scenarios")
+            .update({ initial_scene_id: firstSceneId })
+            .eq("id", newScen.id);
+        }
+      } catch (parseErr) {
+        console.warn("Failed to parse scenes/choices into sub-tables:", parseErr);
+      }
+
+      createdScenarios.push(newScen);
     }
 
     if (createdScenarios.length === 0) {
       throw new Error("هیچ سناریویی ذخیره نشد.");
     }
 
-    // 6. Send in-app notification
-    const firstTitle = createdScenarios[0]?.title || "سناریوی جدید";
-    await supabase.from("app_notifications").insert({
-      title: "🕯️ سناریوی انتخابی جدید منتشر شد",
-      message: `سناریوی تعاملی «${firstTitle}» هم‌اکنون برای بازی آماده است. آیا زنده بیرون می‌آیید؟`,
-      timestamp: Date.now(),
-      status: "PUBLISHED",
-      is_scheduled: false,
-    });
-
-    // 7. Log success
-    const logMsg = `تعداد ${createdScenarios.length} سناریوی جدید با موفقیت تولید و منتشر شد.`;
+    // 6. Log success
+    const logMsg = `✅ اجرای خودکار: تعداد ${createdScenarios.length} سناریوی اعتیادآور و تفکیک‌شده با موفقیت در دیتابیس منتشر شد.`;
     await supabase.from("automation_logs").insert({
       task_type: "AUTO_SCENARIOS",
       status: "SUCCESS",

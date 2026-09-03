@@ -151,9 +151,21 @@ object ScenarioParser {
                 .filter { it.isNotBlank() }
 
             if (stageBlocks.size > 1) {
-                stageBlocks.forEachIndexed { index, block ->
+                var introText = ""
+                val actualBlocks = mutableListOf<String>()
+                stageBlocks.forEach { blk ->
+                    if (!blk.contains("گزینه") && !blk.contains("۱-") && !blk.contains("1-") && (blk.contains("مطلب") || blk.startsWith("عنوان"))) {
+                        val clean = blk.replace(Regex("^(?:عنوان|مطلب اصلی|مطلب)\\s*[:\\-]?.*"), "").trim()
+                        if (clean.isNotBlank()) introText = clean
+                    } else {
+                        actualBlocks.add(blk)
+                    }
+                }
+                val blocksToProcess = if (actualBlocks.isNotEmpty()) actualBlocks else stageBlocks
+                blocksToProcess.forEachIndexed { index, block ->
                     val stageNum = index + 1
-                    val parsed = parseSingleBlock(stageNum, block, scenarioTitle)
+                    val blockToParse = if (stageNum == 1 && introText.isNotBlank()) "$introText\n\n$block" else block
+                    val parsed = parseSingleBlock(stageNum, blockToParse, scenarioTitle)
                     stages.add(parsed)
                 }
             } else {
@@ -316,15 +328,6 @@ data class AutomationLog(
     val status: String,
     val message: String,
     @Json(name = "created_at") val createdAt: String? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class NotificationTemplate(
-    val id: String,
-    val title: String,
-    val message: String,
-    val imageUrl: String? = null,
-    val category: String = "عمومی"
 )
 
 @JsonClass(generateAdapter = true)
