@@ -1,5 +1,6 @@
 package com.example.ui.user
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -521,11 +522,1295 @@ fun MirrorCracksCanvas(modifier: Modifier = Modifier) {
     }
 }
 
+// ==========================================
+// GAMING FANTASY CUSTOM CANVASES & ASYMMETRICAL BANNERS
+// ==========================================
+
+@Composable
+fun GamingStoryBannerCanvas(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "storyPulse")
+    val auraAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "auraAlpha"
+    )
+    val flameY by infiniteTransition.animateFloat(
+        initialValue = -3f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "flameY"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Dark fantasy midnight obsidian to crimson gradient
+        val bgGrad = Brush.verticalGradient(
+            colors = listOf(Color(0xFF040108), Color(0xFF190615), Color(0xFF07020B))
+        )
+        drawRect(bgGrad)
+
+        // Mystical pulsating blood-red moon
+        drawCircle(
+            color = Color(0xFFFF1E56).copy(alpha = auraAlpha * 0.25f),
+            radius = w * 0.35f,
+            center = Offset(w * 0.8f, h * 0.35f)
+        )
+        drawCircle(
+            color = Color(0xFF9E1B32),
+            radius = w * 0.14f,
+            center = Offset(w * 0.8f, h * 0.35f)
+        )
+        // Golden lunar rim
+        drawCircle(
+            color = Color(0xFFFFD700).copy(alpha = 0.6f),
+            radius = w * 0.142f,
+            center = Offset(w * 0.8f, h * 0.35f),
+            style = Stroke(width = 2f)
+        )
+
+        // Spooky gothic fortress silhouette with high spires
+        val fortPath = Path().apply {
+            moveTo(0f, h)
+            lineTo(0f, h * 0.65f)
+            lineTo(w * 0.12f, h * 0.55f)
+            lineTo(w * 0.18f, h * 0.35f) // Tower 1
+            lineTo(w * 0.22f, h * 0.55f)
+            lineTo(w * 0.35f, h * 0.52f)
+            lineTo(w * 0.42f, h * 0.22f) // Main Cathedral Spire
+            lineTo(w * 0.46f, h * 0.52f)
+            lineTo(w * 0.65f, h * 0.58f)
+            lineTo(w * 0.72f, h * 0.42f)
+            lineTo(w * 0.78f, h * 0.65f)
+            lineTo(w, h * 0.65f)
+            lineTo(w, h)
+            close()
+        }
+        drawPath(fortPath, Color(0xFF030106))
+
+        // Glowing stained glass gothic windows
+        drawRoundRect(
+            color = Color(0xFFFFD700),
+            topLeft = Offset(w * 0.41f, h * 0.38f + flameY),
+            size = Size(w * 0.025f, h * 0.08f),
+            cornerRadius = CornerRadius(w * 0.012f, w * 0.012f)
+        )
+        drawRoundRect(
+            color = Color(0xFFFF1E56),
+            topLeft = Offset(w * 0.17f, h * 0.45f),
+            size = Size(w * 0.02f, h * 0.06f),
+            cornerRadius = CornerRadius(w * 0.01f, w * 0.01f)
+        )
+
+        // Floating grimoire runes & particle dust
+        drawCircle(Color(0xFFFFD700).copy(alpha = 0.8f), 3f, Offset(w * 0.3f, h * 0.3f + flameY))
+        drawCircle(Color(0xFFFF1E56).copy(alpha = 0.7f), 4f, Offset(w * 0.55f, h * 0.25f - flameY))
+        drawCircle(Color(0xFFDEC595).copy(alpha = 0.9f), 2.5f, Offset(w * 0.68f, h * 0.45f + flameY))
+        drawCircle(Color(0xFF8A2BE2).copy(alpha = 0.8f), 3.5f, Offset(w * 0.2f, h * 0.28f))
+    }
+}
+
+@Composable
+fun GamingScenarioBannerCanvas(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "scenarioPulse")
+    val skullEyeGlow by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "eyeGlow"
+    )
+    val mistShift by infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "mistShift"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Dark demonic red & abyssal black gradient
+        val bgGrad = Brush.verticalGradient(
+            colors = listOf(Color(0xFF030104), Color(0xFF1D050D), Color(0xFF070104))
+        )
+        drawRect(bgGrad)
+
+        // Perspective labyrinth lines to center abyss gate
+        val gateStroke = 2.5f
+        val lineCol = Color(0xFF4A0A17)
+        drawLine(lineCol, Offset(0f, 0f), Offset(w * 0.45f, h * 0.45f), gateStroke)
+        drawLine(lineCol, Offset(w, 0f), Offset(w * 0.55f, h * 0.45f), gateStroke)
+        drawLine(lineCol, Offset(0f, h), Offset(w * 0.42f, h * 0.6f), gateStroke)
+        drawLine(lineCol, Offset(w, h), Offset(w * 0.58f, h * 0.6f), gateStroke)
+
+        // Portal of death arch
+        drawRoundRect(
+            color = Color(0xFF0A0205),
+            topLeft = Offset(w * 0.38f, h * 0.25f),
+            size = Size(w * 0.24f, h * 0.5f),
+            cornerRadius = CornerRadius(w * 0.12f, w * 0.12f)
+        )
+        drawRoundRect(
+            color = Color(0xFFB8143F).copy(alpha = skullEyeGlow * 0.5f),
+            topLeft = Offset(w * 0.38f, h * 0.25f),
+            size = Size(w * 0.24f, h * 0.5f),
+            cornerRadius = CornerRadius(w * 0.12f, w * 0.12f),
+            style = Stroke(width = 3f)
+        )
+
+        // Sinister skull eyes inside the portal
+        drawCircle(Color(0xFFFF1A4D).copy(alpha = skullEyeGlow), w * 0.025f, Offset(w * 0.46f, h * 0.42f))
+        drawCircle(Color(0xFFFF1A4D).copy(alpha = skullEyeGlow), w * 0.025f, Offset(w * 0.54f, h * 0.42f))
+        drawCircle(Color(0xFFFFFFFF).copy(alpha = skullEyeGlow), w * 0.008f, Offset(w * 0.46f, h * 0.42f))
+        drawCircle(Color(0xFFFFFFFF).copy(alpha = skullEyeGlow), w * 0.008f, Offset(w * 0.54f, h * 0.42f))
+
+        // Toxic spectral green & crimson rune fire sparks
+        drawCircle(Color(0xFF39FF14).copy(alpha = 0.8f), 3.5f, Offset(w * 0.2f + mistShift, h * 0.65f))
+        drawCircle(Color(0xFF39FF14).copy(alpha = 0.6f), 2.5f, Offset(w * 0.8f - mistShift, h * 0.7f))
+        drawCircle(Color(0xFFFF1A4D).copy(alpha = 0.9f), 4f, Offset(w * 0.5f, h * 0.2f + mistShift * 0.5f))
+    }
+}
+
+@Composable
+fun GamingGrimFortuneBannerCanvas(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "fortunePulse")
+    val angle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(20000, easing = LinearEasing)
+        ),
+        label = "zodiacRotate"
+    )
+    val glow by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.75f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "zodiacGlow"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Deep cosmic astral purple and midnight gradient
+        val bgGrad = Brush.verticalGradient(
+            colors = listOf(Color(0xFF03010A), Color(0xFF140827), Color(0xFF05010E))
+        )
+        drawRect(bgGrad)
+
+        val center = Offset(w * 0.75f, h * 0.5f)
+
+        // Astral nebula glow
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0xFF8A2BE2).copy(alpha = glow * 0.45f), Color.Transparent),
+                center = center,
+                radius = w * 0.45f
+            ),
+            radius = w * 0.45f,
+            center = center
+        )
+
+        // Rotating golden zodiac celestial rings
+        drawCircle(
+            color = Color(0xFFDEC595).copy(alpha = 0.6f),
+            radius = w * 0.26f,
+            center = center,
+            style = Stroke(width = 2f)
+        )
+        drawCircle(
+            color = Color(0xFFFFD700).copy(alpha = 0.4f),
+            radius = w * 0.18f,
+            center = center,
+            style = Stroke(width = 1.5f)
+        )
+
+        // 8 Cosmic Star Points / Sun rays
+        for (i in 0 until 8) {
+            val rad = Math.toRadians((angle + i * 45).toDouble())
+            val r1 = (w * 0.18f).toDouble()
+            val r2 = (w * 0.26f).toDouble()
+            val x1 = (center.x + r1 * Math.cos(rad)).toFloat()
+            val y1 = (center.y + r1 * Math.sin(rad)).toFloat()
+            val x2 = (center.x + r2 * Math.cos(rad)).toFloat()
+            val y2 = (center.y + r2 * Math.sin(rad)).toFloat()
+            drawLine(
+                color = Color(0xFFFFD700).copy(alpha = 0.7f),
+                start = Offset(x1, y1),
+                end = Offset(x2, y2),
+                strokeWidth = 2f
+            )
+        }
+
+        // Golden Eye of Providence at center
+        drawCircle(Color(0xFFFFD700), w * 0.04f, center)
+        drawCircle(Color(0xFF140827), w * 0.02f, center)
+
+        // Left side astrological constellations
+        drawCircle(Color(0xFFDEC595), 3.5f, Offset(w * 0.15f, h * 0.25f))
+        drawCircle(Color(0xFFDEC595), 2.5f, Offset(w * 0.25f, h * 0.35f))
+        drawCircle(Color(0xFFDEC595), 4f, Offset(w * 0.2f, h * 0.65f))
+        drawCircle(Color(0xFFDEC595), 3f, Offset(w * 0.35f, h * 0.75f))
+        drawLine(Color(0x55DEC595), Offset(w * 0.15f, h * 0.25f), Offset(w * 0.25f, h * 0.35f), 1.5f)
+        drawLine(Color(0x55DEC595), Offset(w * 0.2f, h * 0.65f), Offset(w * 0.35f, h * 0.75f), 1.5f)
+    }
+}
+
+@Composable
+fun GamingSubmitStoryBannerCanvas(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "scribePulse")
+    val candleFlame by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "candleFlame"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Vintage antique parchment and dark copper background
+        val bgGrad = Brush.verticalGradient(
+            colors = listOf(Color(0xFF060308), Color(0xFF1C0D08), Color(0xFF090403))
+        )
+        drawRect(bgGrad)
+
+        // Cursed ancient scroll parchment outline on right
+        val scrollPath = Path().apply {
+            moveTo(w * 0.6f, h * 0.15f)
+            lineTo(w * 0.92f, h * 0.15f)
+            lineTo(w * 0.9f, h * 0.85f)
+            lineTo(w * 0.58f, h * 0.85f)
+            close()
+        }
+        drawPath(scrollPath, Color(0xFF261309))
+        drawPath(scrollPath, Color(0xFFDEC595).copy(alpha = 0.5f), style = Stroke(width = 2f))
+
+        // Inscription lines on scroll
+        for (i in 0 until 5) {
+            val y = h * (0.28f + i * 0.11f)
+            drawLine(
+                color = Color(0xFF8C0E26).copy(alpha = 0.6f),
+                start = Offset(w * 0.63f, y),
+                end = Offset(w * 0.85f, y),
+                strokeWidth = 2.5f
+            )
+        }
+
+        // Blood Quill Pen tilted
+        val quillPath = Path().apply {
+            moveTo(w * 0.52f, h * 0.8f) // Quill tip
+            lineTo(w * 0.35f, h * 0.2f) // Feather top
+            lineTo(w * 0.42f, h * 0.35f)
+            lineTo(w * 0.48f, h * 0.55f)
+            close()
+        }
+        drawPath(quillPath, Color(0xFFB8143F))
+        drawPath(quillPath, Color(0xFFFFD700).copy(alpha = 0.7f), style = Stroke(width = 1.5f))
+
+        // Dripping blood drop from quill
+        drawCircle(Color(0xFFFF1E56), 4.5f, Offset(w * 0.52f, h * 0.83f))
+
+        // Candle on left with flickering flame
+        drawRect(Color(0xFFDEC595), topLeft = Offset(w * 0.18f, h * 0.55f), size = Size(w * 0.04f, h * 0.3f))
+        drawCircle(
+            color = Color(0xFFFFD700).copy(alpha = 0.3f),
+            radius = (w * 0.08f) * candleFlame,
+            center = Offset(w * 0.2f, h * 0.48f)
+        )
+        drawCircle(
+            color = Color(0xFFFF7700),
+            radius = (w * 0.03f) * candleFlame,
+            center = Offset(w * 0.2f, h * 0.48f)
+        )
+    }
+}
+
+@Composable
+fun GamingAudioSettingsBannerCanvas(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "audioPulse")
+    val wave1 by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wave1"
+    )
+    val wave2 by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wave2"
+    )
+    val wave3 by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wave3"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Cyber-Gothic neon cyan and dark purple gradient
+        val bgGrad = Brush.verticalGradient(
+            colors = listOf(Color(0xFF020108), Color(0xFF0B1024), Color(0xFF040209))
+        )
+        drawRect(bgGrad)
+
+        // Gothic Gearwork rings on left
+        drawCircle(
+            color = Color(0xFF00E5FF).copy(alpha = 0.35f),
+            radius = w * 0.22f,
+            center = Offset(w * 0.2f, h * 0.5f),
+            style = Stroke(width = 2f)
+        )
+        drawCircle(
+            color = Color(0xFF8A2BE2).copy(alpha = 0.5f),
+            radius = w * 0.12f,
+            center = Offset(w * 0.2f, h * 0.5f),
+            style = Stroke(width = 1.5f)
+        )
+
+        // Equalizer frequency soundwave bars on right
+        val heights = listOf(wave1, wave2, wave3, wave1 * 0.8f, wave2 * 1.1f, wave3 * 0.7f, wave1 * 1.2f, wave2 * 0.6f)
+        val barWidth = w * 0.035f
+        val startX = w * 0.5f
+        val spacing = w * 0.055f
+
+        heights.forEachIndexed { i, factor ->
+            val barH = (h * 0.65f) * factor.coerceIn(0.1f, 1.0f)
+            val x = startX + i * spacing
+            val topY = (h - barH) / 2f
+            drawRoundRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(Color(0xFF00E5FF), Color(0xFFB8143F), Color(0xFF8A2BE2))
+                ),
+                topLeft = Offset(x, topY),
+                size = Size(barWidth, barH),
+                cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
+            )
+        }
+    }
+}
+
+@Composable
+fun GamingAiSummonerBannerCanvas(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "aiSummonPulse")
+    val pulse by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "aiPulse"
+    )
+    val spinAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(12000, easing = LinearEasing)
+        ),
+        label = "spinAngle"
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Dark astral neon vortex
+        val bgGrad = Brush.verticalGradient(
+            colors = listOf(Color(0xFF040108), Color(0xFF1E031E), Color(0xFF06010C))
+        )
+        drawRect(bgGrad)
+
+        val center = Offset(w * 0.8f, h * 0.5f)
+
+        // Astral portal rings
+        drawCircle(
+            color = Color(0xFFFF1E56).copy(alpha = 0.35f),
+            radius = (w * 0.28f) * pulse,
+            center = center,
+            style = Stroke(width = 2f)
+        )
+        drawCircle(
+            color = Color(0xFF8A2BE2).copy(alpha = 0.5f),
+            radius = w * 0.18f,
+            center = center,
+            style = Stroke(width = 2f)
+        )
+
+        // Rotating Summoning Pentagram
+        val pentagonRadius = (w * 0.18f).toDouble()
+        val points = mutableListOf<Offset>()
+        for (i in 0 until 5) {
+            val a = Math.toRadians((spinAngle + i * 72 - 90).toDouble())
+            points.add(Offset((center.x + pentagonRadius * Math.cos(a)).toFloat(), (center.y + pentagonRadius * Math.sin(a)).toFloat()))
+        }
+        for (i in 0 until 5) {
+            val p1 = points[i]
+            val p2 = points[(i + 2) % 5]
+            drawLine(Color(0xFFFFD700).copy(alpha = 0.8f), p1, p2, 2f)
+        }
+
+        // Glowing core crystal
+        drawCircle(Color(0xFFFFFFFF), w * 0.035f, center)
+        drawCircle(Color(0xFFFF1E56).copy(alpha = 0.7f), w * 0.06f, center)
+
+        // Ambient lightning spark lines on left
+        drawLine(Color(0x888A2BE2), Offset(w * 0.1f, h * 0.3f), Offset(w * 0.25f, h * 0.45f), 2f)
+        drawLine(Color(0x8800E5FF), Offset(w * 0.25f, h * 0.45f), Offset(w * 0.4f, h * 0.35f), 2f)
+        drawLine(Color(0x88FF1E56), Offset(w * 0.4f, h * 0.35f), Offset(w * 0.55f, h * 0.6f), 2f)
+    }
+}
+
+// ==========================================
+// USER APP NAVIGATION DESTINATIONS
+// ==========================================
+
+enum class UserDestination {
+    HOME,
+    STORIES,
+    GRIM_FORTUNES,
+    SUBMIT_STORY,
+    SCENARIOS,
+    SETTINGS
+}
+
+// ==========================================
+// GAMING FANTASY TOP BAR COMPONENT
+// ==========================================
+
+@Composable
+fun GamingTopBar(
+    title: String,
+    subtitle: String? = null,
+    icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.AutoAwesome,
+    badgeText: String? = null,
+    onBack: () -> Unit,
+    trailingContent: (@Composable () -> Unit)? = null
+) {
+    Surface(
+        color = Color(0xFF07040C),
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .border(
+                width = 1.dp,
+                brush = Brush.horizontalGradient(
+                    listOf(
+                        Color.Transparent,
+                        Color(0xFFB8143F).copy(alpha = 0.6f),
+                        Color(0xFFDEC595).copy(alpha = 0.8f),
+                        Color(0xFFB8143F).copy(alpha = 0.6f),
+                        Color.Transparent
+                    )
+                ),
+                shape = RectangleShape
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Right Section (RTL): Back button + Title & Subtitle
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    onClick = {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onBack()
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF160B24),
+                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f)),
+                    modifier = Modifier.size(42.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "بازگشت به خانه",
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700),
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = title,
+                            color = Color(0xFFDEC595),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FontFamily.Serif
+                        )
+                        if (badgeText != null) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = Color(0xFFB8143F),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = badgeText,
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            color = Color(0xFF8B8496),
+                            fontSize = 10.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+
+            // Left Section (RTL): Trailing Actions or Home button
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (trailingContent != null) {
+                    trailingContent()
+                } else {
+                    Surface(
+                        onClick = {
+                            HorrorSoundManager.playScenarioChoiceSound()
+                            onBack()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF12081E),
+                        border = BorderStroke(1.dp, Color(0xFF2B1C3D)),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Home,
+                                contentDescription = "خانه",
+                                tint = Color(0xFF8B8496),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ==========================================
+// BRAND NEW GOTHIC GAMING HOME HUB (صفحه اصلی)
+// ==========================================
+
+@Composable
+fun GothicGamingHomeScreen(
+    viewModel: HorrorViewModel,
+    storiesCount: Int,
+    scenariosCount: Int,
+    onNavigate: (UserDestination) -> Unit,
+    onTriggerAiSummon: () -> Unit,
+    onLogoAdminClick: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "homePulse")
+    val ambientGlow by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glowPulse"
+    )
+
+    var isAmbientMuted by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF040207))
+    ) {
+        // High-end ambient background cracks canvas
+        MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // TOP GAMING HUD STATUS BAR
+            Surface(
+                color = Color(0xFF0C0716),
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left (RTL): Manor Crest Logo (Admin tap trigger 7x) + Title
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onLogoAdminClick() }
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFB8143F))
+                                .border(1.5.dp, Color(0xFFDEC595), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Castle,
+                                contentDescription = "عمارت وحشت",
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "عـمـــارت وحـشـــت",
+                                color = Color(0xFFDEC595),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = FontFamily.Serif
+                            )
+                            Text(
+                                text = "HORROR REALM • HUB",
+                                color = Color(0xFF8B8496),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
+
+                    // Right (RTL): Sound Synthesizer toggle + Gamer Rank Badge
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            onClick = {
+                                isAmbientMuted = !isAmbientMuted
+                                if (!isAmbientMuted) {
+                                    HorrorSoundManager.playScenarioChoiceSound()
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isAmbientMuted) Color(0xFF1B0F1B) else Color(0xFF2E0C1C),
+                            border = BorderStroke(1.dp, if (isAmbientMuted) Color(0xFF4A1A32) else Color(0xFFFF1E56))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (isAmbientMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    contentDescription = null,
+                                    tint = if (isAmbientMuted) Color(0xFF8B8496) else Color(0xFFFF1E56),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isAmbientMuted) "بی‌صدا" else "آوا فعال",
+                                    color = if (isAmbientMuted) Color(0xFF8B8496) else Color(0xFFFFD700),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        Surface(
+                            color = Color(0xFF1E1032),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFF8A2BE2).copy(alpha = 0.7f))
+                        ) {
+                            Text(
+                                text = "⚜️ لول ۵",
+                                color = Color(0xFFDEC595),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // GAMING QUICK STATS STRIP
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Stat 1
+                Surface(
+                    color = Color(0xFF0D0618),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.4f)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "📜 $storiesCount", color = Color(0xFFDEC595), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "روایات کهن", color = Color(0xFF8B8496), fontSize = 9.sp)
+                    }
+                }
+                // Stat 2
+                Surface(
+                    color = Color(0xFF0D0618),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFF1E56).copy(alpha = 0.4f)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "💀 $scenariosCount", color = Color(0xFFFF1E56), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "سناریوی بقا", color = Color(0xFF8B8496), fontSize = 9.sp)
+                    }
+                }
+                // Stat 3
+                Surface(
+                    color = Color(0xFF0D0618),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFF8A2BE2).copy(alpha = 0.4f)),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(text = "🔮 ۱۲", color = Color(0xFFFFD700), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "طالع ماهانه", color = Color(0xFF8B8496), fontSize = 9.sp)
+                    }
+                }
+            }
+
+            // ==========================================
+            // ASYMMETRICAL BENTO GRID OF GAME PORTAL CARDS
+            // ==========================================
+
+            // CARD 1: LARGE HERO SPAN - STORIES ARCHIVE (روایات واقعی و اسرار ماوراء)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .gothicBorder(borderColor = Color(0xFFDEC595), alpha = 0.65f, cornerRadiusDp = 14f)
+                    .clickable {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onNavigate(UserDestination.STORIES)
+                    },
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF080310))
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    GamingStoryBannerCanvas(modifier = Modifier.fillMaxSize())
+
+                    // Dark gradient vignette
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(Color(0x33000000), Color(0x99030107), Color(0xFA05010B))
+                                )
+                            )
+                    )
+
+                    // Content overlay
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                color = Color(0xFFB8143F),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("آرشیو کهن روایات", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            Surface(
+                                color = Color(0xDD0D061A),
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f))
+                            ) {
+                                Text("🔥 داغ‌ترین بخش", color = Color(0xFFFFD700), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                            }
+                        }
+
+                        Column {
+                            Text(
+                                text = "کتابخانه روایات تسخیرشده",
+                                color = Color(0xFFDEC595),
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                fontFamily = FontFamily.Serif
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            Text(
+                                text = "مجموعه مستند وقایع ماوراءالطبیعه، ارواح، طلسم‌ها و اعترافات کاربران",
+                                color = Color(0xFFEDE8F5),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Surface(
+                                    color = Color(0xFFB8143F),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.7f))
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("گشایش کتیبه‌ها", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ASYMMETRICAL DUAL ROW 1: SCENARIOS (TALL POSTER) + GRIM FORTUNES (MEDIUM POSTER)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // CARD 2: SCENARIOS (بازی تعاملی بقا و انتخاب اشتباه)
+                Card(
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .height(230.dp)
+                        .gothicBorder(borderColor = Color(0xFFFF1E56).copy(alpha = 0.7f), cornerRadiusDp = 14f)
+                        .clickable {
+                            HorrorSoundManager.playScenarioChoiceSound()
+                            onNavigate(UserDestination.SCENARIOS)
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        GamingScenarioBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0x22000000), Color(0x880E040A), Color(0xF50E040A))
+                                    )
+                                )
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                color = Color(0xFFB8143F),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("💀 بازی بقا", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+
+                            Column {
+                                Text(
+                                    text = "سناریوهای تعاملی",
+                                    color = Color(0xFFFF1E56),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontFamily = FontFamily.Serif
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "انتخاب اشتباه = مرگ آنی!",
+                                    color = Color(0xFFEDE8F5),
+                                    fontSize = 10.sp
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = Color(0xFF4A0A17),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFFF1E56))
+                                ) {
+                                    Text(
+                                        text = "آغاز بازی ❯",
+                                        color = Color(0xFFFFD700),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // CARD 3: GRIM FORTUNES (طالع شوم ۱۲ ماه)
+                Card(
+                    modifier = Modifier
+                        .weight(1.0f)
+                        .height(230.dp)
+                        .gothicBorder(borderColor = Color(0xFF8A2BE2).copy(alpha = 0.7f), cornerRadiusDp = 14f)
+                        .clickable {
+                            HorrorSoundManager.playScenarioChoiceSound()
+                            onNavigate(UserDestination.GRIM_FORTUNES)
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0314))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        GamingGrimFortuneBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0x22000000), Color(0x880A0314), Color(0xF50A0314))
+                                    )
+                                )
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                color = Color(0xFF8A2BE2),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("🔮 پیشگویی", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+
+                            Column {
+                                Text(
+                                    text = "طالع شوم ماهانه",
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontFamily = FontFamily.Serif
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "۱۲ ماه در فلک تاریک",
+                                    color = Color(0xFFEDE8F5),
+                                    fontSize = 10.sp
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = Color(0xFF210C35),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(1.dp, Color(0xFF8A2BE2))
+                                ) {
+                                    Text(
+                                        text = "مشاهده طالع ❯",
+                                        color = Color(0xFFDEC595),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ASYMMETRICAL DUAL ROW 2: SUBMIT STORY (کتیبه نگارش) + SOUND & SETTINGS (آواها و تنظیمات)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // CARD 4: SUBMIT STORY (نگارش و ارسال رازها)
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(180.dp)
+                        .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.5f), cornerRadiusDp = 14f)
+                        .clickable {
+                            HorrorSoundManager.playScenarioChoiceSound()
+                            onNavigate(UserDestination.SUBMIT_STORY)
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0806))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        GamingSubmitStoryBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0x22000000), Color(0x990F0806), Color(0xF50F0806))
+                                    )
+                                )
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                color = Color(0xFF6E260E),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("✍️ کاتبان عمارت", color = Color(0xFFFFD700), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+
+                            Column {
+                                Text(
+                                    text = "ارسال روایت و راز",
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontFamily = FontFamily.Serif
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "حکاکی تجربه در کتیبه‌ها",
+                                    color = Color(0xFF8B8496),
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // CARD 5: AUDIO & SETTINGS (آواهای تاریک و تنظیمات)
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(180.dp)
+                        .gothicBorder(borderColor = Color(0xFF00E5FF).copy(alpha = 0.5f), cornerRadiusDp = 14f)
+                        .clickable {
+                            HorrorSoundManager.playScenarioChoiceSound()
+                            onNavigate(UserDestination.SETTINGS)
+                        },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF050814))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        GamingAudioSettingsBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(Color(0x22000000), Color(0x99050814), Color(0xF5050814))
+                                    )
+                                )
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Surface(
+                                color = Color(0xFF005B66),
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text("🎧 سنتز صدا", color = Color(0xFF00E5FF), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+
+                            Column {
+                                Text(
+                                    text = "آواها و تنظیمات",
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontFamily = FontFamily.Serif
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "افکت‌های ماورائی و کنترل",
+                                    color = Color(0xFF8B8496),
+                                    fontSize = 9.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // CARD 6: WIDE BANNER - AI SUMMONER (احضارگر هوش مصنوعی)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+                    .gothicBorder(borderColor = Color(0xFFFFD700).copy(alpha = 0.6f), cornerRadiusDp = 14f)
+                    .clickable {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onTriggerAiSummon()
+                    },
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0C0212))
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    GamingAiSummonerBannerCanvas(modifier = Modifier.fillMaxSize())
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xF50C0212), Color(0xCC0C0212), Color(0x440C0212))
+                                )
+                            )
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Surface(
+                                color = Color(0xFF4A0A35),
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, Color(0xFFFFD700))
+                            ) {
+                                Text("⚡ GEMINI AI HORROR", color = Color(0xFFFFD700), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "احضارگر داستان با هوش مصنوعی",
+                                color = Color(0xFFDEC595),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Serif
+                            )
+                            Text(
+                                text = "خلق آنی کابوس و سناریوهای وحشت سفارشی",
+                                color = Color(0xFFEDE8F5),
+                                fontSize = 10.sp
+                            )
+                        }
+
+                        Surface(
+                            color = Color(0xFFB8143F),
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFDEC595))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("احضار 🔮", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // FOOTER SIGNATURE
+            Text(
+                text = "ـ عمارت وحشت | بقا متعلق به کسی است که مسیر تاریکی را بشناسد ـ",
+                color = Color(0xFF8B8496).copy(alpha = 0.6f),
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+        }
+    }
+}
+
+// ==========================================
+// USER MAIN SCREEN ROUTER (REFACTORED WITH ZERO BOTTOM NAVIGATION)
+// ==========================================
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var currentDestination by remember { mutableStateOf(UserDestination.HOME) }
     var logoTapCount by remember { mutableIntStateOf(0) }
     var showAiStoryGeneratorDialog by remember { mutableStateOf(false) }
     var showNoInternetDialog by remember { mutableStateOf(false) }
@@ -538,152 +1823,53 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
 
     var activeReadingStory by remember { mutableStateOf<RealStory?>(null) }
 
-    CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-        Scaffold(
-            topBar = {
-                if (!isOnline) {
-                    Surface(
-                        color = Color(0xFF4A0A17),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                                Icon(
-                                    Icons.Default.WifiOff,
-                                    contentDescription = null,
-                                    tint = Color(0xFFFFD700),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "اینترنت متصل نیست (ثبت بازدید و امتیاز متوقف شد)",
-                                    color = Color(0xFFEDE8F5),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            TextButton(
-                                onClick = { viewModel.loadUserData() },
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
-                            ) {
-                                Text("اتصال مجدد 🔄", color = Color(0xFFFFD700), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            },
-            bottomBar = {
-                val infiniteTransition = rememberInfiniteTransition(label = "bottomBarPulse")
-                val pulseAlpha by infiniteTransition.animateFloat(
-                    initialValue = 0.04f,
-                    targetValue = 0.18f,
-                    animationSpec = infiniteRepeatable(
-                        animation = tween(2800, easing = FastOutSlowInEasing),
-                        repeatMode = RepeatMode.Reverse
-                    ),
-                    label = "pulseAlpha"
-                )
+    // Intercept system back button to smoothly navigate back to Home hub
+    BackHandler(enabled = currentDestination != UserDestination.HOME || activeReadingStory != null) {
+        if (activeReadingStory != null) {
+            activeReadingStory = null
+        } else {
+            currentDestination = UserDestination.HOME
+        }
+    }
 
-                // STUNNING FLAT GOTHIC BOTTOM NAVIGATION
-                Surface(
-                    color = Color(0xFF030106),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.navigationBars)
-                        .border(
-                            width = 1.dp,
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color(0xFFB8143F).copy(alpha = 0.5f),
-                                    Color(0xFFDEC595),
-                                    Color(0xFFB8143F).copy(alpha = 0.5f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = RectangleShape
-                        )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(68.dp)
-                            .drawBehind {
-                                drawRect(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color(0xFFB8143F).copy(alpha = pulseAlpha),
-                                            Color.Transparent
-                                        )
-                                    )
-                                )
-                            }
-                            .padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // 5 OPTION TAB BUTTONS EXACTLY PORTRAYING THE SCREENSHOT
-                            ScreenshotNavTab(
-                                title = "داستان‌ها",
-                                icon = Icons.Default.Home,
-                                selected = selectedTab == 0,
-                                onClick = { selectedTab = 0 }
-                            )
-                            ScreenshotNavTab(
-                                title = "طالع شوم",
-                                icon = Icons.Default.AutoAwesome,
-                                selected = selectedTab == 1,
-                                onClick = { selectedTab = 1 }
-                            )
-                            ScreenshotNavTab(
-                                title = "ارسال داستان",
-                                icon = Icons.Default.AddBox,
-                                selected = selectedTab == 2,
-                                onClick = { selectedTab = 2 }
-                            )
-                            ScreenshotNavTab(
-                                title = "سناریو",
-                                icon = Icons.Default.Explore,
-                                selected = selectedTab == 3,
-                                onClick = { selectedTab = 3 }
-                            )
-                            ScreenshotNavTab(
-                                title = "تنظیمات",
-                                icon = Icons.Default.Settings,
-                                selected = selectedTab == 4,
-                                onClick = { selectedTab = 4 }
-                            )
-                        }
-                    }
-                }
-        ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .background(Color(0xFF050308))
-            ) {
-                if (loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color(0xFFB8143F)
+    CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF040207))
+        ) {
+            if (loading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
+                    color = Color(0xFFB8143F)
+                )
+            } else {
+                if (activeReadingStory != null) {
+                    StoryReaderScreen(
+                        story = activeReadingStory!!,
+                        viewModel = viewModel,
+                        onBack = { activeReadingStory = null }
                     )
                 } else {
-                    if (activeReadingStory != null) {
-                        StoryReaderScreen(
-                            story = activeReadingStory!!,
-                            viewModel = viewModel,
-                            onBack = { activeReadingStory = null }
-                        )
-                    } else {
-                        when (selectedTab) {
-                            0 -> BeautifulStoriesDashboard(
+                    when (currentDestination) {
+                        UserDestination.HOME -> {
+                            GothicGamingHomeScreen(
+                                viewModel = viewModel,
+                                storiesCount = realStories.size,
+                                scenariosCount = scenarios.size,
+                                onNavigate = { dest -> currentDestination = dest },
+                                onTriggerAiSummon = { showAiStoryGeneratorDialog = true },
+                                onLogoAdminClick = {
+                                    logoTapCount++
+                                    if (logoTapCount >= 7) {
+                                        logoTapCount = 0
+                                        onOpenAdminLogin()
+                                    }
+                                }
+                            )
+                        }
+                        UserDestination.STORIES -> {
+                            BeautifulStoriesDashboard(
                                 realStories = realStories,
                                 viewModel = viewModel,
                                 onLogoClick = {
@@ -699,14 +1885,65 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                                     } else {
                                         activeReadingStory = selected
                                     }
-                                }
+                                },
+                                onBack = { currentDestination = UserDestination.HOME }
                             )
-                            1 -> GrimFortuneScreen(grimFortunes, viewModel)
-                            2 -> BeautifulSubmitStoryScreen(viewModel) {
-                                selectedTab = 0 // Navigate back to stories tab
-                            }
-                            3 -> WrongChoiceSection(scenarios, viewModel)
-                            4 -> GorgeousSettingsScreen(viewModel, onOpenAdminLogin)
+                        }
+                        UserDestination.GRIM_FORTUNES -> {
+                            GrimFortuneScreen(
+                                grimFortunes = grimFortunes,
+                                viewModel = viewModel,
+                                onBack = { currentDestination = UserDestination.HOME }
+                            )
+                        }
+                        UserDestination.SUBMIT_STORY -> {
+                            BeautifulSubmitStoryScreen(
+                                viewModel = viewModel,
+                                onBack = { currentDestination = UserDestination.HOME },
+                                onSubmissionComplete = { currentDestination = UserDestination.STORIES }
+                            )
+                        }
+                        UserDestination.SCENARIOS -> {
+                            WrongChoiceSection(
+                                scenarios = scenarios,
+                                viewModel = viewModel,
+                                onBack = { currentDestination = UserDestination.HOME }
+                            )
+                        }
+                        UserDestination.SETTINGS -> {
+                            GorgeousSettingsScreen(
+                                viewModel = viewModel,
+                                onOpenAdminLogin = onOpenAdminLogin,
+                                onBack = { currentDestination = UserDestination.HOME }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Offline floating warning banner if network is disconnected
+            if (!isOnline) {
+                Surface(
+                    color = Color(0xFF4A0A17),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("عدم اتصال به اینترنت", color = Color(0xFFEDE8F5), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        TextButton(onClick = { viewModel.loadUserData() }) {
+                            Text("اتصال مجدد 🔄", color = Color(0xFFFFD700), fontSize = 11.sp)
                         }
                     }
                 }
@@ -764,188 +2001,6 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     }
 }
 
-@Composable
-fun ScreenshotNavTab(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val bgScale by animateFloatAsState(
-        targetValue = if (selected) 1.0f else 0.7f,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "navTabScale"
-    )
-
-    Column(
-        modifier = Modifier
-            .width(64.dp)
-            .fillMaxHeight()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        // High-contrast filled background square for selected tab mimicking the screenshot
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(if (selected) Color(0xFFB8143F) else Color.Transparent)
-                .graphicsLayer {
-                    scaleX = bgScale
-                    scaleY = bgScale
-                },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (selected) Color.White else Color(0xFF8B8496),
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = title,
-            color = if (selected) Color(0xFFDEC595) else Color(0xFF8B8496),
-            fontWeight = FontWeight.Bold,
-            fontSize = 9.sp,
-            textAlign = TextAlign.Center
-        )
-    }
-}
-
-@Composable
-fun CinematicNavTab(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1.22f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioHighBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "tabScale"
-    )
-
-    val animTranslationY by animateFloatAsState(
-        targetValue = if (selected) -5f else 0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "tabTranslation"
-    )
-
-    val contentColor by animateColorAsState(
-        targetValue = if (selected) Color(0xFFFF1A4D) else Color(0xFF8B8496),
-        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
-        label = "tabColor"
-    )
-
-    val glowAlpha by animateFloatAsState(
-        targetValue = if (selected) 0.32f else 0.0f,
-        animationSpec = tween(durationMillis = 400),
-        label = "tabGlow"
-    )
-
-    // Breathing soul flame size fluctuation
-    val infiniteTransition = rememberInfiniteTransition(label = "flamePulse")
-    val flameSizeMultiplier by infiniteTransition.animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "flameSize"
-    )
-
-    Column(
-        modifier = Modifier
-            .clickable(
-                onClick = onClick,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            )
-            .padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(38.dp)
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    translationY = animTranslationY
-                }
-        ) {
-            // Under-icon glow / aura
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Color(0xFFFF1A4D).copy(alpha = glowAlpha), Color.Transparent)
-                            ),
-                            shape = CircleShape
-                        )
-                )
-                
-                // Spooky little floating flame/droplet indicator
-                Canvas(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .align(Alignment.BottomCenter)
-                        .offset(y = 10.dp)
-                ) {
-                    val w = size.width
-                    val h = size.height
-                    
-                    // Draw a miniature burning flame path
-                    val flamePath = Path().apply {
-                        moveTo(w * 0.5f, 0f) // Tip
-                        quadraticTo(w * 0.9f * flameSizeMultiplier, h * 0.5f, w * 0.5f, h * flameSizeMultiplier)
-                        quadraticTo(w * 0.1f * flameSizeMultiplier, h * 0.5f, w * 0.5f, 0f)
-                    }
-                    drawPath(flamePath, Color(0xFFFF1A4D))
-                }
-            }
-
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(22.dp)
-            )
-        }
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelSmall.copy(
-                color = contentColor,
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Serif
-            ),
-            modifier = Modifier.graphicsLayer {
-                scaleX = if (selected) 1.05f else 1.0f
-                scaleY = if (selected) 1.05f else 1.0f
-            }
-        )
-    }
-}
-
 // ==========================================
 // TAB 1: STORIES DASHBOARD (REAL & USER STORIES)
 // ==========================================
@@ -955,7 +2010,8 @@ fun BeautifulStoriesDashboard(
     realStories: List<RealStory>,
     viewModel: HorrorViewModel,
     onLogoClick: () -> Unit,
-    onStoryRead: (RealStory) -> Unit
+    onStoryRead: (RealStory) -> Unit,
+    onBack: () -> Unit = {}
 ) {
     var storyTab by remember { mutableIntStateOf(0) } // 0 = داستان‌های واقعی, 1 = داستان‌های شما
     var showSubmitDialog by remember { mutableStateOf(false) }
@@ -1012,18 +2068,31 @@ fun BeautifulStoriesDashboard(
         }
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF030106))
     ) {
-        Column(
+        GamingTopBar(
+            title = "کتابخانه روایات تسخیرشده",
+            subtitle = "آرشیو داستان‌های واقعی و اعترافات",
+            icon = Icons.Default.MenuBook,
+            badgeText = "${filteredStories.size + filteredUserSubmissions.size} داستان",
+            onBack = onBack
+        )
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .weight(1f)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             // MODERN SPOOKY HERO BANNER HEADER
             Box(
                 modifier = Modifier
@@ -1481,6 +2550,7 @@ fun BeautifulStoriesDashboard(
             }
         }
     }
+}
 
     if (showSubmitDialog) {
         SubmitStoryDialog(viewModel) {
@@ -1705,26 +2775,43 @@ fun StoryItemCard(
 // ==========================================
 
 @Composable
-fun GrimFortuneScreen(grimFortunes: List<GrimFortune>, viewModel: HorrorViewModel) {
+fun GrimFortuneScreen(
+    grimFortunes: List<GrimFortune>,
+    viewModel: HorrorViewModel,
+    onBack: () -> Unit = {}
+) {
     var selectedMonthIndex by remember { mutableIntStateOf(1) }
     var showMonthPicker by remember { mutableStateOf(false) }
 
     val activeFortune = grimFortunes.find { it.month_index == selectedMonthIndex }
     val monthNames = HorrorViewModel.PERSIAN_MONTHS
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF030106))
     ) {
-        // High-end Gothic ambient crack canvas background
-        MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
+        GamingTopBar(
+            title = "طالع شوم معبد جادوگری",
+            subtitle = "پیش‌گویی ماهانه ارواح و کواکب تاریک",
+            icon = Icons.Default.AutoAwesome,
+            badgeText = monthNames.getOrNull(selectedMonthIndex - 1) ?: "طالع",
+            onBack = onBack
+        )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .weight(1f)
         ) {
+            // High-end Gothic ambient crack canvas background
+            MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // FULL-WIDTH HERO BANNER: GOTHIC SORCERY TEMPLE & DARK SORCERER WITH TOP TRANSPARENT HOVER GRADIENT
             item {
                 Box(
@@ -2054,6 +3141,7 @@ fun GrimFortuneScreen(grimFortunes: List<GrimFortune>, viewModel: HorrorViewMode
             }
         }
     }
+}
 
     // MONTH PICKER DIALOG (ALL 12 PERSIAN MONTHS)
     if (showMonthPicker) {
@@ -2165,102 +3253,107 @@ fun GrimFortuneScreen(grimFortunes: List<GrimFortune>, viewModel: HorrorViewMode
 // ==========================================
 
 @Composable
-fun WrongChoiceSection(scenarios: List<WrongChoiceScenario>, viewModel: HorrorViewModel? = null) {
+fun WrongChoiceSection(
+    scenarios: List<WrongChoiceScenario>,
+    viewModel: HorrorViewModel? = null,
+    onBack: () -> Unit = {}
+) {
     var activeScenario by remember { mutableStateOf<WrongChoiceScenario?>(null) }
     var selectedCategory by remember { mutableStateOf("داغ‌ترین") }
 
     val categories = listOf("داغ‌ترین", "علوم غریبه", "روانی", "هیولاها")
+
+    BackHandler(enabled = activeScenario != null) {
+        activeScenario = null
+    }
 
     if (activeScenario == null) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF030106))
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // SCENARIOS HEADER
-            Text(
-                text = "سناریوهای شوم عمارت",
-                style = MaterialTheme.typography.displayLarge.copy(
-                    fontFamily = FontFamily.Serif,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 30.sp,
-                    color = Color(0xFFDEC595)
-                )
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "ـ سرنوشت روح خود را با گرفتن تصمیمات درست نجات دهید ـ",
-                style = MaterialTheme.typography.bodySmall.copy(
-                    color = Color(0xFFDEC595).copy(alpha = 0.7f),
-                    fontSize = 11.sp,
-                    letterSpacing = 0.5.sp
-                )
+            GamingTopBar(
+                title = "سناریوهای شوم عمارت",
+                subtitle = "بازی تعاملی و انتخاب سرنوشت",
+                icon = Icons.Default.Casino,
+                badgeText = "${scenarios.size} ماجرا",
+                onBack = onBack
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // HORIZONTAL CATEGORY SELECTOR (PILLS)
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                items(categories) { cat ->
-                    val isSel = cat == selectedCategory
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(if (isSel) Color(0xFFB8143F) else Color(0xFF100B1A))
-                            .border(
-                                1.dp,
-                                if (isSel) Color(0xFFDEC595) else Color(0xFF2B1C3D),
-                                RoundedCornerShape(22.dp)
+                // HORIZONTAL CATEGORY SELECTOR (PILLS)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(categories) { cat ->
+                        val isSel = cat == selectedCategory
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(if (isSel) Color(0xFFB8143F) else Color(0xFF100B1A))
+                                .border(
+                                    1.dp,
+                                    if (isSel) Color(0xFFDEC595) else Color(0xFF2B1C3D),
+                                    RoundedCornerShape(22.dp)
+                                )
+                                .clickable {
+                                    HorrorSoundManager.playScenarioChoiceSound()
+                                    selectedCategory = cat
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = cat,
+                                color = if (isSel) Color.White else Color(0xFF8B8496),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
                             )
-                            .clickable { selectedCategory = cat }
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = cat,
-                            color = if (isSel) Color.White else Color(0xFF8B8496),
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp
-                            )
-                        )
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            val filteredScenarios = remember(scenarios, selectedCategory) {
-                when (selectedCategory) {
-                    "علوم غریبه" -> scenarios.filterIndexed { index, _ -> index % 3 == 1 || index == 0 }
-                    "روانی" -> scenarios.filterIndexed { index, _ -> index % 3 == 2 }
-                    "هیولاها" -> scenarios.filterIndexed { index, _ -> index % 3 == 0 && index != 0 }
-                    else -> scenarios // "داغ‌ترین"
+                val filteredScenarios = remember(scenarios, selectedCategory) {
+                    when (selectedCategory) {
+                        "علوم غریبه" -> scenarios.filterIndexed { index, _ -> index % 3 == 1 || index == 0 }
+                        "روانی" -> scenarios.filterIndexed { index, _ -> index % 3 == 2 }
+                        "هیولاها" -> scenarios.filterIndexed { index, _ -> index % 3 == 0 && index != 0 }
+                        else -> scenarios // "داغ‌ترین"
+                    }
                 }
-            }
 
-            // 2-COLUMN PREMIUM PORTRAIT CARD POSTERS
-            if (filteredScenarios.isEmpty()) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text("هنوز سناریویی در این دسته‌بندی بارگذاری نشده است.", color = Color(0xFF8B8496), fontSize = 12.sp)
-                }
-            } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    itemsIndexed(filteredScenarios) { index, sc ->
-                        GothicScenarioCard(
-                            sc = sc,
-                            index = index + 1,
-                            onClick = { activeScenario = sc }
-                        )
+                // 2-COLUMN PREMIUM PORTRAIT CARD POSTERS
+                if (filteredScenarios.isEmpty()) {
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Text("هنوز سناریویی در این دسته‌بندی بارگذاری نشده است.", color = Color(0xFF8B8496), fontSize = 12.sp)
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        itemsIndexed(filteredScenarios) { index, sc ->
+                            GothicScenarioCard(
+                                sc = sc,
+                                index = index + 1,
+                                onClick = {
+                                    HorrorSoundManager.playScenarioChoiceSound()
+                                    activeScenario = sc
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -3622,7 +4715,11 @@ fun StoryReaderScreen(
 }
 
 @Composable
-fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete: () -> Unit) {
+fun BeautifulSubmitStoryScreen(
+    viewModel: HorrorViewModel,
+    onBack: () -> Unit = {},
+    onSubmissionComplete: () -> Unit
+) {
     var title by remember { mutableStateOf("") }
     var content by remember { mutableStateOf("") }
     var author by remember { mutableStateOf("") }
@@ -3635,10 +4732,23 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF030106))
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        GamingTopBar(
+            title = "کتیبه ارسال رازها",
+            subtitle = "ثبت روایات، اعترافات و وقایع ماورایی",
+            icon = Icons.Default.Edit,
+            badgeText = "ارسال لوح",
+            onBack = onBack
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF030106))
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
         Text(
             text = "کتیبه ارسال رازها",
             style = MaterialTheme.typography.displayLarge.copy(
@@ -3821,6 +4931,7 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
             }
         }
     }
+}
 
     if (showSuccessDialog) {
         AlertDialog(
@@ -3867,7 +4978,8 @@ fun BeautifulSubmitStoryScreen(viewModel: HorrorViewModel, onSubmissionComplete:
 @Composable
 fun GorgeousSettingsScreen(
     viewModel: HorrorViewModel,
-    onOpenAdminLogin: () -> Unit
+    onOpenAdminLogin: () -> Unit,
+    onBack: () -> Unit = {}
 ) {
     var soundEnabled by remember { mutableStateOf(true) }
     var spookyModeEnabled by remember { mutableStateOf(true) }
@@ -3876,11 +4988,24 @@ fun GorgeousSettingsScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF030106))
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        GamingTopBar(
+            title = "تنظیمات و طنین‌های عمارت",
+            subtitle = "مدیریت صدا، جلوه‌ها و درگاه باستانی",
+            icon = Icons.Default.Settings,
+            badgeText = "تنظیمات",
+            onBack = onBack
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF030106))
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         Text(
             text = "تنظیمات عمارت",
             style = MaterialTheme.typography.displayLarge.copy(
@@ -3957,6 +5082,7 @@ fun GorgeousSettingsScreen(
             }
         }
     }
+}
 }
 
 @Composable
