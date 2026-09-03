@@ -1154,10 +1154,7 @@ fun GamingTopBar(
 @Composable
 fun GothicGamingHomeScreen(
     viewModel: HorrorViewModel,
-    storiesCount: Int,
-    scenariosCount: Int,
     onNavigate: (UserDestination) -> Unit,
-    onTriggerAiSummon: () -> Unit,
     onLogoAdminClick: () -> Unit
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "homePulse")
@@ -1171,7 +1168,7 @@ fun GothicGamingHomeScreen(
         label = "glowPulse"
     )
 
-    var isAmbientMuted by remember { mutableStateOf(false) }
+    val isAmbientPlaying by HorrorSoundManager.isAmbientPlaying.collectAsState()
 
     Box(
         modifier = Modifier
@@ -1243,106 +1240,33 @@ fun GothicGamingHomeScreen(
                         }
                     }
 
-                    // Right (RTL): Sound Synthesizer toggle + Gamer Rank Badge
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            onClick = {
-                                isAmbientMuted = !isAmbientMuted
-                                if (!isAmbientMuted) {
-                                    HorrorSoundManager.playScenarioChoiceSound()
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isAmbientMuted) Color(0xFF1B0F1B) else Color(0xFF2E0C1C),
-                            border = BorderStroke(1.dp, if (isAmbientMuted) Color(0xFF4A1A32) else Color(0xFFFF1E56))
+                    // Right (RTL): Ambient Horror Sound toggle
+                    Surface(
+                        onClick = {
+                            HorrorSoundManager.toggleAmbient()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (!isAmbientPlaying) Color(0xFF1B0F1B) else Color(0xFF2E0C1C),
+                        border = BorderStroke(1.dp, if (!isAmbientPlaying) Color(0xFF4A1A32) else Color(0xFFFF1E56))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (isAmbientMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                                    contentDescription = null,
-                                    tint = if (isAmbientMuted) Color(0xFF8B8496) else Color(0xFFFF1E56),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = if (isAmbientMuted) "بی‌صدا" else "آوا فعال",
-                                    color = if (isAmbientMuted) Color(0xFF8B8496) else Color(0xFFFFD700),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        Surface(
-                            color = Color(0xFF1E1032),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFF8A2BE2).copy(alpha = 0.7f))
-                        ) {
+                            Icon(
+                                imageVector = if (!isAmbientPlaying) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                contentDescription = null,
+                                tint = if (!isAmbientPlaying) Color(0xFF8B8496) else Color(0xFFFF1E56),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "⚜️ لول ۵",
-                                color = Color(0xFFDEC595),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                text = if (!isAmbientPlaying) "صدا: خاموش" else "صدا: در حال پخش",
+                                color = if (!isAmbientPlaying) Color(0xFF8B8496) else Color(0xFFFFD700),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
-                    }
-                }
-            }
-
-            // GAMING QUICK STATS STRIP
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Stat 1
-                Surface(
-                    color = Color(0xFF0D0618),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.4f)),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = "📜 $storiesCount", color = Color(0xFFDEC595), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "روایات کهن", color = Color(0xFF8B8496), fontSize = 9.sp)
-                    }
-                }
-                // Stat 2
-                Surface(
-                    color = Color(0xFF0D0618),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFFF1E56).copy(alpha = 0.4f)),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = "💀 $scenariosCount", color = Color(0xFFFF1E56), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "سناریوی بقا", color = Color(0xFF8B8496), fontSize = 9.sp)
-                    }
-                }
-                // Stat 3
-                Surface(
-                    color = Color(0xFF0D0618),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFF8A2BE2).copy(alpha = 0.4f)),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(text = "🔮 ۱۲", color = Color(0xFFFFD700), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "طالع ماهانه", color = Color(0xFF8B8496), fontSize = 9.sp)
                     }
                 }
             }
@@ -1718,76 +1642,6 @@ fun GothicGamingHomeScreen(
                 }
             }
 
-            // CARD 6: WIDE BANNER - AI SUMMONER (احضارگر هوش مصنوعی)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .gothicBorder(borderColor = Color(0xFFFFD700).copy(alpha = 0.6f), cornerRadiusDp = 14f)
-                    .clickable {
-                        HorrorSoundManager.playScenarioChoiceSound()
-                        onTriggerAiSummon()
-                    },
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF0C0212))
-            ) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    GamingAiSummonerBannerCanvas(modifier = Modifier.fillMaxSize())
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(Color(0xF50C0212), Color(0xCC0C0212), Color(0x440C0212))
-                                )
-                            )
-                    )
-                    Row(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(14.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Surface(
-                                color = Color(0xFF4A0A35),
-                                shape = RoundedCornerShape(6.dp),
-                                border = BorderStroke(1.dp, Color(0xFFFFD700))
-                            ) {
-                                Text("⚡ GEMINI AI HORROR", color = Color(0xFFFFD700), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "احضارگر داستان با هوش مصنوعی",
-                                color = Color(0xFFDEC595),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Serif
-                            )
-                            Text(
-                                text = "خلق آنی کابوس و سناریوهای وحشت سفارشی",
-                                color = Color(0xFFEDE8F5),
-                                fontSize = 10.sp
-                            )
-                        }
-
-                        Surface(
-                            color = Color(0xFFB8143F),
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFFDEC595))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("احضار 🔮", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-
             Spacer(modifier = Modifier.height(10.dp))
 
             // FOOTER SIGNATURE
@@ -1812,7 +1666,6 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     val context = LocalContext.current
     var currentDestination by remember { mutableStateOf(UserDestination.HOME) }
     var logoTapCount by remember { mutableIntStateOf(0) }
-    var showAiStoryGeneratorDialog by remember { mutableStateOf(false) }
     var showNoInternetDialog by remember { mutableStateOf(false) }
 
     val isOnline by viewModel.isNetworkOnline.collectAsState()
@@ -1822,6 +1675,10 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     val loading by viewModel.loading.collectAsState()
 
     var activeReadingStory by remember { mutableStateOf<RealStory?>(null) }
+
+    LaunchedEffect(Unit) {
+        HorrorSoundManager.startAmbientDrone()
+    }
 
     // Intercept system back button to smoothly navigate back to Home hub
     BackHandler(enabled = currentDestination != UserDestination.HOME || activeReadingStory != null) {
@@ -1855,10 +1712,7 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                         UserDestination.HOME -> {
                             GothicGamingHomeScreen(
                                 viewModel = viewModel,
-                                storiesCount = realStories.size,
-                                scenariosCount = scenarios.size,
                                 onNavigate = { dest -> currentDestination = dest },
-                                onTriggerAiSummon = { showAiStoryGeneratorDialog = true },
                                 onLogoAdminClick = {
                                     logoTapCount++
                                     if (logoTapCount >= 7) {
@@ -1992,12 +1846,6 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                 }
             }
         )
-    }
-
-    if (showAiStoryGeneratorDialog) {
-        AIGeneratorDialog(viewModel) {
-            showAiStoryGeneratorDialog = false
-        }
     }
 }
 
@@ -3645,7 +3493,6 @@ fun InteractiveGamePlay(
     var endingState by remember(scenario.id) { mutableStateOf<String?>(null) } // "DEAD", "SURVIVED"
     var endingNarrative by remember(scenario.id) { mutableStateOf<String?>(null) }
     var previousChoiceMade by remember(scenario.id) { mutableStateOf<String?>(null) }
-    var isGeneratingNextAI by remember { mutableStateOf(false) }
 
     val currentStage = dynamicStages.getOrElse(currentStageIdx) {
         dynamicStages.lastOrNull() ?: ScenarioParsedStage(
@@ -3895,7 +3742,7 @@ fun InteractiveGamePlay(
                                     previousChoiceMade = choice.outcomeText ?: choice.text
                                     currentStageIdx = nextIdx
                                 } else {
-                                    // If no more stages in scenario, conclude with survival or allow AI extension
+                                    // If no more stages in scenario, conclude with survival
                                     com.example.util.HorrorSoundManager.playVictorySound()
                                     endingState = "SURVIVED"
                                     endingNarrative = choice.outcomeText ?: "شما با گذر موفق از تمامی صحنه‌ها و تله‌های عمارت وحشت جان سالم به در بردید!"
@@ -3903,58 +3750,6 @@ fun InteractiveGamePlay(
                             }
                         }
                     )
-                }
-
-                // AI NEXT STAGE GENERATION (Infinite survival gameplay)
-                if (viewModel != null) {
-                    OutlinedButton(
-                        onClick = {
-                            isGeneratingNextAI = true
-                            val prompt = "تو طراح سناریوهای تعاملی وحشت گوتیک هستی. نام سناریو: ${scenario.title}.\n" +
-                                    "داستان تا صحنه ${currentStageIdx + 1}: ${currentStage.narrative}\n" +
-                                    "پاسخ/تصمیم اخیر بازیکن: ${previousChoiceMade ?: currentStage.choices.firstOrNull()?.text ?: "پیشروی در تاریکی"}\n\n" +
-                                    "یک صحنه خطرناک بعدی (${currentStageIdx + 2}) با داستان جذاب و ۳ پاسخ/گزینه کاملاً اختصاصی و مرتبط با این صحنه به زبان فارسی بنویس:\n\n" +
-                                    "---صحنه ${currentStageIdx + 2}---\n" +
-                                    "روایت: [داستان و توصیف موقعیت جدید]\n" +
-                                    "گزینه ۱: [پاسخ اول متناسب با این صحنه] -> [نتیجه یا ادامه]\n" +
-                                    "گزینه ۲: [پاسخ دوم متناسب با این صحنه (تله مرگ)] -> [مرگ]\n" +
-                                    "گزینه ۳: [پاسخ سوم متناسب با این صحنه] -> [بقا یا نجات]"
-
-                            viewModel.generateAILore(prompt) { aiResponse ->
-                                isGeneratingNextAI = false
-                                if (!aiResponse.startsWith("خطا")) {
-                                    val newStages = ScenarioParser.parse(aiResponse, scenario.title)
-                                    if (newStages.isNotEmpty()) {
-                                        val nextStage = newStages[0].copy(
-                                            stageNumber = dynamicStages.size + 1,
-                                            stageTitle = "صحنه ${dynamicStages.size + 1}: ادامه ماجرای شوم"
-                                        )
-                                        dynamicStages = dynamicStages + nextStage
-                                        currentStageIdx = dynamicStages.size - 1
-                                        previousChoiceMade = "ورود به صحنه بعدی بر اساس تصمیم قبلی شما..."
-                                    }
-                                }
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        border = BorderStroke(1.dp, Color(0xFF553F1B)),
-                        shape = RoundedCornerShape(10.dp),
-                        enabled = !isGeneratingNextAI
-                    ) {
-                        if (isGeneratingNextAI) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                color = Color(0xFFDEC595),
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("در حال نگارش صحنه و گزینه‌های بعدی...", color = Color(0xFFDEC595), fontSize = 11.sp)
-                        } else {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("احضار صحنهٔ بعدی ناشناخته با AI", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
                 }
             }
         } else {
@@ -4983,7 +4778,7 @@ fun GorgeousSettingsScreen(
     onOpenAdminLogin: () -> Unit,
     onBack: () -> Unit = {}
 ) {
-    var soundEnabled by remember { mutableStateOf(true) }
+    val isAmbientPlaying by HorrorSoundManager.isAmbientPlaying.collectAsState()
     var spookyModeEnabled by remember { mutableStateOf(true) }
 
     Column(
@@ -5054,8 +4849,8 @@ fun GorgeousSettingsScreen(
                         Text("پخش افکت باد و شیون ارواح در تمام فضا", color = Color(0xFF8B8496), fontSize = 10.sp)
                     }
                     Switch(
-                        checked = soundEnabled,
-                        onCheckedChange = { soundEnabled = it },
+                        checked = isAmbientPlaying,
+                        onCheckedChange = { HorrorSoundManager.toggleAmbient() },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color(0xFFB8143F),
                             checkedTrackColor = Color(0xFF1E1428)
