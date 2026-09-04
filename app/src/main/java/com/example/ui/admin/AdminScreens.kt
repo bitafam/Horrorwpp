@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -2933,6 +2934,8 @@ fun AdminAiStoriesTab(
     var showManualAddDialog by remember { mutableStateOf(false) }
     var storyToDeleteConfirm by remember { mutableStateOf<AiStory?>(null) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
+    var showSqlScriptDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -2987,21 +2990,37 @@ fun AdminAiStoriesTab(
                             unfocusedTextColor = SpectralWhite
                         )
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { viewModel.setAiStoryPrompt(savedPrompt) },
-                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("ذخیره پرامپت", fontSize = 12.sp)
-                        }
-                        TextButton(
-                            onClick = {
-                                savedPrompt = HorrorViewModel.DEFAULT_AI_STORY_PROMPT
-                                viewModel.setAiStoryPrompt(savedPrompt)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(
+                                onClick = { viewModel.setAiStoryPrompt(savedPrompt) },
+                                colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("ذخیره پرامپت", fontSize = 12.sp)
                             }
+                            TextButton(
+                                onClick = {
+                                    savedPrompt = HorrorViewModel.DEFAULT_AI_STORY_PROMPT
+                                    viewModel.setAiStoryPrompt(savedPrompt)
+                                }
+                            ) {
+                                Text("بازنشانی پیش‌فرض", color = MutedAsh, fontSize = 12.sp)
+                            }
+                        }
+
+                        OutlinedButton(
+                            onClick = { showSqlScriptDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f))
                         ) {
-                            Text("بازنشانی پیش‌فرض", color = MutedAsh, fontSize = 12.sp)
+                            Icon(Icons.Default.Code, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("اسکریپت SQL", color = Color(0xFFDEC595), fontSize = 11.sp)
                         }
                     }
                 }
@@ -3768,6 +3787,125 @@ fun AdminAiStoriesTab(
             },
             dismissButton = {
                 TextButton(onClick = { showBulkDeleteConfirm = false }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+
+    // ----------------------------------------------------
+    // DIALOG: SQL SCRIPT & RLS POLICIES FOR SUPABASE
+    // ----------------------------------------------------
+    if (showSqlScriptDialog) {
+        val sqlScript = """
+-- 1. جدول داستان‌های هوش مصنوعی
+CREATE TABLE IF NOT EXISTS public.ai_stories (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    synopsis TEXT,
+    genre TEXT DEFAULT 'ماورایی',
+    cover_image_url TEXT,
+    tags TEXT DEFAULT 'هوش مصنوعی',
+    status TEXT DEFAULT 'PUBLISHED',
+    rating REAL DEFAULT 0,
+    rating_count INT DEFAULT 0,
+    view_count INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. جدول پرامپت‌ها و تنظیمات هوش مصنوعی
+CREATE TABLE IF NOT EXISTS public.ai_prompts (
+    prompt_key TEXT PRIMARY KEY,
+    prompt_text TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. جدول امتیازدهی کاربران به داستان‌های هوش مصنوعی
+CREATE TABLE IF NOT EXISTS public.ai_story_ratings (
+    id BIGSERIAL PRIMARY KEY,
+    story_id TEXT NOT NULL,
+    rating REAL NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 4. فعال‌سازی دسترسی کامل عمومی (رفع خطای RLS 42501)
+ALTER TABLE public.ai_stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_prompts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_story_ratings ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public full access on ai_stories" ON public.ai_stories;
+CREATE POLICY "Public full access on ai_stories" ON public.ai_stories FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on ai_prompts" ON public.ai_prompts;
+CREATE POLICY "Public full access on ai_prompts" ON public.ai_prompts FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on ai_story_ratings" ON public.ai_story_ratings;
+CREATE POLICY "Public full access on ai_story_ratings" ON public.ai_story_ratings FOR ALL USING (true) WITH CHECK (true);
+
+-- 5. اعطای مجوزهای لازم به نقش‌های عمومی Supabase
+GRANT ALL ON public.ai_stories TO anon, authenticated, service_role;
+GRANT ALL ON public.ai_prompts TO anon, authenticated, service_role;
+GRANT ALL ON public.ai_story_ratings TO anon, authenticated, service_role;
+GRANT ALL ON SEQUENCE public.ai_story_ratings_id_seq TO anon, authenticated, service_role;
+        """.trimIndent()
+
+        AlertDialog(
+            onDismissRequest = { showSqlScriptDialog = false },
+            containerColor = CryptCardElevated,
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Code, contentDescription = null, tint = Color(0xFFDEC595))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("اسکریپت SQL دیتابیس Supabase", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "برای رفع خطای RLS (42501) و ثبت خودکار داستان‌ها، پرامپت‌ها و امتیازات، این اسکریپت را در بخش SQL Editor در داشبورد Supabase خود اجرا (Run) کنید:",
+                        color = MutedAsh,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp
+                    )
+                    Surface(
+                        color = VoidBlack,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text = sqlScript,
+                                color = SuccessNeon,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.padding(10.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("Supabase SQL", sqlScript)
+                        clipboard.setPrimaryClip(clip)
+                        android.widget.Toast.makeText(context, "اسکریپت SQL در کلیپ‌بورد کپی شد", android.widget.Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson)
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("کپی اسکریپت SQL", fontSize = 11.sp)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSqlScriptDialog = false }) {
+                    Text("بستن", color = MutedAsh)
+                }
             }
         )
     }

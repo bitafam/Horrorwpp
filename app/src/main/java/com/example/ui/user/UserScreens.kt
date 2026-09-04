@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -4274,11 +4275,19 @@ fun GorgeousSettingsScreen(
                             .border(1.dp, Color(0xFF381A54), RoundedCornerShape(8.dp))
                             .padding(14.dp)
                     ) {
+                        val activeFamily = fontFamilies.getOrNull(selectedFontIndex)?.second ?: FontFamily.Default
+                        val activeWeight = if (selectedFontIndex == 2) FontWeight.Bold else FontWeight.Normal
+                        val activeStyle = if (selectedFontIndex == 1) FontStyle.Italic else FontStyle.Normal
+                        val activeSpacing = if (selectedFontIndex == 3) 2.sp else 0.sp
+
                         Text(
-                            text = "در دل تاریکی شب، نجوایی از اعماق قلعه به گوش می‌رسید... این یک نمونه متن برای بررسی خوانایی و زیبایی فونت انتخاب‌شده در عمارت وحشت است.",
+                            text = "در دل تاریکی شب، نجوایی از اعماق قلعه به گوش می‌رسید... این یک نمونه متن برای بررسی خوانایی و زیبایی فونت [${fontFamilies.getOrNull(selectedFontIndex)?.first}] در عمارت وحشت است.",
                             color = Color(0xFFEDE4F5),
                             fontSize = fontSize.sp,
-                            fontFamily = fontFamilies.getOrNull(selectedFontIndex)?.second ?: FontFamily.Default,
+                            fontFamily = activeFamily,
+                            fontWeight = activeWeight,
+                            fontStyle = activeStyle,
+                            letterSpacing = activeSpacing,
                             textAlign = TextAlign.Start
                         )
                     }

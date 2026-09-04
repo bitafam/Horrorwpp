@@ -1902,13 +1902,20 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch(Dispatchers.IO) {
             val horrorPosters = listOf(
+                "img_ai_story_poster_1",
+                "img_ai_story_poster_2",
+                "img_poster_1",
+                "img_poster_2",
+                "img_poster_3",
+                "img_dark_hafez_banner",
+                "img_dark_sorcerer_banner",
+                "img_sorcery_temple",
                 "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80",
                 "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
                 "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80",
                 "https://images.unsplash.com/photo-1514533450685-4493e01d1fdc?w=600&auto=format&fit=crop&q=80",
                 "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80",
-                "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80",
-                "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80"
+                "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80"
             )
 
             val chunkSize = 2
@@ -2016,9 +2023,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                             cover_image_url = poster,
                                             tags = "$storyGenre, هوش مصنوعی",
                                             status = "PUBLISHED",
-                                            rating = (doomScore / 20.0f).coerceIn(3.5f, 5.0f),
-                                            rating_count = (5..35).random(),
-                                            view_count = (20..250).random(),
+                                            rating = 0f,
+                                            rating_count = 0,
+                                            view_count = 0,
                                             createdAt = null,
                                             updatedAt = null
                                         )
@@ -2029,7 +2036,12 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                 batchSuccess = true
                             }
                         } else {
-                            batchErrorMsg = "خطای سرور گوگل (${response.code})"
+                            val errBody = bodyStr
+                            batchErrorMsg = if (response.code == 429 || errBody.contains("RESOURCE_EXHAUSTED") || errBody.contains("quota")) {
+                                "سهمیه رایگان کلید Gemini به اتمام رسیده است (Resource Exhausted). لطفاً کلید API معتبر دیگری در تنظیمات وارد کنید."
+                            } else {
+                                "خطای سرور گوگل (${response.code})"
+                            }
                         }
                     }
                 } catch (e: Exception) {

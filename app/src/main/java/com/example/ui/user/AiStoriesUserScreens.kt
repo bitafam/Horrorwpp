@@ -3,6 +3,7 @@ package com.example.ui.user
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +35,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.R
 import com.example.data.AiStory
 import com.example.util.HorrorSoundManager
 import com.example.viewmodel.HorrorViewModel
@@ -265,6 +270,70 @@ fun AiStoriesUserSection(
 }
 
 // ==========================================
+// POSTER HELPER FOR AI STORIES
+// ==========================================
+
+fun getStoryPosterDrawableRes(posterUrl: String?, storyId: String): Int {
+    val fallbackList = listOf(
+        R.drawable.img_ai_story_poster_1_1788531305066,
+        R.drawable.img_ai_story_poster_2_1788531326949,
+        R.drawable.img_poster_1_1788266550537,
+        R.drawable.img_poster_2_1788266563762,
+        R.drawable.img_poster_3_1788266577786,
+        R.drawable.img_dark_hafez_banner_1788111363222,
+        R.drawable.img_dark_sorcerer_banner_1788114846553,
+        R.drawable.img_sorcery_temple_1788114860980
+    )
+
+    if (!posterUrl.isNullOrBlank()) {
+        when {
+            posterUrl.contains("img_ai_story_poster_1") -> return R.drawable.img_ai_story_poster_1_1788531305066
+            posterUrl.contains("img_ai_story_poster_2") -> return R.drawable.img_ai_story_poster_2_1788531326949
+            posterUrl.contains("img_poster_1") -> return R.drawable.img_poster_1_1788266550537
+            posterUrl.contains("img_poster_2") -> return R.drawable.img_poster_2_1788266563762
+            posterUrl.contains("img_poster_3") -> return R.drawable.img_poster_3_1788266577786
+            posterUrl.contains("dark_hafez") -> return R.drawable.img_dark_hafez_banner_1788111363222
+            posterUrl.contains("dark_sorcerer") -> return R.drawable.img_dark_sorcerer_banner_1788114846553
+            posterUrl.contains("sorcery_temple") -> return R.drawable.img_sorcery_temple_1788114860980
+        }
+    }
+
+    val hash = kotlin.math.abs(storyId.hashCode())
+    return fallbackList[hash % fallbackList.size]
+}
+
+@Composable
+fun AiStoryPosterGraphic(
+    posterUrl: String?,
+    storyId: String,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop
+) {
+    val defaultRes = remember(posterUrl, storyId) { getStoryPosterDrawableRes(posterUrl, storyId) }
+    val isRemote = remember(posterUrl) {
+        !posterUrl.isNullOrBlank() && (posterUrl.startsWith("http://") || posterUrl.startsWith("https://"))
+    }
+
+    if (isRemote) {
+        AsyncImage(
+            model = posterUrl,
+            contentDescription = "پوستر داستان هوش مصنوعی",
+            modifier = modifier,
+            contentScale = contentScale,
+            error = painterResource(id = defaultRes),
+            placeholder = painterResource(id = defaultRes)
+        )
+    } else {
+        Image(
+            painter = painterResource(id = defaultRes),
+            contentDescription = "پوستر داستان هوش مصنوعی",
+            modifier = modifier,
+            contentScale = contentScale
+        )
+    }
+}
+
+// ==========================================
 // USER CARD: AI STORY
 // ==========================================
 
@@ -276,176 +345,209 @@ private fun UserAiStoryCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
-                    listOf(Color(0xFFB8143F).copy(alpha = 0.7f), Color(0xFF1C0D2E))
+                    listOf(Color(0xFFB8143F).copy(alpha = 0.8f), Color(0xFF1C0D2E))
                 ),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onRead),
         colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0719)),
-        shape = RoundedCornerShape(14.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // HEADER BADGES
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // HERO POSTER WITH GRADIENT OVERLAY & FLOATING BADGES
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
             ) {
-                // Genre Badge
-                Surface(
-                    color = Color(0xFF280F38),
-                    shape = RoundedCornerShape(6.dp),
-                    border = BorderStroke(1.dp, Color(0xFF6B2B85).copy(alpha = 0.6f))
-                ) {
-                    Text(
-                        text = "🔮 ${story.genre}",
-                        color = Color(0xFFD6A2E8),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
+                AiStoryPosterGraphic(
+                    posterUrl = story.cover_image_url,
+                    storyId = story.id,
+                    modifier = Modifier.fillMaxSize()
+                )
 
-                // Doom Score Badge
-                val doomColor = when {
-                    story.doomScore >= 80 -> Color(0xFFFF1E56)
-                    story.doomScore >= 50 -> Color(0xFFFF9800)
-                    else -> Color(0xFF4CAF50)
-                }
-                Surface(
-                    color = doomColor.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(6.dp),
-                    border = BorderStroke(1.dp, doomColor.copy(alpha = 0.6f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text("💀", fontSize = 10.sp)
-                        Text(
-                            text = "وحشت: ${story.doomScore}٪",
-                            color = doomColor,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                // Atmospheric Dark Gradient Vignette
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.Black.copy(alpha = 0.3f),
+                                    Color.Transparent,
+                                    Color(0xFF0F0719)
+                                )
+                            )
                         )
+                )
+
+                // FLOATING HEADER BADGES
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Genre Badge
+                    Surface(
+                        color = Color(0xDD280F38),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, Color(0xFF9C41C0))
+                    ) {
+                        Text(
+                            text = "🔮 ${story.genre}",
+                            color = Color(0xFFF1D8FC),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    // Doom Score Badge
+                    val doomColor = when {
+                        story.doomScore >= 80 -> Color(0xFFFF1E56)
+                        story.doomScore >= 50 -> Color(0xFFFF9800)
+                        else -> Color(0xFF4CAF50)
+                    }
+                    Surface(
+                        color = Color(0xDD12040A),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, doomColor)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text("💀", fontSize = 10.sp)
+                            Text(
+                                text = "وحشت: ${story.doomScore}٪",
+                                color = doomColor,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
 
-            // TITLE
-            Text(
-                text = story.title,
-                color = Color(0xFFDEC595),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Serif,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            // SYNOPSIS
-            val syn = story.synopsis
-            if (!syn.isNullOrBlank()) {
+            // CARD BODY: Title, Synopsis, Stats & CTA
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // TITLE
                 Text(
-                    text = syn,
-                    color = Color(0xFFC7BED3),
-                    fontSize = 12.sp,
-                    lineHeight = 18.sp,
-                    maxLines = 3,
+                    text = story.title,
+                    color = Color(0xFFDEC595),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-            }
 
-            HorizontalDivider(color = Color(0xFF201330), thickness = 1.dp)
+                // SYNOPSIS
+                val syn = story.synopsis
+                if (!syn.isNullOrBlank()) {
+                    Text(
+                        text = syn,
+                        color = Color(0xFFC7BED3),
+                        fontSize = 12.sp,
+                        lineHeight = 18.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
-            // FOOTER: Views + Rating + Button
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+                HorizontalDivider(color = Color(0xFF201330), thickness = 1.dp)
+
+                // FOOTER: Views + Rating + Button
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Rating
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = null,
-                            tint = Color(0xFFFFD700),
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = String.format("%.1f", story.ratingScore),
-                            color = Color(0xFFFFD700),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (story.ratingCount > 0) {
+                        // Rating
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(15.dp)
+                            )
                             Text(
-                                text = "(${story.ratingCount})",
+                                text = String.format("%.1f", story.ratingScore),
+                                color = Color(0xFFFFD700),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (story.ratingCount > 0) {
+                                Text(
+                                    text = "(${story.ratingCount})",
+                                    color = Color(0xFF8B8496),
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+
+                        // Views
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Visibility,
+                                contentDescription = null,
+                                tint = Color(0xFF8B8496),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "${story.viewsCount}",
                                 color = Color(0xFF8B8496),
-                                fontSize = 10.sp
+                                fontSize = 11.sp
                             )
                         }
                     }
 
-                    // Views
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    // Read Button
+                    Surface(
+                        color = Color(0xFFB8143F),
+                        shape = RoundedCornerShape(8.dp),
+                        border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f))
                     ) {
-                        Icon(
-                            Icons.Default.Visibility,
-                            contentDescription = null,
-                            tint = Color(0xFF8B8496),
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Text(
-                            text = "${story.viewsCount}",
-                            color = Color(0xFF8B8496),
-                            fontSize = 11.sp
-                        )
-                    }
-                }
-
-                // Read Button
-                Surface(
-                    color = Color(0xFFB8143F),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Text(
-                            text = "مطالعه قصه",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = Color(0xFFDEC595),
-                            modifier = Modifier.size(12.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "مطالعه قصه",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = Color(0xFFDEC595),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -657,6 +759,50 @@ fun AiStoryReaderScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // ATMOSPHERIC POSTER HERO BANNER
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.6f))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        AiStoryPosterGraphic(
+                            posterUrl = story.cover_image_url,
+                            storyId = story.id,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        // Gradient Overlay
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.Transparent,
+                                            Color(0x99000000),
+                                            Color(0xFF09040F)
+                                        )
+                                    )
+                                )
+                        )
+                        // Story Title overlay at bottom of poster
+                        Text(
+                            text = story.title,
+                            color = Color(0xFFDEC595),
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = activeFontFamily,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(14.dp)
+                        )
+                    }
+                }
+            }
+
             // DOOM & GENRE HEADER CARD
             item {
                 Card(
