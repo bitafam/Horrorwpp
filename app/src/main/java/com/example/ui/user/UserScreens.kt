@@ -1006,7 +1006,7 @@ enum class UserDestination {
     STORIES,
     GRIM_FORTUNES,
     SUBMIT_STORY,
-    SCENARIOS,
+    AI_STORIES,
     SETTINGS
 }
 
@@ -1378,12 +1378,12 @@ fun GothicGamingHomeScreen(
                 }
             }
 
-            // ASYMMETRICAL DUAL ROW 1: SCENARIOS (TALL POSTER) + GRIM FORTUNES (MEDIUM POSTER)
+            // ASYMMETRICAL DUAL ROW 1: AI STORIES (TALL POSTER) + GRIM FORTUNES (MEDIUM POSTER)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // CARD 2: SCENARIOS (بازی تعاملی بقا و انتخاب اشتباه)
+                // CARD 2: AI STORIES (داستان‌های هوش مصنوعی)
                 Card(
                     modifier = Modifier
                         .weight(1.1f)
@@ -1391,7 +1391,7 @@ fun GothicGamingHomeScreen(
                         .gothicBorder(borderColor = Color(0xFFFF1E56).copy(alpha = 0.7f), cornerRadiusDp = 14f)
                         .clickable {
                             HorrorSoundManager.playScenarioChoiceSound()
-                            onNavigate(UserDestination.SCENARIOS)
+                            onNavigate(UserDestination.AI_STORIES)
                         },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
@@ -1417,20 +1417,20 @@ fun GothicGamingHomeScreen(
                                 color = Color(0xFFB8143F),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text("💀 بازی بقا", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text("🧠 هوش مصنوعی", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
 
                             Column {
                                 Text(
-                                    text = "سناریوهای تعاملی",
+                                    text = "داستان‌های هوش مصنوعی",
                                     color = Color(0xFFFF1E56),
-                                    fontSize = 15.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontFamily = FontFamily.Serif
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "انتخاب اشتباه = مرگ آنی!",
+                                    text = "قصه‌های ماورایی Gemini AI",
                                     color = Color(0xFFEDE8F5),
                                     fontSize = 10.sp
                                 )
@@ -1441,7 +1441,7 @@ fun GothicGamingHomeScreen(
                                     border = BorderStroke(1.dp, Color(0xFFFF1E56))
                                 ) {
                                     Text(
-                                        text = "آغاز بازی ❯",
+                                        text = "مطالعه قصه‌ها ❯",
                                         color = Color(0xFFFFD700),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
@@ -1671,19 +1671,22 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     val isOnline by viewModel.isNetworkOnline.collectAsState()
     val grimFortunes by viewModel.grimFortunesList.collectAsState()
     val realStories by viewModel.realStoriesList.collectAsState()
-    val scenarios by viewModel.scenariosList.collectAsState()
+    val aiStories by viewModel.aiStoriesList.collectAsState()
     val loading by viewModel.loading.collectAsState()
 
     var activeReadingStory by remember { mutableStateOf<RealStory?>(null) }
+    var activeReadingAiStory by remember { mutableStateOf<AiStory?>(null) }
 
     LaunchedEffect(Unit) {
         HorrorSoundManager.startAmbientDrone()
     }
 
     // Intercept system back button to smoothly navigate back to Home hub
-    BackHandler(enabled = currentDestination != UserDestination.HOME || activeReadingStory != null) {
+    BackHandler(enabled = currentDestination != UserDestination.HOME || activeReadingStory != null || activeReadingAiStory != null) {
         if (activeReadingStory != null) {
             activeReadingStory = null
+        } else if (activeReadingAiStory != null) {
+            activeReadingAiStory = null
         } else {
             currentDestination = UserDestination.HOME
         }
@@ -1706,6 +1709,12 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                         story = activeReadingStory!!,
                         viewModel = viewModel,
                         onBack = { activeReadingStory = null }
+                    )
+                } else if (activeReadingAiStory != null) {
+                    AiStoryReaderScreen(
+                        story = activeReadingAiStory!!,
+                        viewModel = viewModel,
+                        onBack = { activeReadingAiStory = null }
                     )
                 } else {
                     when (currentDestination) {
@@ -1757,10 +1766,13 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                                 onSubmissionComplete = { currentDestination = UserDestination.STORIES }
                             )
                         }
-                        UserDestination.SCENARIOS -> {
-                            WrongChoiceSection(
-                                scenarios = scenarios,
+                        UserDestination.AI_STORIES -> {
+                            AiStoriesUserSection(
+                                aiStories = aiStories,
                                 viewModel = viewModel,
+                                onStoryRead = { selected ->
+                                    activeReadingAiStory = selected
+                                },
                                 onBack = { currentDestination = UserDestination.HOME }
                             )
                         }
@@ -3096,224 +3108,7 @@ fun GrimFortuneScreen(
     }
 }
 
-// ==========================================
-// TAB 3: SCENARIOS (انتخاب سناریو و بازی تعاملی)
-// ==========================================
-
-@Composable
-fun WrongChoiceSection(
-    scenarios: List<WrongChoiceScenario>,
-    viewModel: HorrorViewModel? = null,
-    onBack: () -> Unit = {}
-) {
-    var activeScenario by remember { mutableStateOf<WrongChoiceScenario?>(null) }
-    var selectedCategory by remember { mutableStateOf("داغ‌ترین") }
-
-    val categories = listOf("داغ‌ترین", "علوم غریبه", "روانی", "هیولاها")
-
-    BackHandler(enabled = activeScenario != null) {
-        activeScenario = null
-    }
-
-    if (activeScenario == null) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF030106))
-        ) {
-            GamingTopBar(
-                title = "سناریوهای شوم عمارت",
-                subtitle = "بازی تعاملی و انتخاب سرنوشت",
-                icon = Icons.Default.Casino,
-                badgeText = "${scenarios.size} ماجرا",
-                onBack = onBack
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // HORIZONTAL CATEGORY SELECTOR (PILLS)
-                LazyRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    items(categories) { cat ->
-                        val isSel = cat == selectedCategory
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(22.dp))
-                                .background(if (isSel) Color(0xFFB8143F) else Color(0xFF100B1A))
-                                .border(
-                                    1.dp,
-                                    if (isSel) Color(0xFFDEC595) else Color(0xFF2B1C3D),
-                                    RoundedCornerShape(22.dp)
-                                )
-                                .clickable {
-                                    HorrorSoundManager.playScenarioChoiceSound()
-                                    selectedCategory = cat
-                                }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = cat,
-                                color = if (isSel) Color.White else Color(0xFF8B8496),
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 11.sp
-                                )
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                val filteredScenarios = remember(scenarios, selectedCategory) {
-                    when (selectedCategory) {
-                        "علوم غریبه" -> scenarios.filterIndexed { index, _ -> index % 3 == 1 || index == 0 }
-                        "روانی" -> scenarios.filterIndexed { index, _ -> index % 3 == 2 }
-                        "هیولاها" -> scenarios.filterIndexed { index, _ -> index % 3 == 0 && index != 0 }
-                        else -> scenarios // "داغ‌ترین"
-                    }
-                }
-
-                // 2-COLUMN PREMIUM PORTRAIT CARD POSTERS
-                if (filteredScenarios.isEmpty()) {
-                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                        Text("هنوز سناریویی در این دسته‌بندی بارگذاری نشده است.", color = Color(0xFF8B8496), fontSize = 12.sp)
-                    }
-                } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Fixed(2),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        itemsIndexed(filteredScenarios) { index, sc ->
-                            GothicScenarioCard(
-                                sc = sc,
-                                index = index + 1,
-                                onClick = {
-                                    HorrorSoundManager.playScenarioChoiceSound()
-                                    activeScenario = sc
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    } else {
-        InteractiveGamePlay(scenario = activeScenario!!, viewModel = viewModel) {
-            activeScenario = null
-        }
-    }
-}
-
-@Composable
-fun GothicScenarioCard(sc: WrongChoiceScenario, index: Int, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(0.66f) // Modern Spooky tall poster aspect ratio
-            .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.35f), cornerRadiusDp = 12f)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF0C0714)),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Cover Artwork based on specific index
-            when (index) {
-                1 -> SpookyCorridorCanvas(modifier = Modifier.fillMaxSize())
-                2 -> SpookyWindowCanvas(modifier = Modifier.fillMaxSize())
-                3 -> SpookyTentaclesCanvas(modifier = Modifier.fillMaxSize())
-                else -> SpookySilhouettedPathCanvas(modifier = Modifier.fillMaxSize())
-            }
-
-            // Premium gradient vignette over card
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color(0xBB000000), Color(0xFF030106))
-                        )
-                    )
-            )
-
-            // Index tag badge
-            Box(
-                modifier = Modifier
-                    .padding(10.dp)
-                    .size(24.dp)
-                    .background(Color(0xDD000000), CircleShape)
-                    .border(1.dp, Color(0xFFDEC595), CircleShape)
-                    .align(Alignment.TopEnd),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = index.toString(),
-                    color = Color(0xFFDEC595),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Serif
-                )
-            }
-
-            // Titles overlay bottom of poster
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = sc.title,
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = sc.description,
-                        color = Color(0xFFD4C8E0),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, lineHeight = 14.sp),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    
-                    // Crimson launch scenario trigger button
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(32.dp)
-                            .background(Color(0xFFB8143F), RoundedCornerShape(6.dp))
-                            .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                            .clickable { onClick() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "احضار گذرگاه مرگ",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
+// AI Stories section is modularized in AiStoriesUserScreens.kt
 
 // ==========================================
 // STORY SUBMISSION PARCHMENT DIALOG
@@ -3471,387 +3266,6 @@ fun SubmitStoryDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
             }
         }
     )
-}
-
-// ==========================================
-// SYSTEM PLAY SCENARIO SCREEN (MULTI-STAGE INTERACTIVE GAMEPLAY)
-// ==========================================
-
-@Composable
-fun InteractiveGamePlay(
-    scenario: WrongChoiceScenario,
-    viewModel: HorrorViewModel? = null,
-    onBack: () -> Unit
-) {
-    // Parse scenario into stages with dedicated choices
-    val parsedStages = remember(scenario.id, scenario.description) {
-        ScenarioParser.parse(scenario.description, scenario.title)
-    }
-
-    var dynamicStages by remember(scenario.id) { mutableStateOf(parsedStages) }
-    var currentStageIdx by remember(scenario.id) { mutableIntStateOf(0) }
-    var endingState by remember(scenario.id) { mutableStateOf<String?>(null) } // "DEAD", "SURVIVED"
-    var endingNarrative by remember(scenario.id) { mutableStateOf<String?>(null) }
-    var previousChoiceMade by remember(scenario.id) { mutableStateOf<String?>(null) }
-
-    val currentStage = dynamicStages.getOrElse(currentStageIdx) {
-        dynamicStages.lastOrNull() ?: ScenarioParsedStage(
-            stageNumber = 1,
-            stageTitle = scenario.title,
-            narrative = scenario.description,
-            choices = emptyList()
-        )
-    }
-
-    val totalStages = dynamicStages.size
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF030106))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // TOP APP BAR / HEADER
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White)
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = scenario.title,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            color = Color(0xFFDEC595),
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Serif,
-                            fontSize = 16.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (endingState == null) {
-                        Text(
-                            text = "صحنه ${currentStageIdx + 1} از $totalStages",
-                            color = Color(0xFFDEC595),
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 11.sp
-                        )
-                    }
-                }
-                // Restart button
-                IconButton(onClick = {
-                    currentStageIdx = 0
-                    endingState = null
-                    endingNarrative = null
-                    previousChoiceMade = null
-                }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "شروع مجدد", tint = Color(0xFFDEC595))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // STAGE PROGRESS INDICATOR BAR
-            if (endingState == null && totalStages > 1) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    for (i in 0 until totalStages) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(
-                                    when {
-                                        i < currentStageIdx -> Color(0xFFDEC595)
-                                        i == currentStageIdx -> Color(0xFFB8143F)
-                                        else -> Color(0xFF2B1C3D)
-                                    }
-                                )
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-            }
-
-            // NARRATIVE PARCHMENT SCENE BOX
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .gothicBorder(
-                        borderColor = when (endingState) {
-                            "DEAD" -> Color(0xFFB8143F)
-                            "SURVIVED" -> Color(0xFF2D936C)
-                            else -> Color(0xFFDEC595)
-                        },
-                        cornerRadiusDp = 14f
-                    )
-                    .background(Color(0xFF0F0918))
-                    .padding(20.dp)
-            ) {
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                    modifier = Modifier.verticalScroll(rememberScrollState())
-                ) {
-                    if (endingState != null) {
-                        // ENDING STATE PRESENTATION
-                        val isDead = endingState == "DEAD"
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (isDead) Icons.Default.Warning else Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = if (isDead) Color(0xFFE63956) else Color(0xFF2D936C),
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = if (isDead) "فرجام شوم: روح شما اسیر شد (مرگ)" else "فرجام نیک: بقا و رهایی از طلسم عمارت!",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = if (isDead) Color(0xFFE63956) else Color(0xFF2D936C),
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = FontFamily.Serif,
-                                    fontSize = 17.sp
-                                ),
-                                textAlign = TextAlign.Center
-                            )
-                        }
-
-                        // Detailed Ending Narrative
-                        Text(
-                            text = endingNarrative ?: if (isDead) {
-                                "تصمیم شوم شما را در دام ارواح عمارت گوتیک گرفتار کرد. شما در این گذرگاه جان باختید!"
-                            } else {
-                                "شما با شجاعت و هوشیاری از گذرگاه‌های مرگبار عبور کردید و طلسم کهن را در هم شکستید!"
-                            },
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = Color.White,
-                                lineHeight = 26.sp,
-                                fontSize = 14.sp,
-                                textAlign = TextAlign.Justify
-                            )
-                        )
-                    } else {
-                        // CURRENT STAGE NARRATIVE
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = currentStage.stageTitle,
-                                color = Color(0xFFDEC595),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = FontFamily.Serif,
-                                fontSize = 13.sp
-                            )
-                            Surface(
-                                color = Color(0xFFB8143F).copy(alpha = 0.3f),
-                                shape = RoundedCornerShape(6.dp),
-                                border = BorderStroke(0.5.dp, Color(0xFFB8143F))
-                            ) {
-                                Text(
-                                    text = "صحنه ${currentStage.stageNumber}",
-                                    color = Color(0xFFDEC595),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-
-                        if (!previousChoiceMade.isNullOrBlank()) {
-                            Surface(
-                                color = Color(0xFF1E122E),
-                                shape = RoundedCornerShape(8.dp),
-                                border = BorderStroke(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.3f)),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "نتیجه پاسخ قبلی: $previousChoiceMade",
-                                    color = Color(0xFFDEC595),
-                                    fontSize = 11.sp,
-                                    modifier = Modifier.padding(8.dp)
-                                )
-                            }
-                        }
-
-                        Text(
-                            text = currentStage.narrative,
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                color = Color(0xFFEDE8F5),
-                                lineHeight = 26.sp,
-                                fontSize = 13.5.sp,
-                                textAlign = TextAlign.Justify
-                            )
-                        )
-                    }
-                }
-            }
-        }
-
-        // BOTTOM CHOICES BUTTONS PANEL
-        if (endingState == null) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            ) {
-                Text(
-                    text = "ـ پاسخ و تصمیم شما برای این صحنه: ـ",
-                    color = Color(0xFFDEC595),
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-
-                // Render each choice inside a dedicated interactive Gothic Button
-                currentStage.choices.forEachIndexed { idx, choice ->
-                    GothicChoiceButton(
-                        choiceNumber = idx + 1,
-                        text = choice.text,
-                        onClick = {
-                            if (choice.isDeath) {
-                                com.example.util.HorrorSoundManager.playDeathSound()
-                                endingState = "DEAD"
-                                endingNarrative = choice.outcomeText ?: "پاسخ «${choice.text}» شما را به تله مرگبار ارواح کشاند و کشته شدید!"
-                            } else if (choice.isVictory) {
-                                com.example.util.HorrorSoundManager.playVictorySound()
-                                endingState = "SURVIVED"
-                                endingNarrative = choice.outcomeText ?: "شما با پاسخ هوشمندانه «${choice.text}» با موفقیت نجات یافتید و طلسم را باطل کردید!"
-                            } else {
-                                com.example.util.HorrorSoundManager.playScenarioChoiceSound()
-                                // Progress to next stage
-                                val nextIdx = currentStageIdx + 1
-                                if (nextIdx < dynamicStages.size) {
-                                    previousChoiceMade = choice.outcomeText ?: choice.text
-                                    currentStageIdx = nextIdx
-                                } else {
-                                    // If no more stages in scenario, conclude with survival
-                                    com.example.util.HorrorSoundManager.playVictorySound()
-                                    endingState = "SURVIVED"
-                                    endingNarrative = choice.outcomeText ?: "شما با گذر موفق از تمامی صحنه‌ها و تله‌های عمارت وحشت جان سالم به در بردید!"
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-        } else {
-            // GAME OVER / VICTORY BUTTONS
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp)
-            ) {
-                Button(
-                    onClick = {
-                        // Restart scenario from stage 1
-                        currentStageIdx = 0
-                        endingState = null
-                        endingNarrative = null
-                        previousChoiceMade = null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (endingState == "DEAD") Color(0xFFB8143F) else Color(0xFF2D936C)
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    border = BorderStroke(1.dp, Color(0xFFDEC595))
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("شروع مجدد این سناریو از ابتدا", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth(),
-                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.4f)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("بازگشت به معبد سناریوها", color = Color(0xFFDEC595), fontSize = 12.sp)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun GothicChoiceButton(choiceNumber: Int, text: String, onClick: () -> Unit) {
-    val persianDigits = listOf("۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹")
-    val numStr = if (choiceNumber in 1..9) persianDigits[choiceNumber] else "$choiceNumber"
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(Color(0xFF140C22))
-            .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 14.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
-        ) {
-            // Choice Number Badge inside the button
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(Color(0xFFB8143F), CircleShape)
-                    .border(1.dp, Color(0xFFDEC595), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = numStr,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Choice Text clearly placed INSIDE the button
-            Text(
-                text = text,
-                color = Color(0xFFEDE8F5),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 20.sp
-                ),
-                modifier = Modifier.weight(1f)
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Icon(
-                Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = Color(0xFFDEC595).copy(alpha = 0.7f),
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
 }
 
 // ==========================================

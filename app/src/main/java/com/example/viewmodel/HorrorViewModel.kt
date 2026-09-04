@@ -45,11 +45,15 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         const val PREF_SUPABASE_ANON_KEY = "pref_supabase_anon_key"
 
         val SUPPORTED_GEMINI_MODELS = listOf(
-            "gemini-3.5-flash",
-            "gemini-3.6-flash",
-            "gemini-3.7-flash",
-            "gemini-3.5-flash-lite"
+            "gemini-2.5-flash",
+            "gemini-2.5-pro",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro"
         )
+
+        const val PREF_AI_STORY_PROMPT = "pref_ai_story_prompt"
+        const val DEFAULT_AI_STORY_PROMPT =
+            "تو کاتب باستانی و استاد تعلیق و وحشت گوتیک عمارت وحشت هستی. داستان‌های ترسناک، روانشناختی، ماورایی و دلهره‌آور بسیار گیرا، با پایان‌های شوکه‌کننده و رازآلود بنویس."
 
         val PERSIAN_MONTHS = listOf(
             "فروردین", "اردیبهشت", "خرداد",
@@ -105,7 +109,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _geminiApiKey = MutableStateFlow(prefs.getString(PREF_GEMINI_KEY, "") ?: "")
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
 
-    private val _selectedGeminiModel = MutableStateFlow(prefs.getString(PREF_GEMINI_MODEL, "gemini-3.5-flash") ?: "gemini-3.5-flash")
+    private val _selectedGeminiModel = MutableStateFlow(
+        prefs.getString(PREF_GEMINI_MODEL, "gemini-2.5-flash")?.let {
+            if (it.contains("3.5") || it.contains("3.6") || it.contains("3.7")) "gemini-2.5-flash" else it
+        } ?: "gemini-2.5-flash"
+    )
     val selectedGeminiModel: StateFlow<String> = _selectedGeminiModel.asStateFlow()
 
     private val _grimFortunePrompt = MutableStateFlow(prefs.getString(PREF_GRIM_FORTUNE_PROMPT, DEFAULT_GRIM_FORTUNE_PROMPT) ?: DEFAULT_GRIM_FORTUNE_PROMPT)
@@ -113,6 +121,26 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _scenarioPrompt = MutableStateFlow(prefs.getString(PREF_SCENARIO_PROMPT, DEFAULT_SCENARIO_PROMPT) ?: DEFAULT_SCENARIO_PROMPT)
     val scenarioPrompt: StateFlow<String> = _scenarioPrompt.asStateFlow()
+
+    private val _aiStoryPrompt = MutableStateFlow(prefs.getString(PREF_AI_STORY_PROMPT, DEFAULT_AI_STORY_PROMPT) ?: DEFAULT_AI_STORY_PROMPT)
+    val aiStoryPrompt: StateFlow<String> = _aiStoryPrompt.asStateFlow()
+
+    fun setAiStoryPrompt(prompt: String) {
+        _aiStoryPrompt.value = prompt
+        prefs.edit().putString(PREF_AI_STORY_PROMPT, prompt).apply()
+        if (SupabaseClientProvider.isConfigured) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    api.updateAiPrompt(
+                        keyEq = "eq.AI_STORY_PROMPT",
+                        item = mapOf("prompt_text" to prompt)
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.e("SupabaseError", "Error updating AI_STORY_PROMPT", e)
+                }
+            }
+        }
+    }
 
     private var hasAttemptedPromptSeeding = false
 
@@ -137,11 +165,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _realStoriesList = MutableStateFlow<List<RealStory>>(emptyList())
     val realStoriesList: StateFlow<List<RealStory>> = _realStoriesList.asStateFlow()
 
-    private val _scenariosList = MutableStateFlow<List<WrongChoiceScenario>>(emptyList())
-    val scenariosList: StateFlow<List<WrongChoiceScenario>> = _scenariosList.asStateFlow()
-
     private val _userSubmissionsList = MutableStateFlow<List<UserStorySubmission>>(emptyList())
     val userSubmissionsList: StateFlow<List<UserStorySubmission>> = _userSubmissionsList.asStateFlow()
+
+    private val _aiStoriesList = MutableStateFlow<List<AiStory>>(emptyList())
+    val aiStoriesList: StateFlow<List<AiStory>> = _aiStoriesList.asStateFlow()
 
     // Admin Management States
     private val _adminGrimFortunes = MutableStateFlow<List<GrimFortune>>(emptyList())
@@ -153,8 +181,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _adminSubmissions = MutableStateFlow<List<UserStorySubmission>>(emptyList())
     val adminSubmissions: StateFlow<List<UserStorySubmission>> = _adminSubmissions.asStateFlow()
 
-    private val _adminScenarios = MutableStateFlow<List<WrongChoiceScenario>>(emptyList())
-    val adminScenarios: StateFlow<List<WrongChoiceScenario>> = _adminScenarios.asStateFlow()
+    private val _adminAiStories = MutableStateFlow<List<AiStory>>(emptyList())
+    val adminAiStories: StateFlow<List<AiStory>> = _adminAiStories.asStateFlow()
 
     // Automation States
     private val _automationConfigs = MutableStateFlow<List<AutomationConfig>>(emptyList())
@@ -278,13 +306,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                                 onResult(success, logMsg)
                             }
                         }
-                        "auto-scenarios" -> {
-                            val scenConfig = _automationConfigs.value.find { it.id == "AUTO_SCENARIOS" }
-                            val count = scenConfig?.batch_count ?: 1
-                            generateScenariosWithAI(count, scenConfig?.custom_prompt) { success, msg ->
-                                val logMsg = if (success) "✅ $count سناریوی تعاملی با موفقیت خلق و در پایگاه داده ثبت شد." else "خطا در تولید سناریو: $msg"
+                        "auto-scenarios", "auto-ai-stories" -> {
+                            val aiConfig = _automationConfigs.value.find { it.id == "AUTO_AI_STORIES" || it.id == "AUTO_SCENARIOS" }
+                            val count = aiConfig?.batch_count ?: 3
+                            generateAiStoriesWithAI(customPrompt = aiConfig?.custom_prompt, count = count) { success, msg, genCount ->
+                                val logMsg = if (success) "✅ $genCount داستان هوش مصنوعی با موفقیت خلق و در پایگاه داده ثبت شد." else "خطا در تولید داستان: $msg"
                                 viewModelScope.launch {
-                                    repository.insertAutomationLog("AUTO_SCENARIOS", if (success) "SUCCESS" else "FAILED", logMsg)
+                                    repository.insertAutomationLog("AUTO_AI_STORIES", if (success) "SUCCESS" else "FAILED", logMsg)
 
                                     loadAutomationData()
                                     loadUserData()
@@ -368,10 +396,10 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 if (gfs.isNotEmpty()) _grimFortunesList.value = gfs
                 val rs = repository.getRealStories(false)
                 if (rs.isNotEmpty()) _realStoriesList.value = rs
-                val scens = repository.getScenarios(false)
-                if (scens.isNotEmpty()) _scenariosList.value = scens
                 val subs = repository.getUserSubmissions(false)
                 if (subs.isNotEmpty()) _userSubmissionsList.value = subs
+                val ai = repository.getAiStories(false)
+                if (ai.isNotEmpty()) _aiStoriesList.value = ai.filter { it.status == "PUBLISHED" }
                 _loading.value = false
                 return@launch
             }
@@ -397,18 +425,16 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 }
                 _realStoriesList.value = rs
 
-                var scens = repository.getScenarios(true)
-                if (scens.isEmpty() && SupabaseClientProvider.isConfigured) {
-                    val mockScens = getMockScenarios()
-                    mockScens.forEach { scen ->
-                        try { repository.saveScenario(scen) } catch (_: Exception) {}
-                    }
-                    scens = repository.getScenarios(true)
-                }
-                _scenariosList.value = scens
-
                 var subs = repository.getUserSubmissions(true)
                 _userSubmissionsList.value = subs
+
+                var ai = repository.getAiStories(true)
+                if (ai.isEmpty() && SupabaseClientProvider.isConfigured) {
+                    val mockAi = getMockAiStories()
+                    repository.upsertAiStories(mockAi)
+                    ai = repository.getAiStories(true)
+                }
+                _aiStoriesList.value = ai.filter { it.status == "PUBLISHED" }
 
                 if (SupabaseClientProvider.isConfigured) {
                     try {
@@ -515,55 +541,6 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun getMockUserSubmissions(): List<UserStorySubmission> {
         return emptyList()
-    }
-
-    private fun getMockScenarios(): List<WrongChoiceScenario> {
-        return listOf(
-            WrongChoiceScenario(
-                id = java.util.UUID.nameUUIDFromBytes("scen-1".toByteArray()).toString(),
-                title = "گذرگاه دالان شرقی عمارت",
-                description = "---صحنه ۱---\n" +
-                        "روایت: شما در آستانه ورود به دالان شرقی عمارت هستید. دیوارهای دالان مه‌آلود و یخ‌زده است و از انتهای راهرو صدای نامنظم کشیده شدن زنجیر روی زمین به گوش می‌رسد.\n" +
-                        "گزینه ۱: مشعل دیواری را بردار و با احتیاط به جلو پیشروی کن -> ورود به تالار آینه‌های طلسم‌شده\n" +
-                        "گزینه ۲: در تاریکی مطلق روی زمین سینه‌خیز شو -> لغزش به دهانه سرداب مخفی\n" +
-                        "گزینه ۳: از پله‌های چوبی سمت راست با سرعت بالا برو -> رسیدن به اتاق ساعت کهن و تله زمان\n\n" +
-                        "---صحنه ۲---\n" +
-                        "روایت: در تالار آینه‌ها، کتیبه‌ای زرین با خط فارسی باستان بر پایه‌ای سنگی قرار دارد. بازتاب شما در آینه‌ها ناگهان متوقف شده و با صدایی محزون زمزمه می‌کند.\n" +
-                        "گزینه ۱: ورد تطهیر را زمزمه کن و کلید زرین را بردار -> باز شدن درگاه رهایی\n" +
-                        "گزینه ۲: صندوقچه جواهرات طلسم‌شده زیر آینه را باز کن -> کشف گنجینه باستانی و خشم ارواح\n" +
-                        "گزینه ۳: آینه مرکزی را با خنجر فولادی بشکن -> آشکار شدن راه فرار مخفی\n\n" +
-                        "---صحنه ۳---\n" +
-                        "روایت: به محراب اصلی و دروازه فرار رسیدید؛ سایه ساحر کهن پدیدار می‌شود و درگاه‌های سرنوشت گشوده می‌شوند.\n" +
-                        "گزینه ۱: طلسم کتیبه را با نور مشعل بسوزان -> رهایی پیروزمندانه از عمارت وحشت (بقا)\n" +
-                        "گزینه ۲: گنجینه را بردار و از دریچه مخفی باغ بگریز -> فرار با ثروت افسانه‌ای (بقا و ثروت)\n" +
-                        "گزینه ۳: با ساحر کهن پیمان خونی ببند -> تبدیل شدن به نگهبان جاودان تاریکی (فرجام ماورایی)",
-                status = "PUBLISHED",
-                initial_scene_id = null,
-                createdAt = null
-            ),
-            WrongChoiceScenario(
-                id = java.util.UUID.nameUUIDFromBytes("scen-2".toByteArray()).toString(),
-                title = "کلاغ‌های معبد سوخته",
-                description = "---صحنه ۱---\n" +
-                        "روایت: برج ناقوس لرزان معبد کهن پیش روی شماست. صدها کلاغ سیاه روی سقف سوخته نشسته‌اند و ناقوس بی‌دلیل با باد زوزه می‌کشد.\n" +
-                        "گزینه ۱: به داخل محراب تاریک معبد پناه ببر -> رسیدن به کتاب مقدسات سیاه\n" +
-                        "گزینه ۲: به سمت گورستان اطراف معبد بدو -> پناه گرفتن در مقبره سنگی سرد\n" +
-                        "گزینه ۳: طناب ناقوس را با شمشیر ببر -> خاموش کردن صدای شوم و گشوده شدن سرداب\n\n" +
-                        "---صحنه ۲---\n" +
-                        "روایت: درون محراب، کتابی با جلد چرم باستانی روی پایه‌ای سنگی قرار دارد که صفحات آن خودبه‌خود با جوهر خون ورق می‌خورند.\n" +
-                        "گزینه ۱: صفحه طلسم محافظت را با صدای رسا بخوان -> تشکیل هاله نورانی نجات\n" +
-                        "گزینه ۲: بخور معطر روی سنگدان محراب را روشن کن -> فرونشاندن خشم ارواح معبد\n" +
-                        "گزینه ۳: دستانت را روی صفحات خونین بگذار -> تسخیر شدن توسط ارواح کلاغ‌ها (مرگ)\n\n" +
-                        "---صحنه ۳---\n" +
-                        "روایت: دیوارهای معبد در شرف فروریختن است و مه غلیظی فضای خروجی را در بر گرفته است.\n" +
-                        "گزینه ۱: کتاب را در آغوش بگیر و به سوی روشنایی بدو -> رهایی به همراه اسرار کهن (بقا)\n" +
-                        "گزینه ۲: از تونل زیرزمینی مقبره خارج شو -> رسیدن به جنگل آرامش (فرار موفق)\n" +
-                        "گزینه ۳: جام نوشداروی ارواح را بنوش -> کسب بینش ماورایی و خروج پیروزمندانه (پیروزی)",
-                status = "PUBLISHED",
-                initial_scene_id = null,
-                createdAt = null
-            )
-        )
     }
 
     fun getUserVote(storyId: String): Float {
@@ -860,8 +837,8 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 val localSubs = repository.getAllUserSubmissionsAdmin()
                 if (localSubs.isNotEmpty()) _adminSubmissions.value = localSubs
 
-                val localScens = repository.getAllScenariosAdmin()
-                if (localScens.isNotEmpty()) _adminScenarios.value = localScens
+                val localAi = repository.getAllAiStoriesAdmin()
+                if (localAi.isNotEmpty()) _adminAiStories.value = localAi
 
                 // If Supabase is configured, also fetch latest remote
                 if (SupabaseClientProvider.isConfigured) {
@@ -880,9 +857,9 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                         _adminSubmissions.value = subResp.body()!!
                     }
 
-                    val scenResp = api.getScenarios()
-                    if (scenResp.isSuccessful && scenResp.body() != null) {
-                        _adminScenarios.value = scenResp.body()!!
+                    val aiResp = api.getAiStories()
+                    if (aiResp.isSuccessful && aiResp.body() != null) {
+                        _adminAiStories.value = aiResp.body()!!
                     }
 
                     val promptResp = api.getAiPrompts()
@@ -1437,74 +1414,6 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun createScenario(title: String, description: String, status: String, onComplete: () -> Unit) {
-        viewModelScope.launch {
-            _loading.value = true
-            try {
-                val scen = WrongChoiceScenario(
-                    id = java.util.UUID.randomUUID().toString(),
-                    title = title,
-                    description = description,
-                    status = status,
-                    initial_scene_id = null,
-                    createdAt = null
-                )
-                val saved = repository.saveScenario(scen)
-                _adminScenarios.value = listOf(saved) + _adminScenarios.value
-                if (status == "PUBLISHED") {
-                    _scenariosList.value = listOf(saved) + _scenariosList.value
-                }
-                onComplete()
-            } catch (e: Exception) {
-                _errorMessage.value = "خطا در ساخت سناریو: ${e.localizedMessage}"
-            } finally {
-                _loading.value = false
-            }
-        }
-    }
-
-    fun updateScenarioStatus(id: String, newStatus: String, onComplete: () -> Unit) {
-        viewModelScope.launch {
-            _loading.value = true
-            try {
-                val s = _adminScenarios.value.find { it.id == id }
-                if (s != null) {
-                    val updated = s.copy(status = newStatus)
-                    val saved = repository.saveScenario(updated)
-                    _adminScenarios.value = _adminScenarios.value.map { if (it.id == id) saved else it }
-                    if (newStatus == "PUBLISHED") {
-                        if (_scenariosList.value.none { it.id == id }) {
-                            _scenariosList.value = listOf(saved) + _scenariosList.value
-                        }
-                    } else {
-                        _scenariosList.value = _scenariosList.value.filter { it.id != id }
-                    }
-                }
-                onComplete()
-            } catch (e: Exception) {
-                _errorMessage.value = "خطا در تغییر وضعیت سناریو: ${e.localizedMessage}"
-            } finally {
-                _loading.value = false
-            }
-        }
-    }
-
-    fun deleteScenario(id: String, onComplete: () -> Unit) {
-        viewModelScope.launch {
-            _loading.value = true
-            try {
-                repository.deleteScenario(id)
-                _adminScenarios.value = _adminScenarios.value.filter { it.id != id }
-                _scenariosList.value = _scenariosList.value.filter { it.id != id }
-                onComplete()
-            } catch (e: Exception) {
-                _errorMessage.value = "خطا در حذف سناریو: ${e.localizedMessage}"
-            } finally {
-                _loading.value = false
-            }
-        }
-    }
-
     fun testGeminiModel(key: String, model: String, onResult: (Boolean, String) -> Unit) {
         val apiKey = key.ifBlank { getEffectiveGeminiApiKey() }
         if (apiKey.isBlank()) {
@@ -1769,74 +1678,331 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun generateScenariosWithAI(count: Int, customPrompt: String? = null, onResult: (Boolean, String) -> Unit) {
-        val basePrompt = customPrompt?.ifBlank { null } ?: _scenarioPrompt.value
-        val fullPrompt = "$basePrompt\n\nلطفاً تعداد $count سناریوی جداگانه با مراحل کامل تولید کن. برای هر سناریو، دقیقاً با پیشوند '###سناریو###' سناریوها را از هم جدا کن."
+    // ==========================================
+    // AI STORIES LOGIC & MANAGEMENT
+    // ==========================================
 
-        generateAILore(fullPrompt) { text ->
-            if (text.startsWith("خطا")) {
-                onResult(false, text)
-                return@generateAILore
+    fun rateAiStory(storyId: String, userRating: Float) {
+        viewModelScope.launch {
+            val p = getApplication<Application>().getSharedPreferences("horror_ai_story_ratings", android.content.Context.MODE_PRIVATE)
+            val existingVote = p.getFloat("rating_$storyId", -1f)
+            if (existingVote != -1f) {
+                _errorMessage.value = "شما قبلاً به این داستان امتیاز داده‌اید (${existingVote.toInt()} ستاره)."
+                return@launch
+            }
+            p.edit().putFloat("rating_$storyId", userRating).apply()
+
+            val currentStories = _aiStoriesList.value
+            val target = currentStories.find { it.id == storyId }
+
+            if (target != null) {
+                val safeCount = target.rating_count.coerceAtLeast(0)
+                val safeRating = if (safeCount == 0) 0f else target.rating
+                val newCount = safeCount + 1
+                val newRating = if (safeCount == 0) userRating else (((safeRating * safeCount) + userRating) / newCount)
+                val roundedRating = kotlin.math.round(newRating * 10f) / 10.0f
+                val updatedTarget = target.copy(rating = roundedRating, rating_count = newCount)
+
+                _aiStoriesList.value = currentStories.map { if (it.id == storyId) updatedTarget else it }
+                _adminAiStories.value = _adminAiStories.value.map { if (it.id == storyId) updatedTarget else it }
             }
 
-            viewModelScope.launch {
-                _loading.value = true
-                try {
-                    val blocks = text.split("###سناریو###")
-                        .map { it.trim() }
-                        .filter { it.length > 20 }
-
-                    val savedList = mutableListOf<WrongChoiceScenario>()
-                    if (blocks.isNotEmpty()) {
-                        for (block in blocks.take(count)) {
-                            val lines = block.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                            var title = "سناریوی تعاملی عمارت وحشت"
-                            if (lines.isNotEmpty()) {
-                                val firstLine = lines[0]
-                                if (firstLine.contains("عنوان:")) {
-                                    title = firstLine.replace("عنوان:", "").replace("#", "").replace("*", "").trim()
-                                }
-                            }
-                            val scen = WrongChoiceScenario(
-                                id = java.util.UUID.randomUUID().toString(),
-                                title = title,
-                                description = block,
-                                status = "PUBLISHED",
-                                initial_scene_id = null,
-                                createdAt = null
-                            )
-                            val saved = repository.saveScenario(scen)
-                            savedList.add(saved)
-                        }
-                        
-                        _adminScenarios.value = savedList + _adminScenarios.value
-                        _scenariosList.value = savedList + _scenariosList.value
-                        onResult(true, "$count سناریوی چندمرحله‌ای با موفقیت توسط هوش مصنوعی خلق و در پایگاه داده ذخیره شد.")
-                    } else {
-                        val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
-                        val title = if (lines.isNotEmpty() && lines[0].contains("عنوان:")) {
-                            lines[0].replace("عنوان:", "").replace("#", "").replace("*", "").trim()
-                        } else "سناریوی تعاملی عمارت وحشت"
-                        val scen = WrongChoiceScenario(
-                            id = java.util.UUID.randomUUID().toString(),
-                            title = title,
-                            description = text,
-                            status = "PUBLISHED",
-                            initial_scene_id = null,
-                            createdAt = null
-                        )
-                        val saved = repository.saveScenario(scen)
-                        _adminScenarios.value = listOf(saved) + _adminScenarios.value
-                        _scenariosList.value = listOf(saved) + _scenariosList.value
-                        onResult(true, "۱ سناریوی چندمرحله‌ای با موفقیت در پایگاه داده ذخیره شد.")
-                    }
-                } catch (e: java.lang.Exception) {
-                    _errorMessage.value = "خطا در ذخیره‌سازی سناریوها: ${e.localizedMessage}"
-                    onResult(false, "خطا در ذخیره‌سازی سناریوها: ${e.localizedMessage}")
-                } finally {
-                    _loading.value = false
+            try {
+                val success = repository.submitAiStoryRatingRemote(storyId, userRating)
+                val refreshed = repository.getAiStories(success)
+                if (refreshed.isNotEmpty()) {
+                    _aiStoriesList.value = refreshed.filter { it.status == "PUBLISHED" }
+                    _adminAiStories.value = refreshed
                 }
+            } catch (e: Exception) {
+                android.util.Log.e("AiStoryRating", "Error submitting AI story rating: ${e.localizedMessage}")
             }
         }
     }
+
+    fun incrementAiStoryViews(storyId: String) {
+        viewModelScope.launch {
+            val currentStories = _aiStoriesList.value
+            val target = currentStories.find { it.id == storyId }
+            if (target != null) {
+                val newCount = target.view_count + 1
+                val updatedTarget = target.copy(view_count = newCount)
+                _aiStoriesList.value = currentStories.map { if (it.id == storyId) updatedTarget else it }
+                _adminAiStories.value = _adminAiStories.value.map { if (it.id == storyId) updatedTarget else it }
+            }
+
+            try {
+                val success = repository.incrementAiStoryViewRemote(storyId)
+                if (success) {
+                    val refreshed = repository.getAiStories(true)
+                    if (refreshed.isNotEmpty()) {
+                        _aiStoriesList.value = refreshed.filter { it.status == "PUBLISHED" }
+                        _adminAiStories.value = refreshed
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AiStoryViews", "Error incrementing AI story views: ${e.localizedMessage}")
+            }
+        }
+    }
+
+    fun updateAiStoryStatus(id: String, newStatus: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                val current = _adminAiStories.value.find { it.id == id }
+                if (current != null) {
+                    val updated = current.copy(status = newStatus)
+                    repository.upsertAiStories(listOf(updated))
+                    _adminAiStories.value = _adminAiStories.value.map { if (it.id == id) updated else it }
+                    if (newStatus == "PUBLISHED") {
+                        if (_aiStoriesList.value.none { it.id == id }) {
+                            _aiStoriesList.value = listOf(updated) + _aiStoriesList.value
+                        }
+                    } else {
+                        _aiStoriesList.value = _aiStoriesList.value.filter { it.id != id }
+                    }
+                }
+                onResult(true, "وضعیت داستان به ${if (newStatus == "PUBLISHED") "منتشر شده" else "پیش‌نویس"} تغییر یافت.")
+            } catch (e: Exception) {
+                onResult(false, "خطا در تغییر وضعیت: ${e.localizedMessage}")
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun deleteAiStory(id: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                repository.deleteAiStory(id)
+                _adminAiStories.value = _adminAiStories.value.filter { it.id != id }
+                _aiStoriesList.value = _aiStoriesList.value.filter { it.id != id }
+                onResult(true, "داستان هوش مصنوعی با موفقیت حذف گردید.")
+            } catch (e: Exception) {
+                onResult(false, "خطا در حذف داستان: ${e.localizedMessage}")
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun bulkUpdateAiStoriesStatus(ids: List<String>, newStatus: String, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                val toUpdate = _adminAiStories.value.filter { ids.contains(it.id) }.map { it.copy(status = newStatus) }
+                repository.upsertAiStories(toUpdate)
+                val idSet = ids.toSet()
+                _adminAiStories.value = _adminAiStories.value.map { if (idSet.contains(it.id)) it.copy(status = newStatus) else it }
+                if (newStatus == "PUBLISHED") {
+                    val currentNonUpdated = _aiStoriesList.value.filter { !idSet.contains(it.id) }
+                    _aiStoriesList.value = toUpdate + currentNonUpdated
+                } else {
+                    _aiStoriesList.value = _aiStoriesList.value.filter { !idSet.contains(it.id) }
+                }
+                onResult(true, "${ids.size} داستان به وضعیت ${if (newStatus == "PUBLISHED") "منتشر شده" else "پیش‌نویس"} منتقل شدند.")
+            } catch (e: Exception) {
+                onResult(false, "خطا در عملیات گروهی: ${e.localizedMessage}")
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun bulkDeleteAiStories(ids: List<String>, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                ids.forEach { repository.deleteAiStory(it) }
+                val idSet = ids.toSet()
+                _adminAiStories.value = _adminAiStories.value.filter { !idSet.contains(it.id) }
+                _aiStoriesList.value = _aiStoriesList.value.filter { !idSet.contains(it.id) }
+                onResult(true, "${ids.size} داستان با موفقیت حذف شدند.")
+            } catch (e: Exception) {
+                onResult(false, "خطا در حذف گروهی: ${e.localizedMessage}")
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun updateAiStory(story: AiStory, onResult: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            _loading.value = true
+            try {
+                repository.upsertAiStories(listOf(story))
+                _adminAiStories.value = _adminAiStories.value.map { if (it.id == story.id) story else it }
+                if (story.status == "PUBLISHED") {
+                    _aiStoriesList.value = _aiStoriesList.value.map { if (it.id == story.id) story else it }
+                } else {
+                    _aiStoriesList.value = _aiStoriesList.value.filter { it.id != story.id }
+                }
+                onResult(true, "داستان با موفقیت ویرایش و ذخیره شد.")
+            } catch (e: Exception) {
+                onResult(false, "خطا در ویرایش داستان: ${e.localizedMessage}")
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    fun generateAiStoriesWithAI(
+        customPrompt: String? = null,
+        count: Int = 3,
+        genre: String? = null,
+        onResult: (Boolean, String, Int) -> Unit
+    ) {
+        val safeCount = count.coerceIn(1, 20)
+        val basePrompt = customPrompt?.ifBlank { null } ?: _aiStoryPrompt.value
+        val genreText = if (!genre.isNullOrBlank() && genre != "همه") "در ژانر وحشت «$genre»" else "در ژانرهای مختلف وحشت (ماورایی، روانشناختی، گوتیک، افسانه‌های تاریک ایرانی)"
+        
+        val prompt = "$basePrompt\n\n" +
+                "دستور اختصاصی:\n" +
+                "دقیقاً تعداد $safeCount داستان ترسناک و دلهره‌آور تازه، عمیق و پرتعلیق $genreText خلق کن.\n" +
+                "پاسخ خود را دقیقاً و صرفاً به صورت یک JSON استاندارد با فرمت زیر ارائه کن (بدون هیچ کلمه اضافی، مارک‌داون یا توضیحات دیگر):\n" +
+                "{\n" +
+                "  \"stories\": [\n" +
+                "    {\n" +
+                "      \"title\": \"یک عنوان جذاب، غافلگیرکننده و خوفناک\",\n" +
+                "      \"genre\": \"ژانر داستان\",\n" +
+                "      \"content\": \"متن کامل و غنی داستان با توصیف فضاسازی، تعلیق نفس‌گیر و پایان شگفت‌آور (حداقل ۳ الی ۵ پاراگراف کامل)\",\n" +
+                "      \"synopsis\": \"خلاصه داستان در ۲ یا ۳ جمله کنجکاوی‌برانگیز\",\n" +
+                "      \"doom_score\": 85\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}\n" +
+                "تعداد داستان‌های خروجی در آرایه stories باید دقیقاً $safeCount عدد باشد."
+
+        generateAILore(prompt) { responseText ->
+            if (responseText.startsWith("خطا")) {
+                onResult(false, responseText, 0)
+                return@generateAILore
+            }
+
+            try {
+                val startIndex = responseText.indexOf("{")
+                val endIndex = responseText.lastIndexOf("}")
+                if (startIndex == -1 || endIndex == -1) {
+                    throw Exception("ساختار پاسخ هوش مصنوعی قالب معتبر JSON ندارد.")
+                }
+                val jsonStr = responseText.substring(startIndex, endIndex + 1)
+                val root = org.json.JSONObject(jsonStr)
+                val array = root.getJSONArray("stories")
+                val storiesList = mutableListOf<AiStory>()
+
+                val defaultPosters = listOf(
+                    "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1514533450685-4493e01d1fdc?w=600&auto=format&fit=crop&q=80",
+                    "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80"
+                )
+
+                for (i in 0 until array.length()) {
+                    val item = array.getJSONObject(i)
+                    val title = item.optString("title", "روایت شماره ${i + 1} هوش مصنوعی")
+                    val storyGenre = item.optString("genre", genre ?: "ماورایی")
+                    val content = item.optString("content", "")
+                    val synopsis = item.optString("synopsis", content.take(120))
+                    val doomScore = item.optInt("doom_score", (75..98).random())
+                    val poster = defaultPosters[i % defaultPosters.size]
+
+                    if (content.isNotBlank()) {
+                        val pseudoId = java.util.UUID.randomUUID().toString()
+                        storiesList.add(
+                            AiStory(
+                                id = pseudoId,
+                                title = title,
+                                content = content,
+                                genre = storyGenre,
+                                synopsis = synopsis,
+                                cover_image_url = poster,
+                                tags = "$storyGenre, هوش مصنوعی",
+                                status = "PUBLISHED",
+                                rating = (doomScore / 20.0f).coerceIn(3.5f, 5.0f),
+                                rating_count = (5..35).random(),
+                                view_count = (20..250).random(),
+                                createdAt = null,
+                                updatedAt = null
+                            )
+                        )
+                    }
+                }
+
+                if (storiesList.isEmpty()) {
+                    throw Exception("هیچ داستانی در پاسخ هوش مصنوعی شناسایی نشد.")
+                }
+
+                viewModelScope.launch {
+                    _loading.value = true
+                    try {
+                        repository.upsertAiStories(storiesList)
+                        _adminAiStories.value = storiesList + _adminAiStories.value
+                        _aiStoriesList.value = storiesList + _aiStoriesList.value
+                        onResult(true, "تعداد ${storiesList.size} داستان هوش مصنوعی با موفقیت تولید و در لیست منتشر شده قرار گرفتند.", storiesList.size)
+                    } catch (e: Exception) {
+                        onResult(false, "خطا در ذخیره داستان‌ها در پایگاه داده: ${e.localizedMessage}", 0)
+                    } finally {
+                        _loading.value = false
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("AiStories", "Parsing JSON batch stories failed", e)
+                onResult(false, "خطا در پردازش پاسخ هوش مصنوعی: ${e.localizedMessage}", 0)
+            }
+        }
+    }
+
+    fun getMockAiStories(): List<AiStory> {
+        return listOf(
+            AiStory(
+                id = "ai-mock-1",
+                title = "زمزمه‌های زیرزمین عمارت قاجاری",
+                content = "در انتهای کوچه بن‌بست سرچشمه رشت، عمارتی با ستون‌های گچ‌بری شده و پنجره‌های رنگی سال‌هاست متروکه مانده است. اهالی محل می‌گفتند آخرین صاحب خانه، تاجر ابریشمی بود که پس از مفقود شدن ناگهانی همسرش، درهای زیرزمین را با آجر و ساروج مسدود کرد و دیگر هرگز کسی خروج او را ندید...\n\nشبی بارانی، دو دانشجوی معماری برای نقشه‌برداری غیرقانونی از پنجره شکسته شاه‌نشین وارد خانه شدند. بوی نم کهنه و چوب سوخته در فضا موج می‌زد. وقتی به راه‌پله نمور زیرزمین رسیدند، متوجه شدند دیواره ساروجی شکسته شده و روزنه‌ای به تاریکی مطلق باز شده است. از درون روزنه، صدای ضربات ملایم و یکنواخت چرخ خیاطی دستی به گوش می‌رسید؛ گویی کسی در ظلمت بی‌پایان هنوز برای عروسی ناکام ابریشم می‌بافت...\n\nوقتی نور چراغ‌قوه را به درون تاباندند، صندلی خالی چوبی به آرامی تکان می‌خورد و رد پاهای خیس و گلی از تاریکی ژرف به سمت دهانه روزنه کشیده شده بود. همان لحظه، در چوبی پشت سرشان با صدای مهیبی قفل شد.",
+                synopsis = "دو دانشجو در شبی بارانی وارد عمارت متروکه قاجاری می‌شوند؛ جایی که صدای چرخ خیاطی از زیرزمین مسدود شده به گوش می‌رسد...",
+                genre = "ماورایی",
+                cover_image_url = "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80",
+                tags = "ماورایی, عمارت",
+                status = "PUBLISHED",
+                rating = 4.8f,
+                rating_count = 18,
+                view_count = 142,
+                createdAt = null,
+                updatedAt = null
+            ),
+            AiStory(
+                id = "ai-mock-2",
+                title = "تماس از باجه خاموش گورستان ابن‌بابویه",
+                content = "ساعت از ۲ نیمه‌شب گذشته بود که کیهان، شیفت شب تاکسی اینترنتی، درخواستی از مبدأ درب جنوبی گورستان ابن‌بابویه دریافت کرد. کرایه پیشنهاد شده سه برابر نرخ معمول بود. به محض رسیدن، باجه تلفن همگانی زرد و زنگ‌زده‌ای را دید که سال‌ها پیش کابل‌هایش قطع شده بود، اما گوشی آن به آرامی تاب می‌خورد.\n\nتلفن همراه کیهان زنگ خورد: «مسافر شما منتظر است». صدای پشت خط زنی بود با لحنی آرام و منجمد که گفت: «لطفاً سوار شو... پشت سرت نشسته‌ام». کیهان با وحشت به آینه نگاه کرد؛ صندلی عقب خالی بود، اما بوی تند خاک خیس و گلاب فضا را پر کرد و دمای داخل کابین خودرو ناگهان به زیر صفر سقوط کرد...\n\nروی شیشه بخار گرفته سمت شاگرد، دستی نامرئی کلماتی را حک کرد: «کرایه این مسیر، جان توست». خودرو ناگهان خودبخود روشن شد و پدال گاز تا انتها فشرده شد، در حالی که فرمان در دستان کیهان قفل شده بود.",
+                synopsis = "یک راننده شیفت شب، درخواستی عجیب از درب گورستان قدیمی دریافت می‌کند؛ مسافری که پیش از سوار شدن، در ماشین حضور دارد...",
+                genre = "روانشناختی",
+                cover_image_url = "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
+                tags = "روانشناختی, گورستان",
+                status = "PUBLISHED",
+                rating = 4.6f,
+                rating_count = 12,
+                view_count = 98,
+                createdAt = null,
+                updatedAt = null
+            ),
+            AiStory(
+                id = "ai-mock-3",
+                title = "نجوای چاه قلعه دیو اردبیل",
+                content = "در ارتفاعات مه گرفته سبلان، بقایای قلعه‌ای مخوف به نام قلعه دیو قرار دارد که بومیان از رفتن به آنجا پس از غروب آفتاب شدیداً پرهیز می‌کنند. افسانه‌ها می‌گویند در ژرفای چاه سنگی حیاط قلعه، موجودی نامیرا به بند کشیده شده که با تکرار نام قربانیان، آنان را به خواب مغناطیسی فرو می‌برد.\n\nتیم کوهنوردی پنج نفره تهرانی، به رغم هشدارهای روستاییان، چادر خود را در کنار دهانه چاه برپا کردند. نیمه‌شب، یکی از اعضا با چشمانی باز اما بی‌فروغ از چادر بیرون رفت. وقتی دوستانش بیدار شدند، او را ایستاده بر لبه باریک چاه دیدند که با لبخندی بی‌روح نام تک‌تک اعضا را با ریتمی مرگبار نجوا می‌کرد...\n\nقبل از آنکه دست کسی به او برسد، دستانی سیاه و استخوانی از اعماق چاه بیرون جهیدند و او را در سیاهی بی‌انتها فرو کشیدند. تنها چیزی که از او باقی ماند، صدای خنده‌های پژواک‌یافته در ژرفای تاریکی بود.",
+                synopsis = "یک گروه کوهنوردی در نزدیکی قلعه نفرین‌شده باستانی چادر می‌زنند؛ جایی که چاه سنگی صداهای آشنا را زمزمه می‌کند...",
+                genre = "افسانه ایرانی",
+                cover_image_url = "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80",
+                tags = "افسانه ایرانی, قلعه",
+                status = "PUBLISHED",
+                rating = 4.9f,
+                rating_count = 24,
+                view_count = 215,
+                createdAt = null,
+                updatedAt = null
+            )
+        )
+    }
 }
+

@@ -109,9 +109,9 @@ class HorrorRepository(context: Context) {
         })
     }
 
-    suspend fun saveScenariosLocalOnly(scenarios: List<WrongChoiceScenario>) = withContext(Dispatchers.IO) {
-        dao.upsertScenarios(scenarios.map {
-            CachedScenario(it.id, it.title, it.description, it.status, it.initial_scene_id)
+    suspend fun saveAiStoriesLocalOnly(stories: List<AiStory>) = withContext(Dispatchers.IO) {
+        dao.upsertAiStories(stories.map {
+            CachedAiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count, it.createdAt)
         })
     }
 
@@ -550,7 +550,7 @@ class HorrorRepository(context: Context) {
         try {
             val resp = when (functionName) {
                 "auto-grim-fortunes" -> api.triggerAutoGrimFortunes()
-                "auto-scenarios" -> api.triggerAutoScenarios()
+                "auto-ai-stories", "auto-scenarios" -> api.triggerAutoAiStories()
                 else -> return@withContext Pair(false, "فانکشن ناشناخته است.")
             }
             if (resp.isSuccessful) {
@@ -611,114 +611,116 @@ class HorrorRepository(context: Context) {
         }
     }
 
-    // SCENARIOS
-    suspend fun getScenarios(forceRefresh: Boolean = false): List<WrongChoiceScenario> = withContext(Dispatchers.IO) {
-        val cached = dao.getPublishedScenarios()
+    // AI STORIES
+    suspend fun getAiStories(forceRefresh: Boolean = false): List<AiStory> = withContext(Dispatchers.IO) {
+        val cached = dao.getPublishedAiStories()
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
-                WrongChoiceScenario(it.id, it.title, it.description, it.status, it.initialSceneId, null)
+                AiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, it.createdAt)
             }
         }
-        
+
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val resp = api.getScenarios(status = "eq.PUBLISHED")
+                val resp = api.getAiStories(status = "eq.PUBLISHED")
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
-                    dao.upsertScenarios(list.map {
-                        CachedScenario(it.id, it.title, it.description, it.status, it.initial_scene_id)
+                    dao.upsertAiStories(list.map {
+                        CachedAiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count, it.createdAt)
                     })
                     return@withContext list
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "getScenarios failed: $code - $errorBody")
-                    if (forceRefresh) throw Exception("خطا در دریافت سناریوهای سرور: $code")
+                    android.util.Log.e("SupabaseError", "getAiStories failed: $code - $errorBody")
+                    if (forceRefresh) throw Exception("خطا در دریافت داستان‌های هوش مصنوعی از سرور: $code")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "getScenarios exception: ${e.message}", e)
+                android.util.Log.e("SupabaseError", "getAiStories exception: ${e.message}", e)
                 if (forceRefresh) throw e
             }
         }
-        
+
         if (cached.isNotEmpty()) {
             cached.map {
-                WrongChoiceScenario(it.id, it.title, it.description, it.status, it.initialSceneId, null)
+                AiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, it.createdAt)
             }
         } else {
             emptyList()
         }
     }
 
-    suspend fun getAllScenariosAdmin(): List<WrongChoiceScenario> = withContext(Dispatchers.IO) {
+    suspend fun getAllAiStoriesAdmin(): List<AiStory> = withContext(Dispatchers.IO) {
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val resp = api.getScenarios()
+                val resp = api.getAiStories()
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
-                    dao.upsertScenarios(list.map {
-                        CachedScenario(it.id, it.title, it.description, it.status, it.initial_scene_id)
+                    dao.upsertAiStories(list.map {
+                        CachedAiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count, it.createdAt)
                     })
                     return@withContext list
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "getAllScenariosAdmin failed: $code - $errorBody")
-                    throw Exception("خطا در دریافت سناریوهای ادمین: $code")
+                    android.util.Log.e("SupabaseError", "getAllAiStoriesAdmin failed: $code - $errorBody")
+                    throw Exception("خطا در دریافت داستان‌های هوش مصنوعی ادمین: $code")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "getAllScenariosAdmin exception: ${e.message}", e)
+                android.util.Log.e("SupabaseError", "getAllAiStoriesAdmin exception: ${e.message}", e)
                 throw e
             }
         }
-        dao.getAllScenarios().map {
-            WrongChoiceScenario(it.id, it.title, it.description, it.status, it.initialSceneId, null)
+        dao.getAllAiStories().map {
+            AiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, it.createdAt)
         }
     }
 
-    suspend fun saveScenario(scenario: WrongChoiceScenario): WrongChoiceScenario = withContext(Dispatchers.IO) {
-        val validId = if (isValidUuid(scenario.id)) scenario.id else java.util.UUID.randomUUID().toString()
-        val validInitialSceneId = if (isValidUuid(scenario.initial_scene_id)) scenario.initial_scene_id else null
-        val preparedScenario = scenario.copy(id = validId, initial_scene_id = validInitialSceneId)
+    suspend fun saveAiStory(story: AiStory): AiStory = withContext(Dispatchers.IO) {
+        val validId = if (isValidUuid(story.id)) story.id else java.util.UUID.randomUUID().toString()
+        val preparedStory = story.copy(id = validId)
 
         if (SupabaseClientProvider.isConfigured) {
             val map = mutableMapOf<String, Any>(
                 "id" to validId,
-                "title" to preparedScenario.title,
-                "description" to preparedScenario.description,
-                "status" to preparedScenario.status
+                "title" to preparedStory.title,
+                "content" to preparedStory.content,
+                "status" to preparedStory.status
             )
-            if (validInitialSceneId != null) {
-                map["initial_scene_id"] = validInitialSceneId
-            }
+            if (!preparedStory.genre.isNullOrBlank()) map["genre"] = preparedStory.genre
+            if (!preparedStory.synopsis.isNullOrBlank()) map["synopsis"] = preparedStory.synopsis
+            if (!preparedStory.cover_image_url.isNullOrBlank()) map["cover_image_url"] = preparedStory.cover_image_url
+            if (!preparedStory.tags.isNullOrBlank()) map["tags"] = preparedStory.tags
+            map["rating"] = preparedStory.rating
+            map["rating_count"] = preparedStory.rating_count
+            map["view_count"] = preparedStory.view_count
+
             try {
-                // 1. Try Upsert with List
-                val resp = api.upsertScenarios(items = listOf(map))
+                // 1. Try Upsert
+                val resp = api.upsertAiStories(items = listOf(map))
                 if (resp.isSuccessful && !resp.body().isNullOrEmpty()) {
                     val returned = resp.body()!!.first()
-                    dao.upsertScenario(
-                        CachedScenario(
-                            returned.id,
-                            returned.title,
-                            returned.description,
-                            returned.status,
-                            returned.initial_scene_id
+                    dao.upsertAiStory(
+                        CachedAiStory(
+                            returned.id, returned.title, returned.content, returned.genre,
+                            returned.synopsis, returned.cover_image_url, returned.tags,
+                            returned.status, returned.rating, returned.rating_count,
+                            returned.view_count, returned.createdAt
                         )
                     )
                     return@withContext returned
                 }
 
-                // 2. Try Create with List
-                val createResp = api.createScenarios(items = listOf(map))
+                // 2. Try Create
+                val createResp = api.createAiStory(item = map)
                 if (createResp.isSuccessful && !createResp.body().isNullOrEmpty()) {
                     val returned = createResp.body()!!.first()
-                    dao.upsertScenario(
-                        CachedScenario(
-                            returned.id,
-                            returned.title,
-                            returned.description,
-                            returned.status,
-                            returned.initial_scene_id
+                    dao.upsertAiStory(
+                        CachedAiStory(
+                            returned.id, returned.title, returned.content, returned.genre,
+                            returned.synopsis, returned.cover_image_url, returned.tags,
+                            returned.status, returned.rating, returned.rating_count,
+                            returned.view_count, returned.createdAt
                         )
                     )
                     return@withContext returned
@@ -726,16 +728,15 @@ class HorrorRepository(context: Context) {
 
                 // 3. Fallback: Update existing row without "id" in PATCH body
                 val patchMap = map.toMutableMap().apply { remove("id") }
-                val updateResp = api.updateScenario(idEq = "eq.$validId", item = patchMap)
+                val updateResp = api.updateAiStory(idEq = "eq.$validId", item = patchMap)
                 if (updateResp.isSuccessful && !updateResp.body().isNullOrEmpty()) {
                     val returned = updateResp.body()!!.first()
-                    dao.upsertScenario(
-                        CachedScenario(
-                            returned.id,
-                            returned.title,
-                            returned.description,
-                            returned.status,
-                            returned.initial_scene_id
+                    dao.upsertAiStory(
+                        CachedAiStory(
+                            returned.id, returned.title, returned.content, returned.genre,
+                            returned.synopsis, returned.cover_image_url, returned.tags,
+                            returned.status, returned.rating, returned.rating_count,
+                            returned.view_count, returned.createdAt
                         )
                     )
                     return@withContext returned
@@ -743,39 +744,138 @@ class HorrorRepository(context: Context) {
 
                 val code = if (resp.code() != 200 && resp.code() != 0) resp.code() else if (createResp.code() != 200 && createResp.code() != 0) createResp.code() else updateResp.code()
                 val errorBody = resp.errorBody()?.string() ?: createResp.errorBody()?.string() ?: updateResp.errorBody()?.string() ?: ""
-                android.util.Log.e("SupabaseError", "saveScenario failed: $code - $errorBody")
-                throw Exception("خطا در ذخیره‌سازی سناریو در سرور: $code")
+                android.util.Log.e("SupabaseError", "saveAiStory failed: $code - $errorBody")
+                throw Exception("خطا در ذخیره‌سازی داستان هوش مصنوعی در سرور: $code")
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "saveScenario exception", e)
+                android.util.Log.e("SupabaseError", "saveAiStory exception", e)
                 throw e
             }
         } else {
-            throw Exception("اتصال به Supabase تنظیم نشده است.")
+            dao.upsertAiStory(
+                CachedAiStory(
+                    preparedStory.id, preparedStory.title, preparedStory.content, preparedStory.genre,
+                    preparedStory.synopsis, preparedStory.cover_image_url, preparedStory.tags,
+                    preparedStory.status, preparedStory.rating, preparedStory.rating_count,
+                    preparedStory.view_count, preparedStory.createdAt
+                )
+            )
+            return@withContext preparedStory
         }
     }
 
-    suspend fun deleteScenario(id: String) = withContext(Dispatchers.IO) {
+    suspend fun upsertAiStories(stories: List<AiStory>): Boolean = withContext(Dispatchers.IO) {
+        if (stories.isEmpty()) return@withContext true
+        val validStories = stories.map { story ->
+            val validId = if (isValidUuid(story.id)) story.id else java.util.UUID.randomUUID().toString()
+            story.copy(id = validId)
+        }
+
+        if (SupabaseClientProvider.isConfigured) {
+            val list = validStories.map { story ->
+                val map = mutableMapOf<String, Any>(
+                    "id" to story.id,
+                    "title" to story.title,
+                    "content" to story.content,
+                    "status" to story.status
+                )
+                if (!story.genre.isNullOrBlank()) map["genre"] = story.genre
+                if (!story.synopsis.isNullOrBlank()) map["synopsis"] = story.synopsis
+                if (!story.cover_image_url.isNullOrBlank()) map["cover_image_url"] = story.cover_image_url
+                if (!story.tags.isNullOrBlank()) map["tags"] = story.tags
+                map["rating"] = story.rating
+                map["rating_count"] = story.rating_count
+                map["view_count"] = story.view_count
+                map
+            }
+            try {
+                val resp = api.upsertAiStories(items = list)
+                if (resp.isSuccessful && resp.body() != null) {
+                    val returned = resp.body()!!
+                    dao.upsertAiStories(returned.map {
+                        CachedAiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count, it.createdAt)
+                    })
+                    return@withContext true
+                } else {
+                    // Fallback to inserting individually
+                    for (story in validStories) {
+                        try { saveAiStory(story) } catch (_: Exception) {}
+                    }
+                    return@withContext true
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("SupabaseError", "upsertAiStories exception", e)
+                for (story in validStories) {
+                    try { saveAiStory(story) } catch (_: Exception) {}
+                }
+                return@withContext true
+            }
+        } else {
+            dao.upsertAiStories(validStories.map {
+                CachedAiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count, it.createdAt)
+            })
+            return@withContext true
+        }
+    }
+
+    suspend fun deleteAiStory(id: String) = withContext(Dispatchers.IO) {
         if (!isValidUuid(id)) {
-            dao.deleteScenario(id)
+            dao.deleteAiStory(id)
             return@withContext
         }
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val resp = api.deleteScenario(idEq = "eq.$id")
+                val resp = api.deleteAiStory(idEq = "eq.$id")
                 if (resp.isSuccessful) {
-                    dao.deleteScenario(id)
+                    dao.deleteAiStory(id)
                 } else {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
-                    android.util.Log.e("SupabaseError", "deleteScenario failed: $code - $errorBody")
-                    throw Exception("خطا در حذف سناریو از سرور: $code")
+                    android.util.Log.e("SupabaseError", "deleteAiStory failed: $code - $errorBody")
+                    throw Exception("خطا در حذف داستان از سرور: $code")
                 }
             } catch (e: Exception) {
-                android.util.Log.e("SupabaseError", "deleteScenario exception", e)
+                android.util.Log.e("SupabaseError", "deleteAiStory exception", e)
                 throw e
             }
         } else {
-            throw Exception("اتصال به Supabase تنظیم نشده است.")
+            dao.deleteAiStory(id)
+        }
+    }
+
+    suspend fun incrementAiStoryViewRemote(storyId: String): Boolean = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext false
+
+        try {
+            val resp = api.incrementAiStoryView(mapOf("story_id" to storyId))
+            if (resp.isSuccessful) {
+                getAiStories(forceRefresh = true)
+                return@withContext true
+            } else {
+                return@withContext false
+            }
+        } catch (e: Exception) {
+            return@withContext false
+        }
+    }
+
+    suspend fun submitAiStoryRatingRemote(storyId: String, rating: Float): Boolean = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext false
+
+        try {
+            val resp = api.submitAiStoryRating(
+                mapOf(
+                    "story_id" to storyId,
+                    "new_rating" to rating
+                )
+            )
+            if (resp.isSuccessful) {
+                getAiStories(forceRefresh = true)
+                return@withContext true
+            } else {
+                return@withContext false
+            }
+        } catch (e: Exception) {
+            return@withContext false
         }
     }
 

@@ -44,40 +44,19 @@ CREATE TABLE IF NOT EXISTS public.real_stories (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 4. WRONG CHOICE SCENARIOS (سناریوهای انتخاب اشتباه)
-CREATE TABLE IF NOT EXISTS public.wrong_choice_scenarios (
+-- 4. AI STORIES (داستان‌های هوش مصنوعی)
+CREATE TABLE IF NOT EXISTS public.ai_stories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'PUBLISHED', 'ARCHIVED')),
-    initial_scene_id UUID,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 5. WRONG CHOICE SCENES (صحنه‌ها)
-CREATE TABLE IF NOT EXISTS public.wrong_choice_scenes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    scenario_id UUID NOT NULL REFERENCES public.wrong_choice_scenarios(id) ON DELETE CASCADE,
-    scene_text TEXT NOT NULL,
-    is_ending BOOLEAN DEFAULT FALSE,
-    ending_type TEXT CHECK (ending_type IN ('SURVIVED', 'DEAD', 'MYSTERY', 'SECRET', NULL)),
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- Bind initial_scene_id FK on scenario table
-ALTER TABLE public.wrong_choice_scenarios 
-    ADD CONSTRAINT fk_initial_scene 
-    FOREIGN KEY (initial_scene_id) 
-    REFERENCES public.wrong_choice_scenes(id) ON DELETE SET NULL;
-
--- 6. WRONG CHOICE CHOICES (انتخاب‌ها)
-CREATE TABLE IF NOT EXISTS public.wrong_choice_choices (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    scene_id UUID NOT NULL REFERENCES public.wrong_choice_scenes(id) ON DELETE CASCADE,
-    choice_text TEXT NOT NULL,
-    next_scene_id UUID REFERENCES public.wrong_choice_scenes(id) ON DELETE SET NULL,
+    content TEXT NOT NULL,
+    genre TEXT DEFAULT 'روانشناختی',
+    synopsis TEXT,
+    cover_image_url TEXT,
+    tags TEXT,
+    status TEXT NOT NULL DEFAULT 'PUBLISHED' CHECK (status IN ('DRAFT', 'PUBLISHED', 'ARCHIVED')),
+    rating NUMERIC(3,1) DEFAULT 4.9,
+    rating_count INTEGER DEFAULT 14,
+    view_count INTEGER DEFAULT 192,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -123,13 +102,13 @@ CREATE TABLE IF NOT EXISTS public.ai_providers (
 INSERT INTO public.ai_prompts (prompt_key, prompt_text)
 VALUES 
 ('GRIM_FORTUNE_PROMPT', 'یک طالع‌بین تاریک و باستانی گوتیک شو و دقیقاً ۱۲ طالع شوم و دلهره‌آور، یکی برای هر ماه سال شمسی تولید کن.'),
-('WRONG_CHOICE_PROMPT', 'یک سناریوی چند مرحله‌ای ترسناک گوتیک به همراه جزئیات برای بازی تعاملی بساز.')
+('AI_STORY_PROMPT', 'داستان‌های ترسناک، روانشناختی و ماورایی بسیار گیرا، با پایان‌های شوکه‌کننده و رازآلود بنویس.')
 ON CONFLICT (prompt_key) DO UPDATE SET prompt_text = EXCLUDED.prompt_text;
 
 INSERT INTO public.ai_providers (provider_name, model_name, is_active)
 VALUES 
-('Gemini', 'gemini-3.5-flash', TRUE),
-('Gemini', 'gemini-1.5-pro', TRUE)
+('Gemini', 'gemini-2.5-flash', TRUE),
+('Gemini', 'gemini-2.5-pro', TRUE)
 ON CONFLICT DO NOTHING;
 
 -- ==========================================
@@ -147,9 +126,7 @@ $$ LANGUAGE plpgsql;
 -- Bind updated_at trigger to all tables
 CREATE OR REPLACE TRIGGER trigger_grim_fortunes_updated_at BEFORE UPDATE ON public.grim_fortunes FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 CREATE OR REPLACE TRIGGER trigger_real_stories_updated_at BEFORE UPDATE ON public.real_stories FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-CREATE OR REPLACE TRIGGER trigger_wrong_choice_scenarios_updated_at BEFORE UPDATE ON public.wrong_choice_scenarios FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-CREATE OR REPLACE TRIGGER trigger_wrong_choice_scenes_updated_at BEFORE UPDATE ON public.wrong_choice_scenes FOR EACH ROW EXECUTE FUNCTION update_modified_column();
-CREATE OR REPLACE TRIGGER trigger_wrong_choice_choices_updated_at BEFORE UPDATE ON public.wrong_choice_choices FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+CREATE OR REPLACE TRIGGER trigger_ai_stories_updated_at BEFORE UPDATE ON public.ai_stories FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 CREATE OR REPLACE TRIGGER trigger_user_story_submissions_updated_at BEFORE UPDATE ON public.user_story_submissions FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 CREATE OR REPLACE TRIGGER trigger_ai_prompts_updated_at BEFORE UPDATE ON public.ai_prompts FOR EACH ROW EXECUTE FUNCTION update_modified_column();
 CREATE OR REPLACE TRIGGER trigger_ai_providers_updated_at BEFORE UPDATE ON public.ai_providers FOR EACH ROW EXECUTE FUNCTION update_modified_column();
@@ -220,9 +197,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.grim_fortunes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.real_stories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.wrong_choice_scenarios ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.wrong_choice_scenes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.wrong_choice_choices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_story_submissions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_prompts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_providers ENABLE ROW LEVEL SECURITY;
@@ -240,19 +215,11 @@ CREATE POLICY "Allow admin manage fortunes" ON public.grim_fortunes ALL USING (p
 CREATE POLICY "Allow public read published stories" ON public.real_stories FOR SELECT USING (status = 'PUBLISHED' OR public.is_admin());
 CREATE POLICY "Allow admin manage stories" ON public.real_stories ALL USING (public.is_admin());
 
--- 4. wrong_choice_scenarios Policies
-CREATE POLICY "Allow public read published scenarios" ON public.wrong_choice_scenarios FOR SELECT USING (status = 'PUBLISHED' OR public.is_admin());
-CREATE POLICY "Allow admin manage scenarios" ON public.wrong_choice_scenarios ALL USING (public.is_admin());
+-- 4. ai_stories Policies
+CREATE POLICY "Allow public read published ai stories" ON public.ai_stories FOR SELECT USING (status = 'PUBLISHED' OR public.is_admin());
+CREATE POLICY "Allow admin manage ai stories" ON public.ai_stories ALL USING (public.is_admin());
 
--- 5. wrong_choice_scenes Policies
-CREATE POLICY "Allow public read scenes" ON public.wrong_choice_scenes FOR SELECT USING (true);
-CREATE POLICY "Allow admin manage scenes" ON public.wrong_choice_scenes ALL USING (public.is_admin());
-
--- 6. wrong_choice_choices Policies
-CREATE POLICY "Allow public read choices" ON public.wrong_choice_choices FOR SELECT USING (true);
-CREATE POLICY "Allow admin manage choices" ON public.wrong_choice_choices ALL USING (public.is_admin());
-
--- 7. user_story_submissions Policies
+-- 5. user_story_submissions Policies
 CREATE POLICY "Allow anyone to insert user stories" ON public.user_story_submissions FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public read published user stories" ON public.user_story_submissions FOR SELECT USING (status = 'PUBLISHED' OR public.is_admin());
 CREATE POLICY "Allow admin full manage submissions" ON public.user_story_submissions ALL USING (public.is_admin());
@@ -335,11 +302,46 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- 5. Increment View for AI Story
+CREATE OR REPLACE FUNCTION public.increment_ai_story_view(story_id UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE public.ai_stories
+    SET view_count = COALESCE(view_count, 0) + 1
+    WHERE id = story_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 6. Submit Rating for AI Story
+CREATE OR REPLACE FUNCTION public.submit_ai_story_rating(story_id UUID, new_rating NUMERIC)
+RETURNS void AS $$
+DECLARE
+    current_rating NUMERIC;
+    current_count INTEGER;
+    updated_rating NUMERIC;
+BEGIN
+    SELECT COALESCE(rating, 4.9), COALESCE(rating_count, 0)
+    INTO current_rating, current_count
+    FROM public.ai_stories
+    WHERE id = story_id;
+
+    IF FOUND THEN
+        updated_rating := ROUND(((current_rating * current_count + new_rating) / (current_count + 1)), 2);
+        UPDATE public.ai_stories
+        SET rating = updated_rating,
+            rating_count = current_count + 1
+        WHERE id = story_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Grant execution permissions
 GRANT EXECUTE ON FUNCTION public.increment_story_view(UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_story_rating(UUID, NUMERIC) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.increment_submission_view(UUID) TO anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.submit_submission_rating(UUID, NUMERIC) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_ai_story_view(UUID) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.submit_ai_story_rating(UUID, NUMERIC) TO anon, authenticated;
 
 -- ====================================================================
 -- AUTOMATION, CRON & EDGE FUNCTIONS SCHEMA

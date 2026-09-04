@@ -37,13 +37,20 @@ data class CachedRealStory(
     val viewCount: Int = 340
 )
 
-@Entity(tableName = "cached_scenarios")
-data class CachedScenario(
+@Entity(tableName = "cached_ai_stories")
+data class CachedAiStory(
     @PrimaryKey val id: String,
     val title: String,
-    val description: String,
+    val content: String,
+    val genre: String?,
+    val synopsis: String?,
+    val coverImageUrl: String?,
+    val tags: String?,
     val status: String,
-    val initialSceneId: String?
+    val rating: Float = 4.9f,
+    val ratingCount: Int = 14,
+    val viewCount: Int = 192,
+    val createdAt: String? = null
 )
 
 @Entity(tableName = "cached_user_submissions")
@@ -96,21 +103,21 @@ interface HorrorDao {
     @Query("DELETE FROM cached_real_stories WHERE id = :id")
     suspend fun deleteRealStory(id: String)
 
-    // Scenarios
-    @Query("SELECT * FROM cached_scenarios")
-    suspend fun getAllScenarios(): List<CachedScenario>
+    // AI Stories
+    @Query("SELECT * FROM cached_ai_stories ORDER BY id DESC")
+    suspend fun getAllAiStories(): List<CachedAiStory>
 
-    @Query("SELECT * FROM cached_scenarios WHERE status = 'PUBLISHED'")
-    suspend fun getPublishedScenarios(): List<CachedScenario>
-
-    @Upsert
-    suspend fun upsertScenarios(items: List<CachedScenario>)
+    @Query("SELECT * FROM cached_ai_stories WHERE status = 'PUBLISHED' ORDER BY id DESC")
+    suspend fun getPublishedAiStories(): List<CachedAiStory>
 
     @Upsert
-    suspend fun upsertScenario(item: CachedScenario)
+    suspend fun upsertAiStories(items: List<CachedAiStory>)
 
-    @Query("DELETE FROM cached_scenarios WHERE id = :id")
-    suspend fun deleteScenario(id: String)
+    @Upsert
+    suspend fun upsertAiStory(item: CachedAiStory)
+
+    @Query("DELETE FROM cached_ai_stories WHERE id = :id")
+    suspend fun deleteAiStory(id: String)
 
     // User Submissions
     @Query("SELECT * FROM cached_user_submissions ORDER BY id DESC")
@@ -136,10 +143,10 @@ interface HorrorDao {
     entities = [
         CachedGrimFortune::class,
         CachedRealStory::class,
-        CachedScenario::class,
+        CachedAiStory::class,
         CachedUserSubmission::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class HorrorDatabase : RoomDatabase() {

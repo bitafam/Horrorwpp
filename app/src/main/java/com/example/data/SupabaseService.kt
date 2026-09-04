@@ -201,34 +201,45 @@ interface SupabaseApi {
         @Query("id") idEq: String
     ): Response<ResponseBody>
 
-    @GET("rest/v1/wrong_choice_scenarios")
-    suspend fun getScenarios(
+    @GET("rest/v1/ai_stories")
+    suspend fun getAiStories(
         @Query("select") select: String = "*",
-        @Query("status") status: String? = null
-    ): Response<List<WrongChoiceScenario>>
+        @Query("status") status: String? = null,
+        @Query("order") order: String = "created_at.desc"
+    ): Response<List<AiStory>>
 
-    @POST("rest/v1/wrong_choice_scenarios?on_conflict=id")
+    @POST("rest/v1/ai_stories?on_conflict=id")
     @Headers("Prefer: resolution=merge-duplicates,return=representation")
-    suspend fun upsertScenarios(
+    suspend fun upsertAiStories(
         @Body items: List<Map<String, Any>>
-    ): Response<List<WrongChoiceScenario>>
+    ): Response<List<AiStory>>
 
-    @POST("rest/v1/wrong_choice_scenarios")
+    @POST("rest/v1/ai_stories")
     @Headers("Prefer: return=representation")
-    suspend fun createScenarios(
-        @Body items: List<Map<String, Any>>
-    ): Response<List<WrongChoiceScenario>>
+    suspend fun createAiStory(
+        @Body item: Map<String, Any>
+    ): Response<List<AiStory>>
 
-    @PATCH("rest/v1/wrong_choice_scenarios")
+    @PATCH("rest/v1/ai_stories")
     @Headers("Prefer: return=representation")
-    suspend fun updateScenario(
+    suspend fun updateAiStory(
         @Query("id") idEq: String,
         @Body item: Map<String, Any>
-    ): Response<List<WrongChoiceScenario>>
+    ): Response<List<AiStory>>
 
-    @DELETE("rest/v1/wrong_choice_scenarios")
-    suspend fun deleteScenario(
+    @DELETE("rest/v1/ai_stories")
+    suspend fun deleteAiStory(
         @Query("id") idEq: String
+    ): Response<ResponseBody>
+
+    @POST("rest/v1/rpc/increment_ai_story_view")
+    suspend fun incrementAiStoryView(
+        @Body body: Map<String, String>
+    ): Response<ResponseBody>
+
+    @POST("rest/v1/rpc/submit_ai_story_rating")
+    suspend fun submitAiStoryRating(
+        @Body body: Map<String, Any>
     ): Response<ResponseBody>
 
     @GET("rest/v1/ai_prompts")
@@ -308,8 +319,8 @@ interface SupabaseApi {
         @Header("Authorization") authHeader: String? = null
     ): Response<ResponseBody>
 
-    @POST("functions/v1/auto-scenarios")
-    suspend fun triggerAutoScenarios(
+    @POST("functions/v1/auto-ai-stories")
+    suspend fun triggerAutoAiStories(
         @Body body: Map<String, Boolean> = mapOf("manual" to true),
         @Header("Authorization") authHeader: String? = null
     ): Response<ResponseBody>

@@ -66,13 +66,13 @@ VALUES
         'یک طالع‌بین تاریک و باستانی گوتیک شو و دقیقاً ۱۲ طالع شوم و دلهره‌آور، یکی برای هر ماه سال شمسی تولید کن.'
     ),
     (
-        'AUTO_SCENARIOS', 
-        FALSE, 
-        'TWICE_DAILY', 
+        'AUTO_AI_STORIES', 
+        TRUE, 
+        'DAILY', 
         14, -- ساعت اول: ۱۴:۰۰
         22, -- ساعت دوم: ۲۲:۰۰
-        1,  -- تعداد ۱ سناریو در هر نوبت
-        'یک سناریوی چند مرحله‌ای ترسناک گوتیک به همراه جزئیات برای بازی تعاملی بساز.'
+        3,  -- تعداد ۳ داستان در هر نوبت (تا ۲۰ داستان قابل تنظیم)
+        'داستان‌های ترسناک، روانشناختی و ماورایی بسیار گیرا، با پایان‌های شوکه‌کننده و رازآلود بنویس.'
     )
 ON CONFLICT (id) DO NOTHING;
 
@@ -169,12 +169,12 @@ BEGIN
         END IF;
     END IF;
 
-    -- بررسی اتوماسیون سناریوهای وحشت
-    SELECT * INTO scenario_cfg FROM public.automation_configs WHERE id = 'AUTO_SCENARIOS';
-    IF scenario_cfg.is_active = TRUE THEN
-        IF (cur_tehran_hour = scenario_cfg.schedule_hour_1 AND cur_tehran_minute = scenario_cfg.schedule_minute_1)
-           OR (scenario_cfg.frequency = 'TWICE_DAILY' AND cur_tehran_hour = scenario_cfg.schedule_hour_2 AND cur_tehran_minute = scenario_cfg.schedule_minute_2) THEN
-            PERFORM public.invoke_edge_function('auto-scenarios', '{"cron": true}'::jsonb);
+    -- بررسی اتوماسیون داستان‌های هوش مصنوعی
+    SELECT * INTO story_cfg FROM public.automation_configs WHERE id = 'AUTO_AI_STORIES';
+    IF story_cfg.is_active = TRUE THEN
+        IF (cur_tehran_hour = story_cfg.schedule_hour_1 AND cur_tehran_minute = story_cfg.schedule_minute_1)
+           OR (story_cfg.frequency = 'TWICE_DAILY' AND cur_tehran_hour = story_cfg.schedule_hour_2 AND cur_tehran_minute = story_cfg.schedule_minute_2) THEN
+            PERFORM public.invoke_edge_function('auto-ai-stories', '{"cron": true}'::jsonb);
         END IF;
     END IF;
 END;

@@ -222,7 +222,7 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
     val grimFortunes by viewModel.adminGrimFortunes.collectAsState()
     val realStories by viewModel.adminRealStories.collectAsState()
     val submissions by viewModel.adminSubmissions.collectAsState()
-    val scenarios by viewModel.adminScenarios.collectAsState()
+    val aiStories by viewModel.adminAiStories.collectAsState()
     val currentModel by viewModel.selectedGeminiModel.collectAsState()
 
     Scaffold(
@@ -271,14 +271,14 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                 NavigationBarItem(
                     selected = adminTab == 3,
                     onClick = { adminTab = 3 },
-                    icon = { Icon(Icons.Default.AltRoute, contentDescription = null) },
-                    label = { Text("سناریو", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Default.Psychology, contentDescription = null) },
+                    label = { Text("داستان AI", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
                 NavigationBarItem(
                     selected = adminTab == 4,
                     onClick = { adminTab = 4 },
-                    icon = { Icon(Icons.Default.Psychology, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Tune, contentDescription = null) },
                     label = { Text("تنظیم AI", fontSize = 10.sp) },
                     colors = NavigationBarItemDefaults.colors(selectedIconColor = BloodGlow, unselectedIconColor = MutedAsh)
                 )
@@ -306,10 +306,10 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                 .background(VoidBlack)
         ) {
             when (adminTab) {
-                0 -> AdminDashboardTab(grimFortunes.size, realStories.size, submissions.size, scenarios.size, onSwitchTab = { adminTab = it })
+                0 -> AdminDashboardTab(grimFortunes.size, realStories.size, submissions.size, aiStories.size, onSwitchTab = { adminTab = it })
                 1 -> AdminStoriesManagerTab(viewModel, realStories, submissions)
                 2 -> AdminGrimFortuneTab(viewModel, grimFortunes)
-                3 -> AdminScenariosTab(viewModel, scenarios)
+                3 -> AdminAiStoriesTab(viewModel, aiStories)
                 4 -> AdminAiSettingsTab(viewModel)
                 5 -> AdminAutomationTab(viewModel)
                 6 -> AdminReportsTab(viewModel) { story -> activeViewingStory = story }
@@ -710,24 +710,25 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
         }
 
         // ==========================================
-        // 2. AUTO SCENARIOS AUTOMATION (1 or 2 per day)
+        // 2. AUTO AI STORIES AUTOMATION (1 or 2 per day, up to 20 stories)
         // ==========================================
-        var scenarioFreq by remember { mutableStateOf(scenarioConfig.frequency) }
-        var scenHour1 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_1) }
-        var scenHour2 by remember { mutableIntStateOf(scenarioConfig.schedule_hour_2) }
-        var scenBatchCount by remember { mutableIntStateOf(scenarioConfig.batch_count) }
+        val storyConfig = automationConfigs.find { it.id == "AUTO_AI_STORIES" } ?: AutomationConfig(id = "AUTO_AI_STORIES", is_active = false, frequency = "TWICE_DAILY", schedule_hour_1 = 14, schedule_hour_2 = 22, batch_count = 3)
+        var storyFreq by remember { mutableStateOf(storyConfig.frequency) }
+        var storyHour1 by remember { mutableIntStateOf(storyConfig.schedule_hour_1) }
+        var storyHour2 by remember { mutableIntStateOf(storyConfig.schedule_hour_2) }
+        var storyBatchCount by remember { mutableIntStateOf(storyConfig.batch_count) }
 
-        LaunchedEffect(scenarioConfig) {
-            scenarioFreq = scenarioConfig.frequency
-            scenHour1 = scenarioConfig.schedule_hour_1
-            scenHour2 = scenarioConfig.schedule_hour_2
-            scenBatchCount = scenarioConfig.batch_count
+        LaunchedEffect(storyConfig) {
+            storyFreq = storyConfig.frequency
+            storyHour1 = storyConfig.schedule_hour_1
+            storyHour2 = storyConfig.schedule_hour_2
+            storyBatchCount = storyConfig.batch_count
         }
 
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, if (scenarioConfig.is_active) BloodGlow.copy(alpha = 0.5f) else MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+                .border(1.dp, if (storyConfig.is_active) BloodGlow.copy(alpha = 0.5f) else MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
             colors = CardDefaults.cardColors(containerColor = CryptCard),
             shape = RoundedCornerShape(16.dp)
         ) {
@@ -738,51 +739,58 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(Icons.Default.AltRoute, contentDescription = null, tint = if (scenarioConfig.is_active) BloodGlow else MutedAsh)
+                        Icon(Icons.Default.Psychology, contentDescription = null, tint = if (storyConfig.is_active) BloodGlow else MutedAsh)
                         Column {
-                            Text("۳. تولید خودکار سناریوهای تعاملی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
-                            Text("تنظیم تعداد، با ساعت دقیق نوبت‌ها", color = MutedAsh, fontSize = 11.sp)
+                            Text("۲. تولید خودکار داستان‌های هوش مصنوعی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                            Text("تولید تا ۲۰ داستان خودکار در دیتابیس بدون نیاز به باز بودن برنامه", color = MutedAsh, fontSize = 11.sp)
                         }
                     }
                     Switch(
-                        checked = scenarioConfig.is_active,
+                        checked = storyConfig.is_active,
                         onCheckedChange = { active ->
                             viewModel.saveAutomationConfig(
-                                scenarioConfig.copy(
+                                storyConfig.copy(
                                     is_active = active,
-                                    frequency = scenarioFreq,
-                                    schedule_hour_1 = scenHour1,
-                                    schedule_hour_2 = scenHour2,
-                                    batch_count = scenBatchCount
+                                    frequency = storyFreq,
+                                    schedule_hour_1 = storyHour1,
+                                    schedule_hour_2 = storyHour2,
+                                    batch_count = storyBatchCount
                                 )
                             ) {
-                                feedbackMsg = "تنظیمات سناریوی خودکار ذخیره شد."
+                                feedbackMsg = "تنظیمات داستان‌های هوش مصنوعی ذخیره شد."
                             }
                         },
                         colors = SwitchDefaults.colors(checkedThumbColor = SpectralWhite, checkedTrackColor = BloodCrimson)
                     )
                 }
 
-                // Batch Count Selector
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("تعداد سناریو در هر نوبت:", color = SpectralWhite, fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(1, 2, 3).forEach { c ->
-                            val isSel = scenBatchCount == c
+                // Batch Count Selector (1 to 20)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("تعداد داستان در هر نوبت اتوماسیون:", color = SpectralWhite, fontSize = 12.sp)
+                        Text("$storyBatchCount داستان", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(1, 3, 5, 10, 15, 20).forEach { c ->
+                            val isSel = storyBatchCount == c
                             Box(
                                 modifier = Modifier
+                                    .weight(1f)
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(if (isSel) BloodCrimson else CryptCardElevated)
-                                    .clickable {
-                                        scenBatchCount = c
-                                    }
-                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                                    .clickable { storyBatchCount = c }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Text("$c سناریو", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("$c", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -794,18 +802,16 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("تناوب انتشار در روز:", color = SpectralWhite, fontSize = 12.sp)
+                    Text("تناوب اجرای اتوماسیون در روز:", color = SpectralWhite, fontSize = 12.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        val isOnce = scenarioFreq == "DAILY"
-                        val isTwice = scenarioFreq == "TWICE_DAILY"
+                        val isOnce = storyFreq == "DAILY"
+                        val isTwice = storyFreq == "TWICE_DAILY"
 
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(if (isOnce) BloodCrimson else CryptCardElevated)
-                                .clickable {
-                                    scenarioFreq = "DAILY"
-                                }
+                                .clickable { storyFreq = "DAILY" }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text("۱ بار در روز", color = if (isOnce) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -815,9 +821,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(if (isTwice) BloodCrimson else CryptCardElevated)
-                                .clickable {
-                                    scenarioFreq = "TWICE_DAILY"
-                                }
+                                .clickable { storyFreq = "TWICE_DAILY" }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
                             Text("۲ بار در روز", color = if (isTwice) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -825,7 +829,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     }
                 }
 
-                // Hour Picker 1 for Scenario
+                // Hour Picker 1 for Stories
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
@@ -839,19 +843,19 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         Text("ساعت نوبت اول (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             IconButton(
-                                onClick = { scenHour1 = if (scenHour1 <= 0) 23 else scenHour1 - 1 },
+                                onClick = { storyHour1 = if (storyHour1 <= 0) 23 else storyHour1 - 1 },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(Icons.Default.Remove, contentDescription = null, tint = SpectralWhite)
                             }
                             Text(
-                                text = String.format("%02d:00", scenHour1),
+                                text = String.format("%02d:00", storyHour1),
                                 color = BloodGlow,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.ExtraBold
                             )
                             IconButton(
-                                onClick = { scenHour1 = (scenHour1 + 1) % 24 },
+                                onClick = { storyHour1 = (storyHour1 + 1) % 24 },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = null, tint = SpectralWhite)
@@ -860,8 +864,8 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     }
                 }
 
-                if (scenarioFreq == "TWICE_DAILY") {
-                    // Hour Picker 2 for Scenario
+                if (storyFreq == "TWICE_DAILY") {
+                    // Hour Picker 2 for Stories
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
@@ -875,19 +879,19 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                             Text("ساعت نوبت دوم (زمان ایران):", color = SpectralWhite, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 IconButton(
-                                    onClick = { scenHour2 = if (scenHour2 <= 0) 23 else scenHour2 - 1 },
+                                    onClick = { storyHour2 = if (storyHour2 <= 0) 23 else storyHour2 - 1 },
                                     modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(Icons.Default.Remove, contentDescription = null, tint = SpectralWhite)
                                 }
                                 Text(
-                                    text = String.format("%02d:00", scenHour2),
+                                    text = String.format("%02d:00", storyHour2),
                                     color = BloodGlow,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 IconButton(
-                                    onClick = { scenHour2 = (scenHour2 + 1) % 24 },
+                                    onClick = { storyHour2 = (storyHour2 + 1) % 24 },
                                     modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(Icons.Default.Add, contentDescription = null, tint = SpectralWhite)
@@ -898,10 +902,10 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                 }
 
                 Text(
-                    text = if (scenarioFreq == "TWICE_DAILY") {
-                        "سناریوهای بازی، رأس ساعت‌های ${String.format("%02d", scenHour1)}:۰۰ و ${String.format("%02d", scenHour2)}:۰۰ به وقت تهران با پرامپت کلی بخش سناریوها تولید می‌شوند."
+                    text = if (storyFreq == "TWICE_DAILY") {
+                        "تعداد $storyBatchCount داستان هوش مصنوعی، رأس ساعت‌های ${String.format("%02d", storyHour1)}:۰۰ و ${String.format("%02d", storyHour2)}:۰۰ به وقت تهران تولید و مستقیماً منتشر می‌شوند."
                     } else {
-                        "سناریوهای بازی، رأس ساعت ${String.format("%02d", scenHour1)}:۰۰ به وقت تهران با پرامپت کلی بخش سناریوها تولید می‌شوند."
+                        "تعداد $storyBatchCount داستان هوش مصنوعی، رأس ساعت ${String.format("%02d", storyHour1)}:۰۰ به وقت تهران تولید و مستقیماً منتشر می‌شوند."
                     },
                     color = BloodGlow,
                     fontSize = 11.sp
@@ -912,13 +916,13 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val time1Str = "${String.format("%02d", scenHour1)}:۰۰"
-                    val time2Str = "${String.format("%02d", scenHour2)}:۰۰"
+                    val time1Str = "${String.format("%02d", storyHour1)}:۰۰"
+                    val time2Str = "${String.format("%02d", storyHour2)}:۰۰"
                     Text(
-                        text = "وضعیت: " + if (scenarioConfig.is_active) {
-                            if (scenarioFreq == "TWICE_DAILY") "فعال در ساعت $time1Str و $time2Str" else "فعال در ساعت $time1Str"
+                        text = "وضعیت: " + if (storyConfig.is_active) {
+                            if (storyFreq == "TWICE_DAILY") "فعال در ساعت $time1Str و $time2Str" else "فعال در ساعت $time1Str"
                         } else "غیرفعال",
-                        color = if (scenarioConfig.is_active) SuccessNeon else WarningAmber,
+                        color = if (storyConfig.is_active) SuccessNeon else WarningAmber,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -927,14 +931,14 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         Button(
                             onClick = {
                                 viewModel.saveAutomationConfig(
-                                    scenarioConfig.copy(
-                                        frequency = scenarioFreq,
-                                        schedule_hour_1 = scenHour1,
-                                        schedule_hour_2 = scenHour2,
-                                        batch_count = scenBatchCount
+                                    storyConfig.copy(
+                                        frequency = storyFreq,
+                                        schedule_hour_1 = storyHour1,
+                                        schedule_hour_2 = storyHour2,
+                                        batch_count = storyBatchCount
                                     )
                                 ) {
-                                    feedbackMsg = "تنظیمات سناریو با موفقیت ذخیره شد."
+                                    feedbackMsg = "تنظیمات داستان‌های خودکار ذخیره شد."
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
@@ -947,8 +951,8 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
 
                         Button(
                             onClick = {
-                                runningTask = "auto-scenarios"
-                                viewModel.triggerEdgeFunction("auto-scenarios") { success, msg ->
+                                runningTask = "auto-ai-stories"
+                                viewModel.triggerEdgeFunction("auto-ai-stories") { success, msg ->
                                     runningTask = null
                                     feedbackMsg = msg
                                 }
@@ -956,15 +960,133 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                             colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            if (runningTask == "auto-scenarios") {
+                            if (runningTask == "auto-ai-stories") {
                                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
                             } else {
-                                Icon(Icons.Default.AltRoute, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Psychology, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("تولید سناریو فوری", fontSize = 11.sp)
+                                Text("تست تولید فوری", fontSize = 11.sp)
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // ==========================================
+        // QUEUED AUTOMATIONS STATUS (Cloud Scheduler Queue)
+        // ==========================================
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, BloodGlow.copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCardElevated),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Schedule, contentDescription = null, tint = BloodGlow)
+                    Text("صف و وضعیت اتوماسیون‌های در انتظار اجرا (Cloud Cron Queue)", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
+                }
+                Text(
+                    text = "در این بخش می‌توانید لیست وظایف برنامه‌ریزی‌شده که در سرور منتظر فرارسیدن ساعت اجرای خود هستند را مشاهده کنید.",
+                    color = MutedAsh,
+                    fontSize = 11.sp
+                )
+
+                // Task 1: Grim Fortunes
+                Surface(
+                    color = Color(0xFF1E0E2B),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("طالع شوم ۱۲ ماه (AUTO_GRIM_FORTUNES)", color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(
+                                if (fortuneConfig.is_active) "در صف اجرای سرور • ساعت ${String.format("%02d", fortuneConfig.schedule_hour_1)}:۰۰ ایران" else "متوقف شده",
+                                color = if (fortuneConfig.is_active) SuccessNeon else MutedAsh,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Badge(containerColor = if (fortuneConfig.is_active) SuccessNeon.copy(alpha = 0.2f) else MutedAsh.copy(alpha = 0.2f)) {
+                            Text(
+                                if (fortuneConfig.is_active) "در صف فعال" else "غیرفعال",
+                                color = if (fortuneConfig.is_active) SuccessNeon else MutedAsh,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(4.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Task 2: AI Stories
+                Surface(
+                    color = Color(0xFF1E0E2B),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp).fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("داستان‌های هوش مصنوعی (AUTO_AI_STORIES)", color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            val schedText = if (storyConfig.frequency == "TWICE_DAILY") {
+                                "ساعت‌های ${String.format("%02d", storyConfig.schedule_hour_1)}:۰۰ و ${String.format("%02d", storyConfig.schedule_hour_2)}:۰۰ ایران"
+                            } else {
+                                "ساعت ${String.format("%02d", storyConfig.schedule_hour_1)}:۰۰ ایران"
+                            }
+                            Text(
+                                if (storyConfig.is_active) "در صف اجرای سرور • $schedText (${storyConfig.batch_count} داستان)" else "متوقف شده",
+                                color = if (storyConfig.is_active) SuccessNeon else MutedAsh,
+                                fontSize = 11.sp
+                            )
+                        }
+                        Badge(containerColor = if (storyConfig.is_active) SuccessNeon.copy(alpha = 0.2f) else MutedAsh.copy(alpha = 0.2f)) {
+                            Text(
+                                if (storyConfig.is_active) "در صف فعال" else "غیرفعال",
+                                color = if (storyConfig.is_active) SuccessNeon else MutedAsh,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(4.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Copy SQL script guidance
+                val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+                var sqlCopied by remember { mutableStateOf(false) }
+
+                OutlinedButton(
+                    onClick = {
+                        val sqlScript = """
+-- فعال‌سازی اجرای سروری pg_cron در Supabase SQL Editor
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+
+-- زمان‌بندی بررسی اتوماسیون‌ها در هر ساعت
+SELECT cron.schedule(
+    'run-automations-hourly',
+    '0 * * * *',
+    $$ SELECT cron_run_automations(); $$
+);
+                        """.trimIndent()
+                        clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(sqlScript))
+                        sqlCopied = true
+                        feedbackMsg = "کد فعال‌سازی سروری pg_cron کپی شد! در بخش SQL Editor کنسول Supabase اجرا نمایید."
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(if (sqlCopied) "کد کپی شد (آماده اجرا در SQL Editor)" else "کپی دستور راه‌اندازی pg_cron سرور", color = SpectralWhite, fontSize = 11.sp)
                 }
             }
         }
@@ -1063,7 +1185,7 @@ fun AdminDashboardTab(
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             StatCard(title = "طالع‌های ۱۲ ماه", count = tmCount.toString(), icon = Icons.Default.AutoAwesome, modifier = Modifier.weight(1f).clickable { onSwitchTab(2) })
-            StatCard(title = "سناریوهای تعاملی", count = scenCount.toString(), icon = Icons.Default.AltRoute, modifier = Modifier.weight(1f).clickable { onSwitchTab(3) })
+            StatCard(title = "داستان‌های هوش مصنوعی", count = scenCount.toString(), icon = Icons.Default.Psychology, modifier = Modifier.weight(1f).clickable { onSwitchTab(3) })
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -1107,7 +1229,7 @@ fun AdminDashboardTab(
                 ) {
                     Icon(Icons.Default.Psychology, contentDescription = null, tint = SpectralWhite)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("تولید گروهی سناریوهای بازی با هوش مصنوعی", color = SpectralWhite)
+                    Text("تولید داستان‌های هوش مصنوعی با پرامپت اختصاصی (تا ۲۰ عدد)", color = SpectralWhite)
                 }
             }
         }
@@ -2775,29 +2897,51 @@ fun AdminGrimFortuneTab(
 }
 
 // ----------------------------------------------------
-// TAB 3: WRONG CHOICE SCENARIOS (AI Batch Generation)
+// TAB 3: AI HORROR STORIES (Generation up to 20, Published & Draft tabs, Bulk & Single Management)
 // ----------------------------------------------------
 @Composable
-fun AdminScenariosTab(
+fun AdminAiStoriesTab(
     viewModel: HorrorViewModel,
-    scenarios: List<WrongChoiceScenario>
+    stories: List<AiStory>
 ) {
     var savedPrompt by remember { mutableStateOf("") }
-    val currentPrompt by viewModel.scenarioPrompt.collectAsState()
+    val currentPrompt by viewModel.aiStoryPrompt.collectAsState()
     LaunchedEffect(currentPrompt) { savedPrompt = currentPrompt }
 
-    var scenarioCountToGenerate by remember { mutableIntStateOf(3) }
+    var storyCountToGenerate by remember { mutableIntStateOf(3) }
+    var selectedGenre by remember { mutableStateOf("همه") }
+    val genres = listOf("همه", "ماورایی", "روانشناختی", "افسانه ایرانی", "گوتیک", "جنایی")
+
     var isGeneratingAI by remember { mutableStateOf(false) }
     var genResultFeedback by remember { mutableStateOf<String?>(null) }
     var promptExpanded by remember { mutableStateOf(false) }
-    var showAddDialog by remember { mutableStateOf(false) }
+
+    // Sub-tabs: 0 = Published, 1 = Drafts
+    var currentSubTab by remember { mutableIntStateOf(0) }
+    val publishedStories = remember(stories) { stories.filter { it.status == "PUBLISHED" } }
+    val draftStories = remember(stories) { stories.filter { it.status != "PUBLISHED" } }
+    val currentDisplayList = if (currentSubTab == 0) publishedStories else draftStories
+
+    // Multi-selection state
+    val selectedIds = remember { mutableStateListOf<String>() }
+    // Clear selection when switching sub-tab
+    LaunchedEffect(currentSubTab) { selectedIds.clear() }
+
+    // Dialog states
+    var storyToView by remember { mutableStateOf<AiStory?>(null) }
+    var storyToEdit by remember { mutableStateOf<AiStory?>(null) }
+    var showManualAddDialog by remember { mutableStateOf(false) }
+    var storyToDeleteConfirm by remember { mutableStateOf<AiStory?>(null) }
+    var showBulkDeleteConfirm by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // AI Prompt Config Box
+        // AI Prompt & Model Configuration
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2814,9 +2958,9 @@ fun AdminScenariosTab(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.AltRoute, contentDescription = null, tint = BloodGlow)
+                        Icon(Icons.Default.Psychology, contentDescription = null, tint = BloodGlow)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("تنظیم پرامپت اصلی سناریوهای وحشت", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
+                        Text("تنظیم پرامپت داستان‌های هوش مصنوعی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
                     }
                     Icon(
                         if (promptExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -2827,7 +2971,7 @@ fun AdminScenariosTab(
 
                 if (promptExpanded) {
                     Text(
-                        text = "این پرامپت به عنوان الگوی اصلی برای خلق سناریوهای چندگزینه‌ای ذخیره می‌شود.",
+                        text = "این پرامپت به عنوان دستورالعمل دائمی برای تولید داستان‌های ترسناک هوش مصنوعی به کار می‌رود.",
                         color = MutedAsh,
                         fontSize = 11.sp
                     )
@@ -2845,16 +2989,16 @@ fun AdminScenariosTab(
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(
-                            onClick = { viewModel.setScenarioPrompt(savedPrompt) },
+                            onClick = { viewModel.setAiStoryPrompt(savedPrompt) },
                             colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Text("ذخیره پرامپت سناریو", fontSize = 12.sp)
+                            Text("ذخیره پرامپت", fontSize = 12.sp)
                         }
                         TextButton(
                             onClick = {
-                                savedPrompt = HorrorViewModel.DEFAULT_SCENARIO_PROMPT
-                                viewModel.setScenarioPrompt(savedPrompt)
+                                savedPrompt = HorrorViewModel.DEFAULT_AI_STORY_PROMPT
+                                viewModel.setAiStoryPrompt(savedPrompt)
                             }
                         ) {
                             Text("بازنشانی پیش‌فرض", color = MutedAsh, fontSize = 12.sp)
@@ -2864,9 +3008,7 @@ fun AdminScenariosTab(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // AI Batch Generator Action Card
+        // AI Generator Action Box (Up to 20 stories)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -2874,26 +3016,67 @@ fun AdminScenariosTab(
             colors = CardDefaults.cardColors(containerColor = CryptCard),
             shape = RoundedCornerShape(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(text = "تولید گروهی سناریو با هوش مصنوعی", fontWeight = FontWeight.Bold, color = SpectralWhite)
-
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("تعداد سناریوها:", color = MutedAsh, fontSize = 13.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(1, 2, 3, 5).forEach { count ->
-                            val isSel = scenarioCountToGenerate == count
+                    Text(text = "تولید همزمان داستان با هوش مصنوعی (تا ۲۰ عدد)", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                    Badge(containerColor = BloodCrimson) {
+                        Text("انتشار مستقیم در لیست", color = SpectralWhite, fontSize = 10.sp, modifier = Modifier.padding(4.dp))
+                    }
+                }
+
+                // Count Selector (1 to 20)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("تعداد داستان‌های درخواستی:", color = MutedAsh, fontSize = 12.sp)
+                        Text("$storyCountToGenerate عدد", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(1, 2, 3, 5, 10, 15, 20).forEach { count ->
+                            val isSel = storyCountToGenerate == count
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) BloodCrimson else CryptCardElevated)
+                                    .clickable { storyCountToGenerate = count }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("$count", color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                // Genre Filter Chips
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("ژانر داستان:", color = MutedAsh, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        genres.forEach { g ->
+                            val isSel = selectedGenre == g
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSel) BloodCrimson else CryptCardElevated)
-                                    .clickable { scenarioCountToGenerate = count }
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    .background(if (isSel) Color(0xFF3B184F) else CryptCardElevated)
+                                    .border(1.dp, if (isSel) BloodGlow else Color.Transparent, RoundedCornerShape(8.dp))
+                                    .clickable { selectedGenre = g }
+                                    .padding(horizontal = 8.dp, vertical = 6.dp)
                             ) {
-                                Text("$count", color = if (isSel) SpectralWhite else MutedAsh, fontWeight = FontWeight.Bold)
+                                Text(g, color = if (isSel) SpectralWhite else MutedAsh, fontSize = 10.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal)
                             }
                         }
                     }
@@ -2903,23 +3086,31 @@ fun AdminScenariosTab(
                     onClick = {
                         isGeneratingAI = true
                         genResultFeedback = null
-                        viewModel.generateScenariosWithAI(scenarioCountToGenerate) { success, msg ->
+                        viewModel.generateAiStoriesWithAI(
+                            customPrompt = savedPrompt,
+                            count = storyCountToGenerate,
+                            genre = if (selectedGenre == "همه") null else selectedGenre
+                        ) { success, msg, count ->
                             isGeneratingAI = false
                             genResultFeedback = msg
+                            if (success) {
+                                currentSubTab = 0 // Show Published tab where newly generated stories reside
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !isGeneratingAI
                 ) {
                     if (isGeneratingAI) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = SpectralWhite)
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = SpectralWhite)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("در حال تولید $scenarioCountToGenerate سناریوی ماورایی...")
+                        Text("در حال نگارش $storyCountToGenerate داستان هولناک با هوش مصنوعی...")
                     } else {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("تولید و اضافه کردن به پایگاه داده")
+                        Text("تولید $storyCountToGenerate داستان و قرار دادن در لیست منتشر شده")
                     }
                 }
 
@@ -2933,64 +3124,309 @@ fun AdminScenariosTab(
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        // Sub-tabs: Published vs Drafts
+        Surface(
+            color = CryptCard,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(4.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Published Tab Button
+                val isPub = currentSubTab == 0
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isPub) BloodCrimson else Color.Transparent)
+                        .clickable { currentSubTab = 0 }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, tint = if (isPub) SpectralWhite else MutedAsh, modifier = Modifier.size(16.dp))
+                        Text("منتشر شده (${publishedStories.size})", color = if (isPub) SpectralWhite else MutedAsh, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
 
-        // Scenario List Header
+                // Draft Tab Button
+                val isDraft = currentSubTab == 1
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isDraft) BloodCrimson else Color.Transparent)
+                        .clickable { currentSubTab = 1 }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Default.EditNote, contentDescription = null, tint = if (isDraft) SpectralWhite else MutedAsh, modifier = Modifier.size(16.dp))
+                        Text("پیش‌نویس‌ها (${draftStories.size})", color = if (isDraft) SpectralWhite else MutedAsh, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+
+        // Action & Selection Bar
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("سناریوهای ثبت شده (${scenarios.size})", fontWeight = FontWeight.Bold, color = SpectralWhite)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Select All / Deselect All
+                OutlinedButton(
+                    onClick = {
+                        if (selectedIds.size == currentDisplayList.size && currentDisplayList.isNotEmpty()) {
+                            selectedIds.clear()
+                        } else {
+                            selectedIds.clear()
+                            selectedIds.addAll(currentDisplayList.map { it.id })
+                        }
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        if (selectedIds.size == currentDisplayList.size && currentDisplayList.isNotEmpty()) "لغو انتخاب همه" else "انتخاب همه",
+                        fontSize = 11.sp,
+                        color = SpectralWhite
+                    )
+                }
+
+                if (selectedIds.isNotEmpty()) {
+                    Text("${selectedIds.size} مورد انتخاب شده", color = BloodGlow, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Manual Add Button
             OutlinedButton(
-                onClick = { showAddDialog = true },
-                shape = RoundedCornerShape(10.dp)
+                onClick = { showManualAddDialog = true },
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(4.dp))
-                Text("افزودن دستی")
+                Text("افزودن دستی", fontSize = 11.sp)
             }
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // Bulk Actions Bar (Shown when 1 or more items selected)
+        if (selectedIds.isNotEmpty()) {
+            Surface(
+                color = Color(0xFF2A1015),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BloodGlow.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp).fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("عملیات گروهی روی ${selectedIds.size} داستان:", color = SpectralWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
 
-        if (scenarios.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("هیچ سناریویی یافت نشد.", color = MutedAsh)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (currentSubTab == 0) {
+                            // In Published: Move to Draft (Bulk)
+                            Button(
+                                onClick = {
+                                    viewModel.bulkUpdateAiStoriesStatus(selectedIds.toList(), "DRAFT") { success, msg ->
+                                        selectedIds.clear()
+                                        genResultFeedback = msg
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = CryptCardElevated),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.Archive, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("پیشنویس گروهی", fontSize = 11.sp)
+                            }
+                        } else {
+                            // In Drafts: Publish (Bulk)
+                            Button(
+                                onClick = {
+                                    viewModel.bulkUpdateAiStoriesStatus(selectedIds.toList(), "PUBLISHED") { success, msg ->
+                                        selectedIds.clear()
+                                        genResultFeedback = msg
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(14.dp), tint = VoidBlack)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("انتشار گروهی", fontSize = 11.sp, color = VoidBlack, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        // Bulk Delete Button
+                        Button(
+                            onClick = { showBulkDeleteConfirm = true },
+                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("حذف گروهی", fontSize = 11.sp)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Stories List
+        if (currentDisplayList.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(32.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (currentSubTab == 0) "هیچ داستان منتشر شده‌ای وجود ندارد." else "هیچ داستان پیش‌نویسی وجود ندارد.",
+                    color = MutedAsh,
+                    fontSize = 13.sp
+                )
             }
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                items(scenarios) { scen ->
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                currentDisplayList.forEach { story ->
+                    val isChecked = selectedIds.contains(story.id)
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .border(1.dp, MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
+                            .border(1.dp, if (isChecked) BloodGlow else MutedAsh.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
                         colors = CardDefaults.cardColors(containerColor = CryptCard),
                         shape = RoundedCornerShape(14.dp)
                     ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(text = scen.title, fontWeight = FontWeight.Bold, color = BloodGlow, modifier = Modifier.weight(1f))
-                                Badge(containerColor = if (scen.status == "PUBLISHED") SuccessNeon else WarningAmber) {
-                                    Text(scen.status, color = SpectralWhite, modifier = Modifier.padding(4.dp), fontSize = 10.sp)
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = { checked ->
+                                            if (checked) selectedIds.add(story.id) else selectedIds.remove(story.id)
+                                        },
+                                        colors = CheckboxDefaults.colors(
+                                            checkedColor = BloodCrimson,
+                                            uncheckedColor = MutedAsh
+                                        )
+                                    )
+                                    Column {
+                                        Text(text = story.title, fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            Text("ژانر: ${story.genre}", color = BloodGlow, fontSize = 10.sp)
+                                            Text("•", color = MutedAsh, fontSize = 10.sp)
+                                            Text("وحشت: ${story.doom_score}%", color = WarningAmber, fontSize = 10.sp)
+                                            Text("•", color = MutedAsh, fontSize = 10.sp)
+                                            Text("بازدید: ${story.view_count}", color = MutedAsh, fontSize = 10.sp)
+                                        }
+                                    }
+                                }
+
+                                Badge(containerColor = if (story.status == "PUBLISHED") SuccessNeon.copy(alpha = 0.2f) else WarningAmber.copy(alpha = 0.2f)) {
+                                    Text(
+                                        text = if (story.status == "PUBLISHED") "منتشر شده" else "پیش‌نویس",
+                                        color = if (story.status == "PUBLISHED") SuccessNeon else WarningAmber,
+                                        fontSize = 10.sp,
+                                        modifier = Modifier.padding(4.dp)
+                                    )
                                 }
                             }
-                            Text(text = scen.description, style = MaterialTheme.typography.bodySmall, color = SpectralWhite, maxLines = 3, overflow = TextOverflow.Ellipsis)
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        val next = if (scen.status == "PUBLISHED") "DRAFT" else "PUBLISHED"
-                                        viewModel.updateScenarioStatus(scen.id, next) {}
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                            Text(
+                                text = story.synopsis?.ifBlank { story.content } ?: story.content,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MutedAsh,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                fontSize = 11.sp
+                            )
+
+                            // Action buttons (Single)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Full view button
+                                TextButton(
+                                    onClick = { storyToView = story },
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
-                                    Text(if (scen.status == "PUBLISHED") "تبدیل به پیش‌نویس" else "انتشار", fontSize = 11.sp)
+                                    Icon(Icons.Default.Visibility, contentDescription = null, tint = SpectralWhite, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("مشاهده کامل", color = SpectralWhite, fontSize = 11.sp)
                                 }
 
-                                IconButton(onClick = { viewModel.deleteScenario(scen.id) {} }) {
-                                    Icon(Icons.Default.Delete, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(18.dp))
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    if (story.status == "PUBLISHED") {
+                                        // Single Draft button
+                                        OutlinedButton(
+                                            onClick = {
+                                                viewModel.updateAiStoryStatus(story.id, "DRAFT") { success, msg ->
+                                                    genResultFeedback = msg
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Icon(Icons.Default.Archive, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("پیش‌نویس", fontSize = 11.sp)
+                                        }
+                                    } else {
+                                        // In Draft: Single Edit button
+                                        OutlinedButton(
+                                            onClick = { storyToEdit = story },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("ویرایش", fontSize = 11.sp)
+                                        }
+
+                                        // In Draft: Single Publish button
+                                        Button(
+                                            onClick = {
+                                                viewModel.updateAiStoryStatus(story.id, "PUBLISHED") { success, msg ->
+                                                    genResultFeedback = msg
+                                                }
+                                            },
+                                            colors = ButtonDefaults.buttonColors(containerColor = SuccessNeon),
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Icon(Icons.Default.Publish, contentDescription = null, modifier = Modifier.size(14.dp), tint = VoidBlack)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("انتشار", fontSize = 11.sp, color = VoidBlack, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+
+                                    // Single Delete button
+                                    IconButton(
+                                        onClick = { storyToDeleteConfirm = story },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(Icons.Default.Delete, contentDescription = null, tint = BloodGlow, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             }
                         }
@@ -3000,106 +3436,101 @@ fun AdminScenariosTab(
         }
     }
 
-    if (showAddDialog) {
-        var title by remember { mutableStateOf("") }
-        var description by remember { mutableStateOf("") }
-        var isGeneratingSingleAI by remember { mutableStateOf(false) }
-
+    // ----------------------------------------------------
+    // DIALOG: FULL STORY READER
+    // ----------------------------------------------------
+    if (storyToView != null) {
+        val s = storyToView!!
         AlertDialog(
-            onDismissRequest = { showAddDialog = false },
+            onDismissRequest = { storyToView = null },
             containerColor = CryptCardElevated,
             title = {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("خلق سناریو با صحنه‌ها و پاسخ‌های اختصاصی", color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(s.title, color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Badge(containerColor = Color(0xFF3B184F)) {
+                            Text(s.genre ?: "روانشناختی", color = SpectralWhite, fontSize = 10.sp, modifier = Modifier.padding(2.dp))
+                        }
+                        Text("میزان وحشت: ${s.doom_score}%", color = WarningAmber, fontSize = 11.sp)
+                    }
                 }
             },
             text = {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.verticalScroll(rememberScrollState())
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "داستان و پاسخ‌های کاربر را بر اساس هر صحنه تعریف کنید. با جابجایی صحنه‌ها، گزینه‌های همان صحنه به کاربر نمایش داده می‌شود.",
-                        color = MutedAsh,
-                        fontSize = 11.sp
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(
-                            onClick = {
-                                description = "---صحنه ۱---\n" +
-                                        "روایت: شما وارد دالان تاریک و سرد عمارت شدید. در انتهای راهرو سایه‌ای متحرک دیده می‌شود.\n" +
-                                        "گزینه ۱: مشعل را روشن کن و آرام جلو برو -> روشن شدن دالان و کشف تالار کهن\n" +
-                                        "گزینه ۲: پشت ستون سنگی پنهان شو -> عبور سایه و باز شدن درگاه مخفی\n" +
-                                        "گزینه ۳: به سمت سایه فریاد بزن و حمله کن -> به دام افتادن در تله تاریکی (مرگ)\n\n" +
-                                        "---صحنه ۲---\n" +
-                                        "روایت: در تالار کهن، کتابچه‌ای با خط زرین روی محراب قرار دارد. نجواهایی از دیوارها شنیده می‌شود.\n" +
-                                        "گزینه ۱: ورد طلسم‌شکن را با صدای رسا بخوان -> خنثی شدن طلسم عمارت\n" +
-                                        "گزینه ۲: صندوقچه عتیقه کنار محراب را باز کن -> کشف گنجینه باستانی\n" +
-                                        "گزینه ۳: به نجواها گوش بسپار و تسلیم شو -> اسیر شدن روح در محراب (مرگ)\n\n" +
-                                        "---صحنه ۳---\n" +
-                                        "روایت: دروازه خروجی عمارت پدیدار شد اما کلید دروازه در دست مجسمه ساحر است.\n" +
-                                        "گزینه ۱: کلید زرین را با ذکر تطهیر از دست مجسمه بردار -> نجات پیروزمندانه از عمارت (بقا)\n" +
-                                        "گزینه ۲: با مشعل به دروازه چوبی بکوب -> شکستن قفل و فرار به سوی جنگل (بقا)"
-                                if (title.isBlank()) title = "راز طلسم سایه‌ها"
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text("درج قالب نمونه صحنه‌ها", fontSize = 11.sp, color = SpectralWhite)
-                        }
-
-                        Button(
-                            onClick = {
-                                isGeneratingSingleAI = true
-                                val topic = if (title.isNotBlank()) "درباره موضوع «$title»" else "با موضوعی دلهره‌آور و ماورایی"
-                                val prompt = "${viewModel.scenarioPrompt.value}\n\nلطفاً ۱ سناریوی کامل با داستان جذاب و تمام صحنه‌ها (صحنه ۱، صحنه ۲، صحنه ۳) $topic به زبان فارسی بنویس."
-                                viewModel.generateAILore(prompt) { resp ->
-                                    isGeneratingSingleAI = false
-                                    if (!resp.startsWith("خطا")) {
-                                        val lines = resp.lines().map { it.trim() }.filter { it.isNotBlank() }
-                                        val extractedTitle = lines.firstOrNull { it.contains("عنوان:") }
-                                            ?.replace("عنوان:", "")?.replace("#", "")?.replace("*", "")?.trim()
-                                        if (!extractedTitle.isNullOrBlank()) {
-                                            title = extractedTitle
-                                        }
-                                        description = resp
-                                    }
-                                }
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                            enabled = !isGeneratingSingleAI
-                        ) {
-                            if (isGeneratingSingleAI) {
-                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = SpectralWhite)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("تولید با AI...", fontSize = 11.sp)
-                            } else {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("تولید با AI", fontSize = 11.sp)
-                            }
-                        }
+                    if (!s.synopsis.isNullOrBlank()) {
+                        Text(
+                            text = "خلاصه: ${s.synopsis}",
+                            color = MutedAsh,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Divider(color = MutedAsh.copy(alpha = 0.2f))
                     }
+                    Text(
+                        text = s.content,
+                        color = SpectralWhite,
+                        fontSize = 13.sp,
+                        lineHeight = 22.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { storyToView = null }) {
+                    Text("بستن", color = SpectralWhite)
+                }
+            }
+        )
+    }
 
+    // ----------------------------------------------------
+    // DIALOG: SINGLE STORY EDIT (For Drafts)
+    // ----------------------------------------------------
+    if (storyToEdit != null) {
+        val target = storyToEdit!!
+        var editTitle by remember { mutableStateOf(target.title) }
+        var editGenre by remember { mutableStateOf(target.genre ?: "") }
+        var editSynopsis by remember { mutableStateOf(target.synopsis ?: "") }
+        var editContent by remember { mutableStateOf(target.content) }
+        var editDoom by remember { mutableIntStateOf(target.doom_score) }
+
+        AlertDialog(
+            onDismissRequest = { storyToEdit = null },
+            containerColor = CryptCardElevated,
+            title = { Text("ویرایش داستان پیش‌نویس", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        label = { Text("عنوان سناریو") },
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("عنوان داستان") },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp)
                     )
                     OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("متن صحنه‌ها و گزینه‌ها") },
-                        placeholder = { Text("---صحنه ۱---\nروایت: ...\nگزینه ۱: ... -> ...") },
+                        value = editGenre,
+                        onValueChange = { editGenre = it },
+                        label = { Text("ژانر") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = editSynopsis,
+                        onValueChange = { editSynopsis = it },
+                        label = { Text("خلاصه کوتاه") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = editContent,
+                        onValueChange = { editContent = it },
+                        label = { Text("متن کامل داستان") },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 8,
                         shape = RoundedCornerShape(10.dp)
@@ -3109,20 +3540,200 @@ fun AdminScenariosTab(
             confirmButton = {
                 Button(
                     onClick = {
-                        if (title.isNotBlank() && description.isNotBlank()) {
-                            viewModel.createScenario(title, description, "PUBLISHED") {
-                                showAddDialog = false
+                        val updated = target.copy(
+                            title = editTitle,
+                            genre = editGenre,
+                            synopsis = editSynopsis,
+                            content = editContent
+                        )
+                        viewModel.updateAiStory(updated) { success, msg ->
+                            storyToEdit = null
+                            genResultFeedback = msg
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson)
+                ) {
+                    Text("ذخیره تغییرات")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { storyToEdit = null }) {
+                    Text("انصراف", color = MutedAsh)
+                }
+            }
+        )
+    }
+
+    // ----------------------------------------------------
+    // DIALOG: MANUAL ADD STORY
+    // ----------------------------------------------------
+    if (showManualAddDialog) {
+        var addTitle by remember { mutableStateOf("") }
+        var addGenre by remember { mutableStateOf("ماورایی") }
+        var addSynopsis by remember { mutableStateOf("") }
+        var addContent by remember { mutableStateOf("") }
+        var addStatus by remember { mutableStateOf("PUBLISHED") }
+
+        AlertDialog(
+            onDismissRequest = { showManualAddDialog = false },
+            containerColor = CryptCardElevated,
+            title = { Text("افزودن دستی داستان هوش مصنوعی", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedTextField(
+                        value = addTitle,
+                        onValueChange = { addTitle = it },
+                        label = { Text("عنوان داستان") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = addGenre,
+                        onValueChange = { addGenre = it },
+                        label = { Text("ژانر") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = addSynopsis,
+                        onValueChange = { addSynopsis = it },
+                        label = { Text("خلاصه کوتاه") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    OutlinedTextField(
+                        value = addContent,
+                        onValueChange = { addContent = it },
+                        label = { Text("متن کامل داستان") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 6,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("وضعیت اولیه:", color = MutedAsh, fontSize = 12.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (addStatus == "PUBLISHED") BloodCrimson else CryptCard)
+                                    .clickable { addStatus = "PUBLISHED" }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("انتشار مستقیم", color = SpectralWhite, fontSize = 10.sp)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (addStatus == "DRAFT") BloodCrimson else CryptCard)
+                                    .clickable { addStatus = "DRAFT" }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text("پیش‌نویس", color = SpectralWhite, fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (addTitle.isNotBlank() && addContent.isNotBlank()) {
+                            val newStory = AiStory(
+                                id = java.util.UUID.randomUUID().toString(),
+                                title = addTitle,
+                                content = addContent,
+                                synopsis = addSynopsis.ifBlank { addContent.take(120) },
+                                genre = addGenre,
+                                cover_image_url = "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80",
+                                tags = "ثبت دستی ادمین",
+                                status = addStatus,
+                                view_count = 0,
+                                rating = 5.0f,
+                                rating_count = 1,
+                                createdAt = null,
+                                updatedAt = null
+                            )
+                            viewModel.updateAiStory(newStory) { success, msg ->
+                                showManualAddDialog = false
+                                genResultFeedback = msg
                             }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson),
-                    shape = RoundedCornerShape(10.dp)
+                    enabled = addTitle.isNotBlank() && addContent.isNotBlank()
                 ) {
-                    Text("ذخیره و انتشار سناریو")
+                    Text("ذخیره داستان")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) { Text("انصراف", color = MutedAsh) }
+                TextButton(onClick = { showManualAddDialog = false }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+
+    // ----------------------------------------------------
+    // DIALOG: SINGLE DELETE CONFIRMATION
+    // ----------------------------------------------------
+    if (storyToDeleteConfirm != null) {
+        val s = storyToDeleteConfirm!!
+        AlertDialog(
+            onDismissRequest = { storyToDeleteConfirm = null },
+            containerColor = CryptCardElevated,
+            title = { Text("تأیید حذف داستان", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = { Text("آیا از حذف داستان «${s.title}» اطمینان دارید؟ این عملیات غیرقابل بازگشت است.", color = SpectralWhite) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteAiStory(s.id) { success, msg ->
+                            storyToDeleteConfirm = null
+                            genResultFeedback = msg
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson)
+                ) {
+                    Text("بله، حذف کن")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { storyToDeleteConfirm = null }) { Text("انصراف", color = MutedAsh) }
+            }
+        )
+    }
+
+    // ----------------------------------------------------
+    // DIALOG: BULK DELETE CONFIRMATION
+    // ----------------------------------------------------
+    if (showBulkDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBulkDeleteConfirm = false },
+            containerColor = CryptCardElevated,
+            title = { Text("تأیید حذف گروهی", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            text = { Text("آیا از حذف همزمان ${selectedIds.size} داستان انتخاب شده اطمینان دارید؟", color = SpectralWhite) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.bulkDeleteAiStories(selectedIds.toList()) { success, msg ->
+                            selectedIds.clear()
+                            showBulkDeleteConfirm = false
+                            genResultFeedback = msg
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = BloodCrimson)
+                ) {
+                    Text("بله، حذف همه")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBulkDeleteConfirm = false }) { Text("انصراف", color = MutedAsh) }
             }
         )
     }

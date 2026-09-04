@@ -99,7 +99,8 @@ serve(async (req) => {
       throw new Error("کلید Gemini API Key نه در جدول app_settings و نه در Secrets یافت نشد. لطفاً در پنل ادمین کلید را ذخیره کنید.");
     }
 
-    const modelName = dbModel || "gemini-2.5-flash";
+    const rawModel = dbModel || "gemini-2.5-flash";
+    const modelName = rawModel.includes("3.5") ? "gemini-2.5-flash" : rawModel;
 
     // 3. Fetch Prompt
     let promptBase = config?.custom_prompt;
