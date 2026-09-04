@@ -60,7 +60,17 @@ fun AiStoriesUserSection(
     var selectedSort by remember { mutableStateOf("جدیدترین") }
     var searchQuery by remember { mutableStateOf("") }
 
-    val genres = listOf("همه", "ماورایی", "روانشناختی", "افسانه ایرانی", "گوتیک", "جنایی", "کیهانی", "اساطیری")
+    val genres = listOf(
+        "همه",
+        "روانشناختی",
+        "ماورایی",
+        "افسانه و فولکلور",
+        "جنایی و معمایی",
+        "شهری و آپارتمان",
+        "جاده و جنگل",
+        "خانه‌های قدیمی",
+        "علمی‌تخیلی"
+    )
     val sortOptions = listOf("جدیدترین", "بیشترین وحشت", "محبوب‌ترین")
 
     val filteredStories = remember(publishedStories, selectedGenre, selectedSort, searchQuery) {

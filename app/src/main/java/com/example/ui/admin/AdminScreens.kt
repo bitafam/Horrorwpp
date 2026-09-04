@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -2911,7 +2912,19 @@ fun AdminAiStoriesTab(
 
     var storyCountToGenerate by remember { mutableIntStateOf(3) }
     var selectedGenre by remember { mutableStateOf("همه") }
-    val genres = listOf("همه", "ماورایی", "روانشناختی", "افسانه ایرانی", "گوتیک", "جنایی")
+    val genres = listOf(
+        "همه",
+        "وحشت روانشناختی",
+        "جنایی و معمایی",
+        "ماورایی",
+        "افسانه‌ها و باورهای عامیانه",
+        "جن و فولکلور",
+        "آپارتمان و شهری",
+        "روستا و مناطق دورافتاده",
+        "جاده و جنگل",
+        "خانه‌های قدیمی",
+        "علمی‌تخیلی تاریک"
+    )
 
     var isGeneratingAI by remember { mutableStateOf(false) }
     var genResultFeedback by remember { mutableStateOf<String?>(null) }
@@ -3082,7 +3095,9 @@ fun AdminAiStoriesTab(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("ژانر داستان:", color = MutedAsh, fontSize = 12.sp)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         genres.forEach { g ->
