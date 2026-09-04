@@ -130,9 +130,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         if (SupabaseClientProvider.isConfigured) {
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    api.updateAiPrompt(
-                        keyEq = "eq.AI_STORY_PROMPT",
-                        item = mapOf("prompt_text" to prompt)
+                    api.upsertAiPrompt(
+                        mapOf(
+                            "prompt_key" to "AI_STORY_PROMPT",
+                            "prompt_text" to prompt
+                        )
                     )
                 } catch (e: Exception) {
                     android.util.Log.e("SupabaseError", "Error updating AI_STORY_PROMPT", e)
@@ -428,11 +430,6 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 _userSubmissionsList.value = subs
 
                 var ai = repository.getAiStories(true)
-                if (ai.isEmpty() && SupabaseClientProvider.isConfigured) {
-                    val mockAi = getMockAiStories()
-                    repository.upsertAiStories(mockAi)
-                    ai = repository.getAiStories(true)
-                }
                 _aiStoriesList.value = ai.filter { it.status == "PUBLISHED" }
 
                 if (SupabaseClientProvider.isConfigured) {
@@ -717,6 +714,12 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             prefs.edit().putString(PREF_SCENARIO_PROMPT, scPrompt).apply()
         }
 
+        val aiPrompt = prompts.find { it.prompt_key == "AI_STORY_PROMPT" }?.prompt_text
+        if (aiPrompt != null) {
+            _aiStoryPrompt.value = aiPrompt
+            prefs.edit().putString(PREF_AI_STORY_PROMPT, aiPrompt).apply()
+        }
+
         // Seeding logic if missing on remote
         if (SupabaseClientProvider.isConfigured && !hasAttemptedPromptSeeding) {
             hasAttemptedPromptSeeding = true
@@ -734,6 +737,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                         api.upsertAiPrompt(mapOf(
                             "prompt_key" to "WRONG_CHOICE_PROMPT",
                             "prompt_text" to DEFAULT_SCENARIO_PROMPT
+                        ))
+                    }
+                    val hasAi = prompts.any { it.prompt_key == "AI_STORY_PROMPT" }
+                    if (!hasAi) {
+                        api.upsertAiPrompt(mapOf(
+                            "prompt_key" to "AI_STORY_PROMPT",
+                            "prompt_text" to DEFAULT_AI_STORY_PROMPT
                         ))
                     }
                 } catch (e: Exception) {
