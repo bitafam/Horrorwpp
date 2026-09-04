@@ -470,12 +470,24 @@ fun AiStoryReaderScreen(
         viewModel.incrementAiStoryViews(story.id)
     }
 
-    var fontSize by remember { mutableFloatStateOf(16f) }
+    val fontSize by viewModel.fontSize.collectAsState()
+    val selectedFontIndex by viewModel.selectedFontIndex.collectAsState()
+
     var userRating by remember { mutableIntStateOf(0) }
     var ratingSubmitted by remember { mutableStateOf(false) }
 
     // Themes: 0 = Crypt Dark, 1 = Ancient Parchment, 2 = Pitch Black
     var themeIndex by remember { mutableIntStateOf(0) }
+
+    val fontFamilies = listOf(
+        Pair("وزیر", FontFamily.Default),
+        Pair("سریف", FontFamily.Serif),
+        Pair("سنز", FontFamily.SansSerif),
+        Pair("مونو", FontFamily.Monospace),
+        Pair("کورسیو", FontFamily.Cursive)
+    )
+
+    val activeFontFamily = fontFamilies.getOrNull(selectedFontIndex)?.second ?: FontFamily.Default
 
     val bgColor = when (themeIndex) {
         1 -> Color(0xFF16120C)
@@ -522,7 +534,7 @@ fun AiStoryReaderScreen(
                     color = Color(0xFFDEC595),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Serif,
+                    fontFamily = activeFontFamily,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
@@ -553,51 +565,84 @@ fun AiStoryReaderScreen(
             color = Color(0xFF0C0714),
             modifier = Modifier.fillMaxWidth().border(0.5.dp, Color(0xFF261536))
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Font Size Adjusters
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("اندازه قلم:", color = Color(0xFF8B8496), fontSize = 11.sp)
-                    IconButton(
-                        onClick = { if (fontSize > 13f) fontSize -= 1f },
-                        modifier = Modifier.size(30.dp)
+                    // Font Size Adjusters
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("A-", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("قلم:", color = Color(0xFF8B8496), fontSize = 11.sp)
+                        IconButton(
+                            onClick = { if (fontSize > 12f) viewModel.setFontSize(fontSize - 1f) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Text("A-", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text("${fontSize.toInt()}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        IconButton(
+                            onClick = { if (fontSize < 26f) viewModel.setFontSize(fontSize + 1f) },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Text("A+", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    Text("${fontSize.toInt()}", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    IconButton(
-                        onClick = { if (fontSize < 24f) fontSize += 1f },
-                        modifier = Modifier.size(30.dp)
+
+                    // Theme Switcher
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("A+", color = Color(0xFFDEC595), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        val themes = listOf("گوتیگ", "پوستینه", "ظلمت")
+                        themes.forEachIndexed { idx, name ->
+                            val isSel = idx == themeIndex
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSel) Color(0xFFB8143F) else Color(0xFF160E22))
+                                    .border(1.dp, if (isSel) Color(0xFFDEC595) else Color(0xFF2E1C44), RoundedCornerShape(6.dp))
+                                    .clickable { themeIndex = idx }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(name, color = if (isSel) Color.White else Color(0xFF8B8496), fontSize = 9.sp)
+                            }
+                        }
                     }
                 }
 
-                // Theme Switcher
+                // Font Family Selector Chips
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val themes = listOf("گوتیگ", "پوستینه", "ظلمت")
-                    themes.forEachIndexed { idx, name ->
-                        val isSel = idx == themeIndex
+                    Text("نوع فونت:", color = Color(0xFF8B8496), fontSize = 10.sp)
+                    fontFamilies.forEachIndexed { idx, pair ->
+                        val isSel = idx == selectedFontIndex
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isSel) Color(0xFFB8143F) else Color(0xFF160E22))
-                                .border(1.dp, if (isSel) Color(0xFFDEC595) else Color(0xFF2E1C44), RoundedCornerShape(6.dp))
-                            .clickable { themeIndex = idx }
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                .background(if (isSel) Color(0xFF3B184F) else Color(0xFF140B1E))
+                                .border(1.dp, if (isSel) Color(0xFFFF1E56) else Color(0xFF2E1A3F), RoundedCornerShape(6.dp))
+                                .clickable { viewModel.setFontFamily(idx) }
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
-                            Text(name, color = if (isSel) Color.White else Color(0xFF8B8496), fontSize = 10.sp)
+                            Text(
+                                text = pair.first,
+                                color = if (isSel) Color(0xFFFF1E56) else Color.White,
+                                fontSize = 10.sp,
+                                fontFamily = pair.second,
+                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                            )
                         }
                     }
                 }
@@ -694,6 +739,7 @@ fun AiStoryReaderScreen(
                             text = "« $syn »",
                             color = Color(0xFFDEC595),
                             fontSize = (fontSize - 1).sp,
+                            fontFamily = activeFontFamily,
                             fontStyle = FontStyle.Italic,
                             lineHeight = (fontSize * 1.5f).sp
                         )
@@ -709,7 +755,7 @@ fun AiStoryReaderScreen(
                         color = textColor,
                         fontSize = fontSize.sp,
                         lineHeight = (fontSize * 1.8f).sp,
-                        fontFamily = FontFamily.Serif,
+                        fontFamily = activeFontFamily,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

@@ -3106,11 +3106,45 @@ fun AdminAiStoriesTab(
                     if (isGeneratingAI) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = SpectralWhite)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("در حال نگارش $storyCountToGenerate داستان هولناک با هوش مصنوعی...")
+                        Text("در حال نگارش صف $storyCountToGenerate داستان هولناک...")
                     } else {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("تولید $storyCountToGenerate داستان و قرار دادن در لیست منتشر شده")
+                        Text("تولید صف $storyCountToGenerate داستان با هوش مصنوعی")
+                    }
+                }
+
+                val queueState by viewModel.aiGenQueueState.collectAsState()
+                if (queueState.isGenerating || queueState.completedCount > 0) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF14081E)),
+                        border = BorderStroke(1.dp, BloodGlow),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text("وضعیت صف تولید داستان‌ها:", color = SpectralWhite, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("${queueState.completedCount} از ${queueState.totalRequested}", color = Color(0xFFDEC595), fontSize = 11.sp)
+                            }
+                            LinearProgressIndicator(
+                                progress = { if (queueState.totalRequested > 0) queueState.completedCount.toFloat() / queueState.totalRequested else 0f },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = BloodCrimson,
+                                trackColor = Color(0xFF261238)
+                            )
+                            Text(
+                                text = queueState.statusMessage,
+                                color = MutedAsh,
+                                fontSize = 10.sp
+                            )
+                        }
                     }
                 }
 

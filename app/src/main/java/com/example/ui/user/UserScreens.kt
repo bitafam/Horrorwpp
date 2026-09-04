@@ -4192,8 +4192,16 @@ fun GorgeousSettingsScreen(
     onOpenAdminLogin: () -> Unit,
     onBack: () -> Unit = {}
 ) {
-    val isAmbientPlaying by HorrorSoundManager.isAmbientPlaying.collectAsState()
-    var spookyModeEnabled by remember { mutableStateOf(true) }
+    val selectedFontIndex by viewModel.selectedFontIndex.collectAsState()
+    val fontSize by viewModel.fontSize.collectAsState()
+
+    val fontFamilies = listOf(
+        Pair("پیش‌فرض سیستم (وزیر)", FontFamily.Default),
+        Pair("کلاسیک گوتیک (Serif)", FontFamily.Serif),
+        Pair("مدرن و خوانا (SansSerif)", FontFamily.SansSerif),
+        Pair("کنسولی (Monospace)", FontFamily.Monospace),
+        Pair("نمایشی (Cursive)", FontFamily.Cursive)
+    )
 
     Column(
         modifier = Modifier
@@ -4201,8 +4209,8 @@ fun GorgeousSettingsScreen(
             .background(Color(0xFF030106))
     ) {
         GamingTopBar(
-            title = "تنظیمات و طنین‌های عمارت",
-            subtitle = "مدیریت صدا، جلوه‌ها و درگاه باستانی",
+            title = "تنظیمات و فونت‌های عمارت",
+            subtitle = "پیکربندی قلم، اندازه متن و پورتال‌ها",
             icon = Icons.Default.Settings,
             badgeText = "تنظیمات",
             onBack = onBack
@@ -4217,83 +4225,171 @@ fun GorgeousSettingsScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-        Text(
-            text = "تنظیمات عمارت",
-            style = MaterialTheme.typography.displayLarge.copy(
-                fontFamily = FontFamily.Serif,
-                fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
-                color = Color(0xFFDEC595)
-            )
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "ـ پیکربندی طنین‌ها و اتمسفر قلعه باستانی گوتیک ـ",
-            style = MaterialTheme.typography.bodySmall.copy(
-                color = Color(0xFF8B8496),
-                fontSize = 11.sp
-            )
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Ambient Sound Controls
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.25f), cornerRadiusDp = 12f),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(
-                    text = "طنین‌های وحشت و ماوراء",
-                    color = Color(0xFFDEC595),
+            Text(
+                text = "تنظیمات قلم و ظاهر داستان",
+                style = MaterialTheme.typography.displayLarge.copy(
+                    fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
+                    fontSize = 24.sp,
+                    color = Color(0xFFDEC595)
                 )
+            )
+            Text(
+                text = "ـ شخصی‌سازی اندازه و نوع قلم برای خوانش راحت‌تر روایات ترسناک ـ",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = Color(0xFF8B8496),
+                    fontSize = 11.sp
+                )
+            )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // LIVE PREVIEW CARD
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(borderColor = Color(0xFFDEC595), cornerRadiusDp = 12f),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF140B1E)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column {
-                        Text("صداهای شوم پس‌زمینه", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("پخش افکت باد و شیون ارواح در تمام فضا", color = Color(0xFF8B8496), fontSize = 10.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("پیش‌نمایش زنده قلم:", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("${fontSize.toInt()} sp", color = Color(0xFFFF1E56), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
-                    Switch(
-                        checked = isAmbientPlaying,
-                        onCheckedChange = { HorrorSoundManager.toggleAmbient() },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color(0xFFB8143F),
-                            checkedTrackColor = Color(0xFF1E1428)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFF0A0512), RoundedCornerShape(8.dp))
+                            .border(1.dp, Color(0xFF381A54), RoundedCornerShape(8.dp))
+                            .padding(14.dp)
+                    ) {
+                        Text(
+                            text = "در دل تاریکی شب، نجوایی از اعماق قلعه به گوش می‌رسید... این یک نمونه متن برای بررسی خوانایی و زیبایی فونت انتخاب‌شده در عمارت وحشت است.",
+                            color = Color(0xFFEDE4F5),
+                            fontSize = fontSize.sp,
+                            fontFamily = fontFamilies.getOrNull(selectedFontIndex)?.second ?: FontFamily.Default,
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                }
+            }
+
+            // FONT FAMILY SELECTION CARD
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.3f), cornerRadiusDp = 12f),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "انتخاب قلم (فونت فارسی)",
+                        color = Color(0xFFDEC595),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+
+                    fontFamilies.forEachIndexed { index, pair ->
+                        val isSelected = selectedFontIndex == index
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) Color(0xFF2E1225) else Color(0xFF181024))
+                                .border(1.dp, if (isSelected) Color(0xFFFF1E56) else Color(0xFF2E1A3F), RoundedCornerShape(8.dp))
+                                .clickable { viewModel.setFontFamily(index) }
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = pair.first,
+                                color = if (isSelected) Color(0xFFFF1E56) else Color.White,
+                                fontSize = 13.sp,
+                                fontFamily = pair.second,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { viewModel.setFontFamily(index) },
+                                colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF1E56))
+                            )
+                        }
+                    }
+                }
+            }
+
+            // FONT SIZE SLIDER CARD
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.3f), cornerRadiusDp = 12f),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0918)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "اندازه قلم متن داستان",
+                        color = Color(0xFFDEC595),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+
+                    Slider(
+                        value = fontSize,
+                        onValueChange = { viewModel.setFontSize(it) },
+                        valueRange = 12f..26f,
+                        steps = 13,
+                        colors = SliderDefaults.colors(
+                            thumbColor = Color(0xFFFF1E56),
+                            activeTrackColor = Color(0xFFFF1E56),
+                            inactiveTrackColor = Color(0xFF2E1A3F)
                         )
                     )
-                }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text("حالت تنفس قلعه گوتیک", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("نبض خون‌رنگ و لرزش‌های ملایم رابط کاربری", color = Color(0xFF8B8496), fontSize = 10.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("کوچک (12sp)", color = Color(0xFF8B8496), fontSize = 10.sp)
+                        Text("پیش‌فرض (16sp)", color = Color(0xFF8B8496), fontSize = 10.sp)
+                        Text("بزرگ (26sp)", color = Color(0xFF8B8496), fontSize = 10.sp)
                     }
-                    Switch(
-                        checked = spookyModeEnabled,
-                        onCheckedChange = { spookyModeEnabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color(0xFFB8143F),
-                            checkedTrackColor = Color(0xFF1E1428)
-                        )
-                    )
                 }
+            }
+
+            // ADMIN PORTAL LINK
+            Button(
+                onClick = onOpenAdminLogin,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E1225)),
+                border = BorderStroke(1.dp, Color(0xFFFF1E56)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp)
+            ) {
+                Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color(0xFFDEC595))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("ورود به درگاه ادمین و مدیریت ارواح", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold)
             }
         }
     }
-}
 }
 
 @Composable

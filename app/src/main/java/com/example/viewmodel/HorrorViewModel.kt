@@ -124,6 +124,35 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _aiStoryPrompt = MutableStateFlow(prefs.getString(PREF_AI_STORY_PROMPT, DEFAULT_AI_STORY_PROMPT) ?: DEFAULT_AI_STORY_PROMPT)
     val aiStoryPrompt: StateFlow<String> = _aiStoryPrompt.asStateFlow()
 
+    private val PREF_FONT_FAMILY = "pref_font_family"
+    private val PREF_FONT_SIZE = "pref_font_size"
+
+    private val _selectedFontIndex = MutableStateFlow(prefs.getInt(PREF_FONT_FAMILY, 0))
+    val selectedFontIndex: StateFlow<Int> = _selectedFontIndex.asStateFlow()
+
+    private val _fontSize = MutableStateFlow(prefs.getFloat(PREF_FONT_SIZE, 16f))
+    val fontSize: StateFlow<Float> = _fontSize.asStateFlow()
+
+    fun setFontFamily(index: Int) {
+        _selectedFontIndex.value = index
+        prefs.edit().putInt(PREF_FONT_FAMILY, index).apply()
+    }
+
+    fun setFontSize(size: Float) {
+        _fontSize.value = size
+        prefs.edit().putFloat(PREF_FONT_SIZE, size).apply()
+    }
+
+    data class AiGenQueueState(
+        val isGenerating: Boolean = false,
+        val totalRequested: Int = 0,
+        val completedCount: Int = 0,
+        val statusMessage: String = ""
+    )
+
+    private val _aiGenQueueState = MutableStateFlow(AiGenQueueState())
+    val aiGenQueueState: StateFlow<AiGenQueueState> = _aiGenQueueState.asStateFlow()
+
     fun setAiStoryPrompt(prompt: String) {
         _aiStoryPrompt.value = prompt
         prefs.edit().putString(PREF_AI_STORY_PROMPT, prompt).apply()
@@ -1864,102 +1893,179 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         onResult: (Boolean, String, Int) -> Unit
     ) {
         val safeCount = count.coerceIn(1, 20)
-        val basePrompt = customPrompt?.ifBlank { null } ?: _aiStoryPrompt.value
-        val genreText = if (!genre.isNullOrBlank() && genre != "همه") "در ژانر وحشت «$genre»" else "در ژانرهای مختلف وحشت (ماورایی، روانشناختی، گوتیک، افسانه‌های تاریک ایرانی)"
-        
-        val prompt = "$basePrompt\n\n" +
-                "دستور اختصاصی:\n" +
-                "دقیقاً تعداد $safeCount داستان ترسناک و دلهره‌آور تازه، عمیق و پرتعلیق $genreText خلق کن.\n" +
-                "پاسخ خود را دقیقاً و صرفاً به صورت یک JSON استاندارد با فرمت زیر ارائه کن (بدون هیچ کلمه اضافی، مارک‌داون یا توضیحات دیگر):\n" +
-                "{\n" +
-                "  \"stories\": [\n" +
-                "    {\n" +
-                "      \"title\": \"یک عنوان جذاب، غافلگیرکننده و خوفناک\",\n" +
-                "      \"genre\": \"ژانر داستان\",\n" +
-                "      \"content\": \"متن کامل و غنی داستان با توصیف فضاسازی، تعلیق نفس‌گیر و پایان شگفت‌آور (حداقل ۳ الی ۵ پاراگراف کامل)\",\n" +
-                "      \"synopsis\": \"خلاصه داستان در ۲ یا ۳ جمله کنجکاوی‌برانگیز\",\n" +
-                "      \"doom_score\": 85\n" +
-                "    }\n" +
-                "  ]\n" +
-                "}\n" +
-                "تعداد داستان‌های خروجی در آرایه stories باید دقیقاً $safeCount عدد باشد."
+        _aiGenQueueState.value = AiGenQueueState(
+            isGenerating = true,
+            totalRequested = safeCount,
+            completedCount = 0,
+            statusMessage = "آغاز صف تولید $safeCount داستان..."
+        )
 
-        generateAILore(prompt) { responseText ->
-            if (responseText.startsWith("خطا")) {
-                onResult(false, responseText, 0)
-                return@generateAILore
-            }
+        viewModelScope.launch(Dispatchers.IO) {
+            val horrorPosters = listOf(
+                "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1514533450685-4493e01d1fdc?w=600&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80",
+                "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80"
+            )
 
-            try {
-                val startIndex = responseText.indexOf("{")
-                val endIndex = responseText.lastIndexOf("}")
-                if (startIndex == -1 || endIndex == -1) {
-                    throw Exception("ساختار پاسخ هوش مصنوعی قالب معتبر JSON ندارد.")
-                }
-                val jsonStr = responseText.substring(startIndex, endIndex + 1)
-                val root = org.json.JSONObject(jsonStr)
-                val array = root.getJSONArray("stories")
-                val storiesList = mutableListOf<AiStory>()
+            val chunkSize = 2
+            var totalGenerated = 0
+            val allCreatedStories = mutableListOf<AiStory>()
 
-                val defaultPosters = listOf(
-                    "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1514533450685-4493e01d1fdc?w=600&auto=format&fit=crop&q=80",
-                    "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=600&auto=format&fit=crop&q=80"
+            var remaining = safeCount
+            while (remaining > 0) {
+                val batchCount = minOf(remaining, chunkSize)
+                _aiGenQueueState.value = _aiGenQueueState.value.copy(
+                    statusMessage = "در حال تولید دسته ${totalGenerated + 1} تا ${totalGenerated + batchCount} از $safeCount..."
                 )
 
-                for (i in 0 until array.length()) {
-                    val item = array.getJSONObject(i)
-                    val title = item.optString("title", "روایت شماره ${i + 1} هوش مصنوعی")
-                    val storyGenre = item.optString("genre", genre ?: "ماورایی")
-                    val content = item.optString("content", "")
-                    val synopsis = item.optString("synopsis", content.take(120))
-                    val doomScore = item.optInt("doom_score", (75..98).random())
-                    val poster = defaultPosters[i % defaultPosters.size]
+                val basePrompt = customPrompt?.ifBlank { null } ?: _aiStoryPrompt.value
+                val genreText = if (!genre.isNullOrBlank() && genre != "همه") "در ژانر وحشت «$genre»" else "در ژانرهای مختلف وحشت (ماورایی، روانشناختی، گوتیک، افسانه‌های تاریک ایرانی)"
 
-                    if (content.isNotBlank()) {
-                        val pseudoId = java.util.UUID.randomUUID().toString()
-                        storiesList.add(
-                            AiStory(
-                                id = pseudoId,
-                                title = title,
-                                content = content,
-                                genre = storyGenre,
-                                synopsis = synopsis,
-                                cover_image_url = poster,
-                                tags = "$storyGenre, هوش مصنوعی",
-                                status = "PUBLISHED",
-                                rating = (doomScore / 20.0f).coerceIn(3.5f, 5.0f),
-                                rating_count = (5..35).random(),
-                                view_count = (20..250).random(),
-                                createdAt = null,
-                                updatedAt = null
-                            )
-                        )
+                val prompt = "$basePrompt\n\n" +
+                        "دستور اختصاصی:\n" +
+                        "دقیقاً تعداد $batchCount داستان ترسناک و دلهره‌آور تازه، عمیق و پرتعلیق $genreText خلق کن.\n" +
+                        "پاسخ خود را دقیقاً و صرفاً به صورت یک JSON استاندارد با فرمت زیر ارائه کن (بدون هیچ کلمه اضافی، مارک‌داون یا توضیحات دیگر):\n" +
+                        "{\n" +
+                        "  \"stories\": [\n" +
+                        "    {\n" +
+                        "      \"title\": \"یک عنوان جذاب، غافلگیرکننده و خوفناک\",\n" +
+                        "      \"genre\": \"ژانر داستان\",\n" +
+                        "      \"content\": \"متن کامل و غنی داستان با توصیف فضاسازی، تعلیق نفس‌گیر و پایان شگفت‌آور (حداقل ۳ الی ۵ پاراگراف کامل)\",\n" +
+                        "      \"synopsis\": \"خلاصه داستان در ۲ یا ۳ جمله کنجکاوی‌برانگیز\",\n" +
+                        "      \"doom_score\": 85\n" +
+                        "    }\n" +
+                        "  ]\n" +
+                        "}\n" +
+                        "تعداد داستان‌های خروجی در آرایه stories باید دقیقاً $batchCount عدد باشد."
+
+                var batchSuccess = false
+                var batchErrorMsg = ""
+
+                try {
+                    val apiKey = getEffectiveGeminiApiKey()
+                    if (apiKey.isBlank()) {
+                        batchErrorMsg = "کلید هوش مصنوعی یافت نشد."
+                    } else {
+                        val actualModel = _selectedGeminiModel.value.trim()
+                        val client = OkHttpClient.Builder()
+                            .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                            .build()
+
+                        val requestJson = JSONObject().apply {
+                            val contentsArray = JSONArray().apply {
+                                put(JSONObject().apply {
+                                    put("parts", JSONArray().apply {
+                                        put(JSONObject().apply { put("text", prompt) })
+                                    })
+                                })
+                            }
+                            put("contents", contentsArray)
+                            put("systemInstruction", JSONObject().apply {
+                                put("parts", JSONArray().apply {
+                                    put(JSONObject().apply {
+                                        put("text", "تو کاتب باستانی و نگهبان ارواح عمارت وحشت گوتیک هستی. لحن تو باید کاملاً ادبی، رازآلود، گوتیک، مهیج و فوق‌العاده ترسناک باشد. فقط به زبان فارسی روان و شکیل پاسخ بنویس.")
+                                    })
+                                })
+                            })
+                        }
+
+                        val request = Request.Builder()
+                            .url("https://generativelanguage.googleapis.com/v1beta/models/$actualModel:generateContent?key=$apiKey")
+                            .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+                            .build()
+
+                        val response = client.newCall(request).execute()
+                        val bodyStr = response.body?.string() ?: ""
+                        if (response.isSuccessful) {
+                            val responseObj = JSONObject(bodyStr)
+                            val candidates = responseObj.getJSONArray("candidates")
+                            val firstCandidate = candidates.getJSONObject(0)
+                            val content = firstCandidate.getJSONObject("content")
+                            val parts = content.getJSONArray("parts")
+                            val responseText = parts.getJSONObject(0).getString("text").trim()
+
+                            val startIndex = responseText.indexOf("{")
+                            val endIndex = responseText.lastIndexOf("}")
+                            if (startIndex != -1 && endIndex != -1) {
+                                val jsonStr = responseText.substring(startIndex, endIndex + 1)
+                                val root = org.json.JSONObject(jsonStr)
+                                val array = root.getJSONArray("stories")
+
+                                for (i in 0 until array.length()) {
+                                    val item = array.getJSONObject(i)
+                                    val title = item.optString("title", "روایت هوش مصنوعی")
+                                    val storyGenre = item.optString("genre", genre ?: "ماورایی")
+                                    val contentText = item.optString("content", "")
+                                    val synopsis = item.optString("synopsis", contentText.take(120))
+                                    val doomScore = item.optInt("doom_score", (75..98).random())
+                                    val poster = horrorPosters.random()
+
+                                    if (contentText.isNotBlank()) {
+                                        val pseudoId = java.util.UUID.randomUUID().toString()
+                                        val story = AiStory(
+                                            id = pseudoId,
+                                            title = title,
+                                            content = contentText,
+                                            genre = storyGenre,
+                                            synopsis = synopsis,
+                                            cover_image_url = poster,
+                                            tags = "$storyGenre, هوش مصنوعی",
+                                            status = "PUBLISHED",
+                                            rating = (doomScore / 20.0f).coerceIn(3.5f, 5.0f),
+                                            rating_count = (5..35).random(),
+                                            view_count = (20..250).random(),
+                                            createdAt = null,
+                                            updatedAt = null
+                                        )
+                                        allCreatedStories.add(story)
+                                        repository.upsertAiStories(listOf(story))
+                                    }
+                                }
+                                batchSuccess = true
+                            }
+                        } else {
+                            batchErrorMsg = "خطای سرور گوگل (${response.code})"
+                        }
                     }
+                } catch (e: Exception) {
+                    batchErrorMsg = e.localizedMessage ?: "خطای ناشناخته"
                 }
 
-                if (storiesList.isEmpty()) {
-                    throw Exception("هیچ داستانی در پاسخ هوش مصنوعی شناسایی نشد.")
-                }
-
-                viewModelScope.launch {
-                    _loading.value = true
-                    try {
-                        repository.upsertAiStories(storiesList)
-                        _adminAiStories.value = storiesList + _adminAiStories.value
-                        _aiStoriesList.value = storiesList + _aiStoriesList.value
-                        onResult(true, "تعداد ${storiesList.size} داستان هوش مصنوعی با موفقیت تولید و در لیست منتشر شده قرار گرفتند.", storiesList.size)
-                    } catch (e: Exception) {
-                        onResult(false, "خطا در ذخیره داستان‌ها در پایگاه داده: ${e.localizedMessage}", 0)
-                    } finally {
-                        _loading.value = false
+                if (!batchSuccess && allCreatedStories.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        _aiGenQueueState.value = AiGenQueueState(isGenerating = false, totalRequested = safeCount, completedCount = totalGenerated, statusMessage = "خطا در صف: $batchErrorMsg")
+                        onResult(false, "خطا در تولید داستان‌ها: $batchErrorMsg", totalGenerated)
                     }
+                    return@launch
                 }
-            } catch (e: Exception) {
-                android.util.Log.e("AiStories", "Parsing JSON batch stories failed", e)
-                onResult(false, "خطا در پردازش پاسخ هوش مصنوعی: ${e.localizedMessage}", 0)
+
+                totalGenerated += batchCount
+                remaining -= batchCount
+                withContext(Dispatchers.Main) {
+                    _aiGenQueueState.value = _aiGenQueueState.value.copy(
+                        completedCount = totalGenerated,
+                        statusMessage = "تکمیل شده: $totalGenerated از $safeCount داستان"
+                    )
+                    _adminAiStories.value = allCreatedStories + _adminAiStories.value
+                    _aiStoriesList.value = allCreatedStories + _aiStoriesList.value
+                }
+
+                kotlinx.coroutines.delay(800)
+            }
+
+            withContext(Dispatchers.Main) {
+                _aiGenQueueState.value = AiGenQueueState(
+                    isGenerating = false,
+                    totalRequested = safeCount,
+                    completedCount = allCreatedStories.size,
+                    statusMessage = "صف تولید با موفقیت کامل شد! (${allCreatedStories.size} داستان اضافه شد)"
+                )
+                onResult(true, "تعداد ${allCreatedStories.size} داستان با موفقیت تولید و منتشر شدند.", allCreatedStories.size)
             }
         }
     }
