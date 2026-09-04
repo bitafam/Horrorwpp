@@ -4487,13 +4487,24 @@ fun AdminReportsTab(viewModel: HorrorViewModel, onOpenStory: (RealStory) -> Unit
                                     )
                                 }
 
+                                val badgeText = when (report.story_type) {
+                                    "USER" -> "روایت کاربر"
+                                    "AI" -> "داستان هوش مصنوعی"
+                                    else -> "داستان اصلی"
+                                }
+                                val badgeColor = when (report.story_type) {
+                                    "USER" -> Color(0xFFDEC595)
+                                    "AI" -> Color(0xFFC084FC)
+                                    else -> BloodGlow
+                                }
+
                                 Text(
-                                    text = if (report.story_type == "USER") "روایت کاربر" else "داستان اصلی",
-                                    color = if (report.story_type == "USER") Color(0xFFDEC595) else BloodGlow,
+                                    text = badgeText,
+                                    color = badgeColor,
                                     fontSize = 10.sp,
                                     modifier = Modifier
                                         .background(
-                                            color = (if (report.story_type == "USER") Color(0xFFDEC595) else BloodGlow).copy(alpha = 0.15f),
+                                            color = badgeColor.copy(alpha = 0.15f),
                                             shape = RoundedCornerShape(4.dp)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
@@ -4535,11 +4546,28 @@ fun AdminReportsTab(viewModel: HorrorViewModel, onOpenStory: (RealStory) -> Unit
                                     onClick = {
                                         val subStories = viewModel.adminSubmissions.value
                                         val realStories = viewModel.adminRealStories.value
-                                        val foundStory = if (report.story_type == "USER") {
-                                            subStories.find { it.id == report.story_id }?.toRealStory()
-                                        } else {
-                                            realStories.find { it.id == report.story_id }
+                                        val aiStories = viewModel.adminAiStories.value.ifEmpty { viewModel.aiStoriesList.value }
+                                        
+                                        val foundStory = when (report.story_type) {
+                                            "USER" -> subStories.find { it.id == report.story_id }?.toRealStory()
+                                            "AI" -> aiStories.find { it.id == report.story_id }?.let { ai ->
+                                                RealStory(
+                                                    id = ai.id,
+                                                    title = ai.title,
+                                                    content = ai.content,
+                                                    author = "هوش مصنوعی عمارت وحشت",
+                                                    source = "هوش مصنوعی عمارت وحشت",
+                                                    cover_image_url = ai.cover_image_url,
+                                                    tags = ai.tags,
+                                                    rating = ai.rating,
+                                                    rating_count = ai.rating_count,
+                                                    view_count = ai.viewsCount,
+                                                    status = ai.status
+                                                )
+                                            }
+                                            else -> realStories.find { it.id == report.story_id }
                                         }
+                                        
                                         if (foundStory != null) {
                                             onOpenStory(foundStory)
                                         } else {
@@ -4547,7 +4575,7 @@ fun AdminReportsTab(viewModel: HorrorViewModel, onOpenStory: (RealStory) -> Unit
                                                 RealStory(
                                                     id = report.story_id,
                                                     title = report.story_title,
-                                                    content = "این داستان مستقیماً یافت نشد. ممکن است از پایگاه داده حذف شده باشد.",
+                                                    content = "این داستان مستقیماً در حافظه جاری یافت نشد. ممکن است شناسه آن متفاوت یا حذف شده باشد.",
                                                     author = report.story_author,
                                                     source = "گزارش خطا",
                                                     status = "PUBLISHED"

@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
+import android.app.Activity
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.example.R
@@ -694,13 +696,13 @@ fun GamingGrimFortuneBannerCanvas(modifier: Modifier = Modifier) {
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(20000, easing = LinearEasing)
+            animation = tween(24000, easing = LinearEasing)
         ),
         label = "zodiacRotate"
     )
     val glow by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.75f,
+        initialValue = 0.35f,
+        targetValue = 0.8f,
         animationSpec = infiniteRepeatable(
             animation = tween(2200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
@@ -712,18 +714,18 @@ fun GamingGrimFortuneBannerCanvas(modifier: Modifier = Modifier) {
         val w = size.width
         val h = size.height
 
-        // Deep cosmic astral purple and midnight gradient
+        // Deep gothic obsidian and blood crimson gradient
         val bgGrad = Brush.verticalGradient(
-            colors = listOf(Color(0xFF03010A), Color(0xFF140827), Color(0xFF05010E))
+            colors = listOf(Color(0xFF040108), Color(0xFF180510), Color(0xFF07010A))
         )
         drawRect(bgGrad)
 
         val center = Offset(w * 0.75f, h * 0.5f)
 
-        // Astral nebula glow
+        // Mystical Crimson Aura glow
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0xFF8A2BE2).copy(alpha = glow * 0.45f), Color.Transparent),
+                colors = listOf(Color(0xFFFF1E56).copy(alpha = glow * 0.4f), Color.Transparent),
                 center = center,
                 radius = w * 0.45f
             ),
@@ -733,13 +735,13 @@ fun GamingGrimFortuneBannerCanvas(modifier: Modifier = Modifier) {
 
         // Rotating golden zodiac celestial rings
         drawCircle(
-            color = Color(0xFFDEC595).copy(alpha = 0.6f),
+            color = Color(0xFFDEC595).copy(alpha = 0.65f),
             radius = w * 0.26f,
             center = center,
             style = Stroke(width = 2f)
         )
         drawCircle(
-            color = Color(0xFFFFD700).copy(alpha = 0.4f),
+            color = Color(0xFFFFD700).copy(alpha = 0.45f),
             radius = w * 0.18f,
             center = center,
             style = Stroke(width = 1.5f)
@@ -764,13 +766,13 @@ fun GamingGrimFortuneBannerCanvas(modifier: Modifier = Modifier) {
 
         // Golden Eye of Providence at center
         drawCircle(Color(0xFFFFD700), w * 0.04f, center)
-        drawCircle(Color(0xFF140827), w * 0.02f, center)
+        drawCircle(Color(0xFF14050D), w * 0.02f, center)
 
-        // Left side astrological constellations
+        // Left side astrological constellations in warm gold and crimson
         drawCircle(Color(0xFFDEC595), 3.5f, Offset(w * 0.15f, h * 0.25f))
-        drawCircle(Color(0xFFDEC595), 2.5f, Offset(w * 0.25f, h * 0.35f))
+        drawCircle(Color(0xFFFF1E56).copy(alpha = 0.8f), 2.5f, Offset(w * 0.25f, h * 0.35f))
         drawCircle(Color(0xFFDEC595), 4f, Offset(w * 0.2f, h * 0.65f))
-        drawCircle(Color(0xFFDEC595), 3f, Offset(w * 0.35f, h * 0.75f))
+        drawCircle(Color(0xFFFFD700), 3f, Offset(w * 0.35f, h * 0.75f))
         drawLine(Color(0x55DEC595), Offset(w * 0.15f, h * 0.25f), Offset(w * 0.25f, h * 0.35f), 1.5f)
         drawLine(Color(0x55DEC595), Offset(w * 0.2f, h * 0.65f), Offset(w * 0.35f, h * 0.75f), 1.5f)
     }
@@ -885,27 +887,27 @@ fun GamingAudioSettingsBannerCanvas(modifier: Modifier = Modifier) {
         val w = size.width
         val h = size.height
 
-        // Cyber-Gothic neon cyan and dark purple gradient
+        // Deep gothic obsidian and blood crimson gradient
         val bgGrad = Brush.verticalGradient(
-            colors = listOf(Color(0xFF020108), Color(0xFF0B1024), Color(0xFF040209))
+            colors = listOf(Color(0xFF040108), Color(0xFF190612), Color(0xFF06020A))
         )
         drawRect(bgGrad)
 
-        // Gothic Gearwork rings on left
+        // Gothic Gearwork rings on left in antique gold and crimson
         drawCircle(
-            color = Color(0xFF00E5FF).copy(alpha = 0.35f),
+            color = Color(0xFFDEC595).copy(alpha = 0.45f),
             radius = w * 0.22f,
             center = Offset(w * 0.2f, h * 0.5f),
             style = Stroke(width = 2f)
         )
         drawCircle(
-            color = Color(0xFF8A2BE2).copy(alpha = 0.5f),
+            color = Color(0xFFB8143F).copy(alpha = 0.6f),
             radius = w * 0.12f,
             center = Offset(w * 0.2f, h * 0.5f),
             style = Stroke(width = 1.5f)
         )
 
-        // Equalizer frequency soundwave bars on right
+        // Equalizer frequency soundwave bars on right in blood crimson and gothic gold
         val heights = listOf(wave1, wave2, wave3, wave1 * 0.8f, wave2 * 1.1f, wave3 * 0.7f, wave1 * 1.2f, wave2 * 0.6f)
         val barWidth = w * 0.035f
         val startX = w * 0.5f
@@ -917,7 +919,7 @@ fun GamingAudioSettingsBannerCanvas(modifier: Modifier = Modifier) {
             val topY = (h - barH) / 2f
             drawRoundRect(
                 brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFF00E5FF), Color(0xFFB8143F), Color(0xFF8A2BE2))
+                    colors = listOf(Color(0xFFFF1E56), Color(0xFFB8143F), Color(0xFFDEC595))
                 ),
                 topLeft = Offset(x, topY),
                 size = Size(barWidth, barH),
@@ -1195,79 +1197,28 @@ fun GothicGamingHomeScreen(
                 border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .clickable { onLogoAdminClick() }
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Left (RTL): Manor Crest Logo (Admin tap trigger 7x) + Title
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.clickable { onLogoAdminClick() }
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFB8143F))
-                                .border(1.5.dp, Color(0xFFDEC595), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Castle,
-                                contentDescription = "عمارت وحشت",
-                                tint = Color(0xFFFFD700),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "عـمـــارت وحـشـــت",
-                                color = Color(0xFFDEC595),
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                fontFamily = FontFamily.Serif
-                            )
-                            Text(
-                                text = "HORROR REALM • HUB",
-                                color = Color(0xFF8B8496),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.sp
-                            )
-                        }
-                    }
-
-                    // Right (RTL): Ambient Horror Sound toggle
-                    Surface(
-                        onClick = {
-                            HorrorSoundManager.toggleAmbient()
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (!isAmbientPlaying) Color(0xFF1B0F1B) else Color(0xFF2E0C1C),
-                        border = BorderStroke(1.dp, if (!isAmbientPlaying) Color(0xFF4A1A32) else Color(0xFFFF1E56))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = if (!isAmbientPlaying) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                                contentDescription = null,
-                                tint = if (!isAmbientPlaying) Color(0xFF8B8496) else Color(0xFFFF1E56),
-                                modifier = Modifier.size(15.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (!isAmbientPlaying) "صدا: خاموش" else "صدا: در حال پخش",
-                                color = if (!isAmbientPlaying) Color(0xFF8B8496) else Color(0xFFFFD700),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "عـمـــارت وحـشـــت",
+                            color = Color(0xFFDEC595),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = FontFamily.Serif
+                        )
+                        Text(
+                            text = "HORROR REALM • HUB",
+                            color = Color(0xFF8B8496),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
                     }
                 }
             }
@@ -1281,13 +1232,13 @@ fun GothicGamingHomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .gothicBorder(borderColor = Color(0xFFDEC595), alpha = 0.65f, cornerRadiusDp = 14f)
+                    .gothicBorder(borderColor = Color(0xFFB8143F).copy(alpha = 0.7f), cornerRadiusDp = 14f)
                     .clickable {
                         HorrorSoundManager.playScenarioChoiceSound()
                         onNavigate(UserDestination.STORIES)
                     },
                 shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF080310))
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     GamingStoryBannerCanvas(modifier = Modifier.fillMaxSize())
@@ -1298,7 +1249,7 @@ fun GothicGamingHomeScreen(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    listOf(Color(0x33000000), Color(0x99030107), Color(0xFA05010B))
+                                    listOf(Color(0x33000000), Color(0x990E040A), Color(0xFA0E040A))
                                 )
                             )
                     )
@@ -1325,16 +1276,16 @@ fun GothicGamingHomeScreen(
                                 ) {
                                     Icon(Icons.Default.MenuBook, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("آرشیو کهن روایات", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Text("آرشیو کهن روایات", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
 
                             Surface(
-                                color = Color(0xDD0D061A),
+                                color = Color(0xFF380714),
                                 shape = RoundedCornerShape(6.dp),
-                                border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f))
+                                border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.7f))
                             ) {
-                                Text("🔥 داغ‌ترین بخش", color = Color(0xFFFFD700), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
+                                Text("داغ‌ترین بخش", color = Color(0xFFDEC595), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp))
                             }
                         }
 
@@ -1360,17 +1311,17 @@ fun GothicGamingHomeScreen(
                                 horizontalArrangement = Arrangement.End
                             ) {
                                 Surface(
-                                    color = Color(0xFFB8143F),
+                                    color = Color(0xFF380714),
                                     shape = RoundedCornerShape(8.dp),
-                                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.7f))
+                                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.7f))
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text("گشایش کتیبه‌ها", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        Text("گشایش کتیبه‌ها", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                         Spacer(modifier = Modifier.width(4.dp))
-                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(12.dp))
                                     }
                                 }
                             }
@@ -1389,11 +1340,11 @@ fun GothicGamingHomeScreen(
                     modifier = Modifier
                         .weight(1.1f)
                         .height(230.dp)
-                        .gothicBorder(borderColor = Color(0xFFFF1E56).copy(alpha = 0.7f), cornerRadiusDp = 14f)
-                        .clickable {
-                            HorrorSoundManager.playScenarioChoiceSound()
-                            onNavigate(UserDestination.AI_STORIES)
-                        },
+                        .gothicBorder(borderColor = Color(0xFFB8143F).copy(alpha = 0.7f), cornerRadiusDp = 14f)
+                    .clickable {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onNavigate(UserDestination.AI_STORIES)
+                    },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
@@ -1418,32 +1369,32 @@ fun GothicGamingHomeScreen(
                                 color = Color(0xFFB8143F),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text("🧠 هوش مصنوعی", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text("هوش مصنوعی", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
 
                             Column {
                                 Text(
                                     text = "داستان‌های هوش مصنوعی",
-                                    color = Color(0xFFFF1E56),
+                                    color = Color(0xFFDEC595),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     fontFamily = FontFamily.Serif
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "قصه‌های ماورایی Gemini AI",
+                                    text = "قصه‌های ماورایی و دلهره‌آور",
                                     color = Color(0xFFEDE8F5),
                                     fontSize = 10.sp
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Surface(
-                                    color = Color(0xFF4A0A17),
+                                    color = Color(0xFF380714),
                                     shape = RoundedCornerShape(6.dp),
-                                    border = BorderStroke(1.dp, Color(0xFFFF1E56))
+                                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.7f))
                                 ) {
                                     Text(
                                         text = "مطالعه قصه‌ها ❯",
-                                        color = Color(0xFFFFD700),
+                                        color = Color(0xFFDEC595),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -1459,13 +1410,13 @@ fun GothicGamingHomeScreen(
                     modifier = Modifier
                         .weight(1.0f)
                         .height(230.dp)
-                        .gothicBorder(borderColor = Color(0xFF8A2BE2).copy(alpha = 0.7f), cornerRadiusDp = 14f)
-                        .clickable {
-                            HorrorSoundManager.playScenarioChoiceSound()
-                            onNavigate(UserDestination.GRIM_FORTUNES)
-                        },
+                        .gothicBorder(borderColor = Color(0xFFB8143F).copy(alpha = 0.7f), cornerRadiusDp = 14f)
+                    .clickable {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onNavigate(UserDestination.GRIM_FORTUNES)
+                    },
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0A0314))
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         GamingGrimFortuneBannerCanvas(modifier = Modifier.fillMaxSize())
@@ -1474,7 +1425,7 @@ fun GothicGamingHomeScreen(
                                 .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(Color(0x22000000), Color(0x880A0314), Color(0xF50A0314))
+                                        listOf(Color(0x22000000), Color(0x880E040A), Color(0xF50E040A))
                                     )
                                 )
                         )
@@ -1485,10 +1436,10 @@ fun GothicGamingHomeScreen(
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Surface(
-                                color = Color(0xFF8A2BE2),
+                                color = Color(0xFFB8143F),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text("🔮 پیشگویی", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text("طالع شوم", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
 
                             Column {
@@ -1507,9 +1458,9 @@ fun GothicGamingHomeScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Surface(
-                                    color = Color(0xFF210C35),
+                                    color = Color(0xFF380714),
                                     shape = RoundedCornerShape(6.dp),
-                                    border = BorderStroke(1.dp, Color(0xFF8A2BE2))
+                                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.7f))
                                 ) {
                                     Text(
                                         text = "مشاهده طالع ❯",
@@ -1525,7 +1476,7 @@ fun GothicGamingHomeScreen(
                 }
             }
 
-            // ASYMMETRICAL DUAL ROW 2: SUBMIT STORY (کتیبه نگارش) + SOUND & SETTINGS (آواها و تنظیمات)
+            // ASYMMETRICAL DUAL ROW 2: SUBMIT STORY (کتیبه نگارش) + SOUND & SETTINGS (تنظیمات)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -1535,13 +1486,13 @@ fun GothicGamingHomeScreen(
                     modifier = Modifier
                         .weight(1f)
                         .height(180.dp)
-                        .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.5f), cornerRadiusDp = 14f)
-                        .clickable {
-                            HorrorSoundManager.playScenarioChoiceSound()
-                            onNavigate(UserDestination.SUBMIT_STORY)
-                        },
+                        .gothicBorder(borderColor = Color(0xFFB8143F).copy(alpha = 0.7f), cornerRadiusDp = 14f)
+                    .clickable {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onNavigate(UserDestination.SUBMIT_STORY)
+                    },
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0806))
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         GamingSubmitStoryBannerCanvas(modifier = Modifier.fillMaxSize())
@@ -1550,7 +1501,7 @@ fun GothicGamingHomeScreen(
                                 .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(Color(0x22000000), Color(0x990F0806), Color(0xF50F0806))
+                                        listOf(Color(0x22000000), Color(0x990E040A), Color(0xF50E040A))
                                     )
                                 )
                         )
@@ -1561,10 +1512,10 @@ fun GothicGamingHomeScreen(
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Surface(
-                                color = Color(0xFF6E260E),
+                                color = Color(0xFFB8143F),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text("✍️ کاتبان عمارت", color = Color(0xFFFFD700), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text("ارسال روایت", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
 
                             Column {
@@ -1578,26 +1529,40 @@ fun GothicGamingHomeScreen(
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = "حکاکی تجربه در کتیبه‌ها",
-                                    color = Color(0xFF8B8496),
+                                    color = Color(0xFFEDE8F5),
                                     fontSize = 9.sp
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = Color(0xFF380714),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.7f))
+                                ) {
+                                    Text(
+                                        text = "نگارش راز ❯",
+                                        color = Color(0xFFDEC595),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
 
-                // CARD 5: AUDIO & SETTINGS (آواهای تاریک و تنظیمات)
+                // CARD 5: SETTINGS (تنظیمات)
                 Card(
                     modifier = Modifier
                         .weight(1f)
                         .height(180.dp)
-                        .gothicBorder(borderColor = Color(0xFF00E5FF).copy(alpha = 0.5f), cornerRadiusDp = 14f)
-                        .clickable {
-                            HorrorSoundManager.playScenarioChoiceSound()
-                            onNavigate(UserDestination.SETTINGS)
-                        },
+                        .gothicBorder(borderColor = Color(0xFFB8143F).copy(alpha = 0.7f), cornerRadiusDp = 14f)
+                    .clickable {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onNavigate(UserDestination.SETTINGS)
+                    },
                     shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF050814))
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         GamingAudioSettingsBannerCanvas(modifier = Modifier.fillMaxSize())
@@ -1606,7 +1571,7 @@ fun GothicGamingHomeScreen(
                                 .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(Color(0x22000000), Color(0x99050814), Color(0xF5050814))
+                                        listOf(Color(0x22000000), Color(0x990E040A), Color(0xF50E040A))
                                     )
                                 )
                         )
@@ -1617,15 +1582,15 @@ fun GothicGamingHomeScreen(
                             verticalArrangement = Arrangement.SpaceBetween
                         ) {
                             Surface(
-                                color = Color(0xFF005B66),
+                                color = Color(0xFFB8143F),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text("🎧 سنتز صدا", color = Color(0xFF00E5FF), fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text("تنظیمات", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
 
                             Column {
                                 Text(
-                                    text = "آواها و تنظیمات",
+                                    text = "تنظیمات",
                                     color = Color(0xFFDEC595),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.ExtraBold,
@@ -1633,10 +1598,24 @@ fun GothicGamingHomeScreen(
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "افکت‌های ماورائی و کنترل",
-                                    color = Color(0xFF8B8496),
+                                    text = "تنظیمات کلی برنامه",
+                                    color = Color(0xFFEDE8F5),
                                     fontSize = 9.sp
                                 )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Surface(
+                                    color = Color(0xFF380714),
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.7f))
+                                ) {
+                                    Text(
+                                        text = "پیکربندی ❯",
+                                        color = Color(0xFFDEC595),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1665,9 +1644,11 @@ fun GothicGamingHomeScreen(
 @Composable
 fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     val context = LocalContext.current
-    var currentDestination by remember { mutableStateOf(UserDestination.HOME) }
+    val destinationStack = remember { mutableStateListOf(UserDestination.HOME) }
+    val currentDestination = destinationStack.lastOrNull() ?: UserDestination.HOME
     var logoTapCount by remember { mutableIntStateOf(0) }
     var showNoInternetDialog by remember { mutableStateOf(false) }
+    var showExitDialog by remember { mutableStateOf(false) }
 
     val isOnline by viewModel.isNetworkOnline.collectAsState()
     val grimFortunes by viewModel.grimFortunesList.collectAsState()
@@ -1682,15 +1663,32 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
         HorrorSoundManager.startAmbientDrone()
     }
 
-    // Intercept system back button to smoothly navigate back to Home hub
-    BackHandler(enabled = currentDestination != UserDestination.HOME || activeReadingStory != null || activeReadingAiStory != null) {
+    fun navigateTo(dest: UserDestination) {
+        if (dest == UserDestination.HOME) {
+            destinationStack.clear()
+            destinationStack.add(UserDestination.HOME)
+        } else {
+            if (destinationStack.lastOrNull() != dest) {
+                destinationStack.add(dest)
+            }
+        }
+    }
+
+    fun popBack() {
         if (activeReadingStory != null) {
             activeReadingStory = null
         } else if (activeReadingAiStory != null) {
             activeReadingAiStory = null
+        } else if (destinationStack.size > 1) {
+            destinationStack.removeAt(destinationStack.lastIndex)
         } else {
-            currentDestination = UserDestination.HOME
+            showExitDialog = true
         }
+    }
+
+    // Intercept system back button to smoothly navigate back step-by-step or show exit dialog
+    BackHandler(enabled = true) {
+        popBack()
     }
 
     CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
@@ -1722,7 +1720,7 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                         UserDestination.HOME -> {
                             GothicGamingHomeScreen(
                                 viewModel = viewModel,
-                                onNavigate = { dest -> currentDestination = dest },
+                                onNavigate = { dest -> navigateTo(dest) },
                                 onLogoAdminClick = {
                                     logoTapCount++
                                     if (logoTapCount >= 7) {
@@ -1750,21 +1748,21 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                                         activeReadingStory = selected
                                     }
                                 },
-                                onBack = { currentDestination = UserDestination.HOME }
+                                onBack = { popBack() }
                             )
                         }
                         UserDestination.GRIM_FORTUNES -> {
                             GrimFortuneScreen(
                                 grimFortunes = grimFortunes,
                                 viewModel = viewModel,
-                                onBack = { currentDestination = UserDestination.HOME }
+                                onBack = { popBack() }
                             )
                         }
                         UserDestination.SUBMIT_STORY -> {
                             BeautifulSubmitStoryScreen(
                                 viewModel = viewModel,
-                                onBack = { currentDestination = UserDestination.HOME },
-                                onSubmissionComplete = { currentDestination = UserDestination.STORIES }
+                                onBack = { popBack() },
+                                onSubmissionComplete = { navigateTo(UserDestination.STORIES) }
                             )
                         }
                         UserDestination.AI_STORIES -> {
@@ -1774,18 +1772,88 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
                                 onStoryRead = { selected ->
                                     activeReadingAiStory = selected
                                 },
-                                onBack = { currentDestination = UserDestination.HOME }
+                                onBack = { popBack() }
                             )
                         }
                         UserDestination.SETTINGS -> {
                             GorgeousSettingsScreen(
                                 viewModel = viewModel,
                                 onOpenAdminLogin = onOpenAdminLogin,
-                                onBack = { currentDestination = UserDestination.HOME }
+                                onBack = { popBack() }
                             )
                         }
                     }
                 }
+            }
+
+            // Exit Confirmation Dialog
+            if (showExitDialog) {
+                AlertDialog(
+                    onDismissRequest = { showExitDialog = false },
+                    containerColor = Color(0xFF14081E),
+                    shape = RoundedCornerShape(16.dp),
+                    tonalElevation = 8.dp,
+                    icon = {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF380714))
+                                .border(1.5.dp, Color(0xFFB8143F), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ExitToApp,
+                                contentDescription = null,
+                                tint = Color(0xFFFF1E56),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    },
+                    title = {
+                        Text(
+                            text = "میخوای بری؟! ",
+                            color = Color(0xFFDEC595),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Serif,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
+                    text = {
+                        Text(
+                            text = "آیا مطمئنی که می‌خواهی از عمارت وحشت خارج شوی؟",
+                            color = Color(0xFFEDE8F5).copy(alpha = 0.85f),
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                showExitDialog = false
+                                (context as? Activity)?.finish()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Text("آره", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    },
+                    dismissButton = {
+                        OutlinedButton(
+                            onClick = { showExitDialog = false },
+                            shape = RoundedCornerShape(8.dp),
+                            border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
+                            modifier = Modifier.padding(horizontal = 4.dp)
+                        ) {
+                            Text("نه", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
+                    }
+                )
             }
 
             // Offline floating warning banner if network is disconnected
@@ -3281,32 +3349,6 @@ fun StoryReaderScreen(
 ) {
     val context = LocalContext.current
     
-    // Five premium Persian Font options mapping to Android System FontFamilies
-    val fontOptions = remember {
-        listOf(
-            "پیش‌فرض سیستم" to FontFamily.Default,
-            "نسخ مذهبی عتیق" to FontFamily.Serif,
-            "کتیبه سنتی دیواری" to FontFamily.Monospace,
-            "ایران‌سنس مدرن" to FontFamily.SansSerif,
-            "دوات تحریری شکسته" to FontFamily.Cursive
-        )
-    }
-    var selectedFontIndex by remember { mutableIntStateOf(0) }
-    val selectedFont = fontOptions[selectedFontIndex]
-
-    // Font size options for elegant scrolls
-    val sizeOptions = remember {
-        listOf(
-            "بسیار کوچک" to 13f,
-            "کوچک" to 15f,
-            "متوسط" to 18f,
-            "بزرگ" to 22f,
-            "بسیار بزرگ" to 26f,
-            "عتیق و غول‌آسا" to 32f
-        )
-    }
-    var fontSizeMultiplier by remember { mutableFloatStateOf(18f) }
-
     val realStoriesState by viewModel.realStoriesList.collectAsState()
     val userSubmissionsState by viewModel.userSubmissionsList.collectAsState()
     
@@ -3324,17 +3366,6 @@ fun StoryReaderScreen(
         }
     }
 
-    val existingVote = remember(story.id) { viewModel.getUserVote(story.id) }
-    var userRatingGiven by remember(story.id) {
-        mutableIntStateOf(if (existingVote > 0f) existingVote.toInt() else 0)
-    }
-    var ratingSubmitted by remember(story.id) {
-        mutableStateOf(existingVote > 0f)
-    }
-    
-    var showFontMenu by remember { mutableStateOf(false) }
-    var showSizeMenu by remember { mutableStateOf(false) }
-
     LaunchedEffect(story.id) {
         if (NetworkUtils.isOnline(context)) {
             if (isUserSub) {
@@ -3343,6 +3374,36 @@ fun StoryReaderScreen(
                 viewModel.incrementStoryViews(story.id)
             }
         }
+    }
+
+    val fontSize by viewModel.fontSize.collectAsState()
+    val selectedFontIndex by viewModel.selectedFontIndex.collectAsState()
+
+    val existingVote = remember(story.id) { viewModel.getUserVote(story.id) }
+    var userRatingGiven by remember(story.id) {
+        mutableIntStateOf(if (existingVote > 0f) existingVote.toInt() else 0)
+    }
+    var ratingSubmitted by remember(story.id) {
+        mutableStateOf(existingVote > 0f)
+    }
+
+    var showReportDialog by remember { mutableStateOf(false) }
+
+    // Themes: 0 = Crypt Dark, 1 = Ancient Parchment, 2 = Pitch Black
+    var themeIndex by remember { mutableIntStateOf(0) }
+
+    val activeFontPreset = HorrorFontPresets.getOrNull(selectedFontIndex) ?: HorrorFontPresets[0]
+
+    val bgColor = when (themeIndex) {
+        1 -> Color(0xFF16120C)
+        2 -> Color(0xFF020104)
+        else -> Color(0xFF09040F)
+    }
+
+    val textColor = when (themeIndex) {
+        1 -> Color(0xFFE8DAC2)
+        2 -> Color(0xFFE0DAE8)
+        else -> Color(0xFFEDE4F5)
     }
 
     val shareUrl = "https://ai.studio/build/horrorhouse/story?id=${story.id}"
@@ -3357,420 +3418,434 @@ fun StoryReaderScreen(
 🔑 آدرس مستقیم کتیبه: $deepLinkSchema
 """.trimIndent()
 
+    if (showReportDialog) {
+        ReportStoryDialog(
+            storyId = story.id,
+            storyTitle = story.title,
+            storyAuthor = story.author ?: "کاتبان عمارت وحشت",
+            storyType = if (isUserSub) "USER" else "REAL",
+            viewModel = viewModel,
+            onDismiss = { showReportDialog = false }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF030106))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+            .background(bgColor)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            
-            // FADED / BLURRED HERO CARD HEADER CONTAINING OPTIONS
-            Box(
+        // TOP APP BAR
+        Surface(
+            color = Color(0xFF06030B),
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .border(1.dp, Color(0xFF2E1A3F))
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(160.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.5f), cornerRadiusDp = 14f)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Background Cover Image or Canvas
-                if (!story.cover_image_url.isNullOrBlank()) {
-                    AsyncImage(
-                        model = story.cover_image_url,
-                        placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                        error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                        contentDescription = story.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    val defaultRes = when (story.id.hashCode() % 3) {
-                        0 -> R.drawable.img_poster_1_1788266550537
-                        1 -> R.drawable.img_poster_2_1788266563762
-                        else -> R.drawable.img_poster_3_1788266577786
-                    }
-                    androidx.compose.foundation.Image(
-                        painter = painterResource(id = defaultRes),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                IconButton(onClick = onBack) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "بازگشت",
+                        tint = Color(0xFFDEC595)
                     )
                 }
 
-                // Blurred/Faded Translucent Overlay (Lighter opacity)
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0x33000000),
-                                    Color(0x66000000),
-                                    Color(0xB3000000)
-                                )
-                            )
-                        )
+                Text(
+                    text = story.title,
+                    color = Color(0xFFDEC595),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = activeFontPreset.fontFamily,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+                    textAlign = TextAlign.Center
                 )
 
-                // Back Button (Top Right Corner)
-                IconButton(
-                    onClick = {
-                        HorrorSoundManager.playClickSound()
-                        onBack()
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(36.dp)
-                        .background(Color(0x88000000), CircleShape)
-                        .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.4f), CircleShape)
-                ) {
-                    Icon(
-                        Icons.Default.ArrowForward,
-                        contentDescription = "بازگشت",
-                        tint = Color.White,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Report Button
+                    IconButton(
+                        onClick = {
+                            HorrorSoundManager.playClickSound()
+                            showReportDialog = true
+                        }
+                    ) {
+                        Icon(
+                            Icons.Default.ReportProblem,
+                            contentDescription = "گزارش تخلف یا محتوای نامناسب",
+                            tint = Color(0xFFFF4D4D)
+                        )
+                    }
 
-                // Interactive Option Icons in Top-Left Corner (Dropdown Menus Inside)
+                    // Share Button
+                    IconButton(
+                        onClick = {
+                            HorrorSoundManager.playClickSound()
+                            val shareIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, shareMessage)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری روایت"))
+                        }
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "اشتراک‌گذاری", tint = Color(0xFFDEC595))
+                    }
+                }
+            }
+        }
+
+        // READING CONTROLS STRIP
+        Surface(
+            color = Color(0xFF0C0714),
+            modifier = Modifier.fillMaxWidth().border(0.5.dp, Color(0xFF261536))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Row(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Font Family Selector Menu Button
-                    Box {
+                    // Font Size Adjusters
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("اندازه قلم:", color = Color(0xFF8B8496), fontSize = 11.sp)
                         IconButton(
-                            onClick = {
-                                HorrorSoundManager.playClickSound()
-                                showFontMenu = true
-                            },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(Color(0x88000000), CircleShape)
-                                .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.4f), CircleShape)
+                            onClick = { if (fontSize > 12f) viewModel.setFontSize(fontSize - 1f) },
+                            modifier = Modifier.size(28.dp)
                         ) {
-                            Icon(
-                                Icons.Default.TextFields,
-                                contentDescription = "قلم کتیبه",
-                                tint = Color(0xFFDEC595),
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Text("A-", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
-                        DropdownMenu(
-                            expanded = showFontMenu,
-                            onDismissRequest = { showFontMenu = false },
-                            modifier = Modifier
-                                .background(Color(0xFF140C22))
-                                .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        Text("${fontSize.toInt()}", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        IconButton(
+                            onClick = { if (fontSize < 26f) viewModel.setFontSize(fontSize + 1f) },
+                            modifier = Modifier.size(28.dp)
                         ) {
-                            fontOptions.forEachIndexed { idx, (name, fontFamily) ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = name,
-                                            color = if (selectedFontIndex == idx) Color(0xFFB8143F) else Color.White,
-                                            fontFamily = fontFamily,
-                                            fontWeight = if (selectedFontIndex == idx) FontWeight.Bold else FontWeight.Normal,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    onClick = {
-                                        selectedFontIndex = idx
-                                        showFontMenu = false
-                                        HorrorSoundManager.playClickSound()
-                                    }
-                                )
-                            }
+                            Text("A+", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    // Font Size Selector Menu Button
-                    Box {
-                        IconButton(
-                            onClick = {
-                                HorrorSoundManager.playClickSound()
-                                showSizeMenu = true
-                            },
-                            modifier = Modifier
-                                .size(36.dp)
-                                .background(Color(0x88000000), CircleShape)
-                                .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.4f), CircleShape)
-                        ) {
-                            Icon(
-                                Icons.Default.FormatSize,
-                                contentDescription = "اندازه قلم",
-                                tint = Color(0xFFDEC595),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        DropdownMenu(
-                            expanded = showSizeMenu,
-                            onDismissRequest = { showSizeMenu = false },
-                            modifier = Modifier
-                                .background(Color(0xFF140C22))
-                                .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                        ) {
-                            sizeOptions.forEach { (label, value) ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = label,
-                                            color = if (fontSizeMultiplier == value) Color(0xFFB8143F) else Color.White,
-                                            fontWeight = if (fontSizeMultiplier == value) FontWeight.Bold else FontWeight.Normal,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    onClick = {
-                                        fontSizeMultiplier = value
-                                        showSizeMenu = false
-                                        HorrorSoundManager.playClickSound()
-                                    }
-                                )
+                    // Theme Switcher
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        val themes = listOf("گوتیگ", "پوستینه", "ظلمت")
+                        themes.forEachIndexed { idx, name ->
+                            val isSel = idx == themeIndex
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isSel) Color(0xFFB8143F) else Color(0xFF160E22))
+                                    .border(1.dp, if (isSel) Color(0xFFDEC595) else Color(0xFF2E1C44), RoundedCornerShape(6.dp))
+                                    .clickable { themeIndex = idx }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(name, color = if (isSel) Color.White else Color(0xFF8B8496), fontSize = 9.sp)
                             }
                         }
                     }
                 }
 
-                // Centered Story Info and Title inside the card
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Bottom
+                // Font Family Selector Chips (5 distinct presets)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = story.title,
-                        style = MaterialTheme.typography.titleLarge.copy(
+                    items(HorrorFontPresets) { preset ->
+                        val isSel = preset.id == selectedFontIndex
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSel) Color(0xFF3B184F) else Color(0xFF140B1E))
+                                .border(1.dp, if (isSel) Color(0xFFFF1E56) else Color(0xFF2E1A3F), RoundedCornerShape(6.dp))
+                                .clickable { viewModel.setFontFamily(preset.id) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = preset.name,
+                                color = if (isSel) Color(0xFFFF1E56) else Color.White,
+                                fontSize = 10.sp,
+                                fontFamily = preset.fontFamily,
+                                fontWeight = if (isSel) FontWeight.Bold else preset.fontWeight,
+                                fontStyle = preset.fontStyle
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // READING CONTENT
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // ATMOSPHERIC POSTER HERO BANNER
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.6f))
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (!story.cover_image_url.isNullOrBlank()) {
+                            AsyncImage(
+                                model = story.cover_image_url,
+                                placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
+                                error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
+                                contentDescription = story.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            val defaultRes = when (story.id.hashCode() % 3) {
+                                0 -> R.drawable.img_poster_1_1788266550537
+                                1 -> R.drawable.img_poster_2_1788266563762
+                                else -> R.drawable.img_poster_3_1788266577786
+                            }
+                            Image(
+                                painter = painterResource(id = defaultRes),
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Gradient Overlay
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.Transparent,
+                                            Color(0x99000000),
+                                            Color(0xFF09040F)
+                                        )
+                                    )
+                                )
+                        )
+                        // Story Title overlay at bottom of poster
+                        Text(
+                            text = story.title,
                             color = Color(0xFFDEC595),
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = selectedFont.second,
-                            fontSize = 20.sp,
-                            textAlign = TextAlign.Center
+                            fontFamily = activeFontPreset.fontFamily,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(14.dp)
                         )
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    }
+                }
+            }
+
+            // INFO & ATTRIBUTION CARD
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF12081E)),
+                    border = BorderStroke(1.dp, Color(0xFF381A54)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🔮 سبک: ${story.tags ?: if (isUserSub) "روایت کاربر" else "وحشت واقعی"}",
+                                color = Color(0xFFDEC595),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            // Rating summary badge
+                            Surface(
+                                color = Color(0xFF260D18),
+                                shape = RoundedCornerShape(6.dp),
+                                border = BorderStroke(1.dp, Color(0xFFFF1E56).copy(alpha = 0.6f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(13.dp))
+                                    Text(
+                                        text = String.format(java.util.Locale.US, "%.1f (%d رأی)", liveStory.rating, liveStory.rating_count),
+                                        color = Color(0xFFDEC595),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    text = "✍️ راوی: ${story.author ?: "کاتبان عمارت وحشت"}",
+                                    color = Color(0xFFDEC595).copy(alpha = 0.9f),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Text(
+                                    text = "منبع: ${story.source ?: "طومارهای عتیق عمارت"}",
+                                    color = Color(0xFF8B8496),
+                                    fontSize = 10.sp
+                                )
+                            }
+
+                            TextButton(
+                                onClick = { showReportDialog = true },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ReportProblem,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF6B6B),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("گزارش محتوا", color = Color(0xFFFF6B6B), fontSize = 10.sp)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // FULL STORY CONTENT
+            item {
+                SelectionContainer {
                     Text(
-                        text = "ـ مکتوب گرانبها در معبد عتیق ـ",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = Color(0xFF8B8496),
-                            fontSize = 10.sp
-                        )
+                        text = story.content,
+                        color = textColor,
+                        fontSize = fontSize.sp,
+                        lineHeight = (fontSize * activeFontPreset.lineHeightMultiplier).sp,
+                        fontFamily = activeFontPreset.fontFamily,
+                        fontWeight = activeFontPreset.fontWeight,
+                        fontStyle = activeFontPreset.fontStyle,
+                        letterSpacing = activeFontPreset.letterSpacing,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // STORY NARRATIVE CONTENT BODY CARD
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.35f), cornerRadiusDp = 12f)
-                    .background(Color(0xFF0F0918))
-                    .padding(16.dp)
-            ) {
-                Column(
+            // RATING AND FEEDBACK BOX
+            item {
+                Card(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF12081E)),
+                    border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.6f)),
+                    shape = RoundedCornerShape(14.dp)
                 ) {
-                    // Story Narrative Content Body
-                    Text(
-                        text = story.content,
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            color = Color(0xFFEDE8F5),
-                            lineHeight = (fontSizeMultiplier * 1.8f).sp,
-                            fontSize = fontSizeMultiplier.sp,
-                            fontFamily = selectedFont.second
-                        )
-                    )
-
-                    HorizontalDivider(color = Color(0xFFDEC595).copy(alpha = 0.2f))
-
-                    // AUTHOR NAME & SOURCE DETAILS
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "راوی باستانی: ${story.author ?: "کاتبان عمارت وحشت"}",
-                                color = Color(0xFFDEC595),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = selectedFont.second
-                            )
-                            Text(
-                                text = "منبع: ${story.source ?: "طومارهای عتیق معبد"}",
-                                color = Color(0xFF8B8496),
-                                fontSize = 10.5.sp,
-                                fontFamily = selectedFont.second
-                            )
-                        }
-
-                        // Star stat (displays live average rating)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(String.format(java.util.Locale.US, "%.1f (%d رأی)", liveStory.rating, liveStory.rating_count), color = Color(0xFFDEC595), fontSize = 11.sp)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 1. AVERAGE RATING STATS (Filled Stars visually showing average)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF0F0B18))
-                            .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.15f), RoundedCornerShape(10.dp))
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "میانگین امتیاز کل کتیبه",
-                                color = Color(0xFF8B8496),
-                                fontSize = 11.sp,
-                                fontFamily = selectedFont.second
-                            )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                (1..5).forEach { star ->
-                                    // Calculate if filled
-                                    val isFilled = star <= liveStory.rating
-                                    Icon(
-                                        imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
-                                        contentDescription = null,
-                                        tint = if (isFilled) Color(0xFFFFD700) else Color(0xFF4C4556),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = String.format(java.util.Locale.US, "%.1f از ۵ (%d رأی)", liveStory.rating, liveStory.rating_count),
-                                    color = Color(0xFFDEC595),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = selectedFont.second
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 2. INTERACTIVE USER RATING SYSTEM (Saves to Room DB & Supabase Remote DB)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF140C22))
-                            .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.25f), RoundedCornerShape(10.dp))
-                            .padding(14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = if (ratingSubmitted) "رأی شما با موفقیت ثبت شد!" else "میزان وحشت و گیرایی این داستان از نظر شما چطور بود؟",
-                                color = if (ratingSubmitted) Color(0xFFDEC595) else Color(0xFFEDE8F5),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = selectedFont.second
-                            )
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                (1..5).forEach { star ->
-                                    val isFilled = star <= userRatingGiven
-                                    IconButton(
-                                        onClick = {
-                                            if (!ratingSubmitted) {
-                                                if (!NetworkUtils.isOnline(context)) {
-                                                    android.widget.Toast.makeText(
-                                                        context,
-                                                        "❌ اتصال اینترنت برقرار نیست! ثبت رأی نیازمند اینترنت است.",
-                                                        android.widget.Toast.LENGTH_LONG
-                                                    ).show()
-                                                } else {
-                                                    userRatingGiven = star
-                                                    ratingSubmitted = true
-                                                    HorrorSoundManager.playStarRatingSound(star)
-                                                    
-                                                    if (isUserSub) {
-                                                        viewModel.rateUserSubmission(story.id, star.toFloat())
-                                                    } else {
-                                                        viewModel.rateStory(story.id, star.toFloat())
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
-                                            contentDescription = "ستاره $star",
-                                            tint = if (isFilled) Color(0xFFFFD700) else Color(0xFF8B8496),
-                                            modifier = Modifier.size(26.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            
-                            if (ratingSubmitted) {
-                                Text(
-                                    text = "امتیاز ثبت‌شده شما: $userRatingGiven ستاره از ۵ (حق رأی شما محفوظ است)",
-                                    color = Color(0xFFDEC595),
-                                    fontSize = 11.sp,
-                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                    fontFamily = selectedFont.second
-                                )
-                            } else {
-                                Text(
-                                    text = "💡 راهنما: امتیازدهی از راست به چپ افزایش می‌یابد؛ ستاره اول از راست = ۱ (کمترین) 🌟 چپ‌ترین ستاره = ۵ (بیشترین وحشت)",
-                                    color = Color(0xFF8B8496),
-                                    fontSize = 10.sp,
-                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
-                                    fontFamily = selectedFont.second,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    // ADVANCED SOCIAL NETWORK SHARING SYSTEM (Dynamic Deep Link Schema)
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "اشتراک‌گذاری طومار در شبکه‌های اجتماعی:",
-                            color = Color(0xFF8B8496),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            fontFamily = selectedFont.second
+                            text = if (ratingSubmitted) "رأی شما با موفقیت ثبت شد!" else "میزان وحشت و گیرایی این داستان از نظر شما چطور بود؟",
+                            color = Color(0xFFDEC595),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
                         )
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            (1..5).forEach { star ->
+                                val isFilled = star <= userRatingGiven || (userRatingGiven == 0 && star <= liveStory.rating.toInt())
+                                IconButton(
+                                    onClick = {
+                                        if (!ratingSubmitted) {
+                                            if (!NetworkUtils.isOnline(context)) {
+                                                android.widget.Toast.makeText(
+                                                    context,
+                                                    "❌ اتصال اینترنت برقرار نیست! ثبت رأی نیازمند اینترنت است.",
+                                                    android.widget.Toast.LENGTH_LONG
+                                                ).show()
+                                            } else {
+                                                userRatingGiven = star
+                                                ratingSubmitted = true
+                                                HorrorSoundManager.playStarRatingSound(star)
+                                                
+                                                if (isUserSub) {
+                                                    viewModel.rateUserSubmission(story.id, star.toFloat())
+                                                } else {
+                                                    viewModel.rateStory(story.id, star.toFloat())
+                                                }
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.size(38.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
+                                        contentDescription = "ستاره $star",
+                                        tint = if (isFilled) Color(0xFFFFD700) else Color(0xFF5A496B),
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        if (ratingSubmitted) {
+                            Text(
+                                text = "✨ امتیاز شما ($userRatingGiven ستاره) با موفقیت ثبت شد!",
+                                color = Color(0xFF4CAF50),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Text(
+                                text = String.format(java.util.Locale.US, "میانگین فعلی: %.1f از ۵ (%d رأی)", liveStory.rating, liveStory.rating_count),
+                                color = Color(0xFF8B8496),
+                                fontSize = 11.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // SOCIAL NETWORK SHARING BUTTONS
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -3791,7 +3866,6 @@ fun StoryReaderScreen(
                                             }
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
-                                            // Fallback standard share
                                             val sendIntent = Intent().apply {
                                                 action = Intent.ACTION_SEND
                                                 putExtra(Intent.EXTRA_TEXT, shareMessage)
@@ -3800,7 +3874,7 @@ fun StoryReaderScreen(
                                             context.startActivity(Intent.createChooser(sendIntent, "اشتراک‌گذاری در تلگرام"))
                                         }
                                     }
-                                    .padding(vertical = 10.dp),
+                                    .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("تلگرام ✈️", color = Color(0xFF229ED9), fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -3829,7 +3903,7 @@ fun StoryReaderScreen(
                                             context.startActivity(Intent.createChooser(sendIntent, "اشتراک‌گذاری در واتساپ"))
                                         }
                                     }
-                                    .padding(vertical = 10.dp),
+                                    .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("واتساپ 💬", color = Color(0xFF25D366), fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -3848,80 +3922,30 @@ fun StoryReaderScreen(
                                             val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                                             val clip = android.content.ClipData.newPlainText("طومار وحشت", deepLinkSchema)
                                             clipboard.setPrimaryClip(clip)
-                                            android.widget.Toast.makeText(context, "نشانی عتیقه کتیبه با موفقیت کپی شد!", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(context, "نشانی کتیبه با موفقیت کپی شد!", android.widget.Toast.LENGTH_SHORT).show()
                                         } catch (e: Exception) {}
                                     }
-                                    .padding(vertical = 10.dp),
+                                    .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text("کپی نشانی 🔗", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
-                    // REPORT / REPORT CONTENT BUTTON (MYKET COMPLIANCE)
-                    var showReportDialog by remember { mutableStateOf(false) }
-                    
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFB8143F).copy(alpha = 0.08f))
-                            .border(1.dp, Color(0xFFB8143F).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                            .clickable {
-                                HorrorSoundManager.playClickSound()
-                                showReportDialog = true
-                            }
-                            .padding(12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        // Return to list button
+                        Button(
+                            onClick = onBack,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A0A17)),
+                            border = BorderStroke(1.dp, Color(0xFFFF1E56)),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
-                            Icon(Icons.Default.Report, contentDescription = null, tint = Color(0xFFB8143F), modifier = Modifier.size(16.dp))
-                            Text(
-                                text = "گزارش محتوای نامناسب (ریپورت داستان)",
-                                color = Color(0xFFB8143F),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                fontFamily = selectedFont.second
-                            )
+                            Text("بازگشت به فهرست داستان‌ها", color = Color(0xFFFFD700), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
-                    }
-
-                    if (showReportDialog) {
-                        ReportStoryDialog(
-                            storyId = story.id,
-                            storyTitle = story.title,
-                            storyAuthor = story.author ?: "کاتبان عمارت وحشت",
-                            storyType = if (isUserSub) "USER" else "REAL",
-                            viewModel = viewModel,
-                            onDismiss = { showReportDialog = false }
-                        )
                     }
                 }
             }
-        }
-
-        Spacer(modifier = Modifier.height(14.dp))
-
-        // FOOTER MAIN CLOSE ACTION BUTTON
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color(0xFFB8143F))
-                .clickable {
-                    HorrorSoundManager.playClickSound()
-                    onBack()
-                }
-                .padding(vertical = 14.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("بستن کتیبه راز", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
         }
     }
 }
@@ -4190,19 +4214,13 @@ fun BeautifulSubmitStoryScreen(
 @Composable
 fun GorgeousSettingsScreen(
     viewModel: HorrorViewModel,
-    onOpenAdminLogin: () -> Unit,
+    onOpenAdminLogin: () -> Unit = {},
     onBack: () -> Unit = {}
 ) {
     val selectedFontIndex by viewModel.selectedFontIndex.collectAsState()
     val fontSize by viewModel.fontSize.collectAsState()
 
-    val fontFamilies = listOf(
-        Pair("پیش‌فرض سیستم (وزیر)", FontFamily.Default),
-        Pair("کلاسیک گوتیک (Serif)", FontFamily.Serif),
-        Pair("مدرن و خوانا (SansSerif)", FontFamily.SansSerif),
-        Pair("کنسولی (Monospace)", FontFamily.Monospace),
-        Pair("نمایشی (Cursive)", FontFamily.Cursive)
-    )
+    val activeFontPreset = HorrorFontPresets.getOrNull(selectedFontIndex) ?: HorrorFontPresets[0]
 
     Column(
         modifier = Modifier
@@ -4210,8 +4228,8 @@ fun GorgeousSettingsScreen(
             .background(Color(0xFF030106))
     ) {
         GamingTopBar(
-            title = "تنظیمات و فونت‌های عمارت",
-            subtitle = "پیکربندی قلم، اندازه متن و پورتال‌ها",
+            title = "تنظیمات",
+            subtitle = "تنظیمات کلی برنامه و قلم‌ها",
             icon = Icons.Default.Settings,
             badgeText = "تنظیمات",
             onBack = onBack
@@ -4231,7 +4249,7 @@ fun GorgeousSettingsScreen(
                 style = MaterialTheme.typography.displayLarge.copy(
                     fontFamily = FontFamily.Serif,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp,
+                    fontSize = 22.sp,
                     color = Color(0xFFDEC595)
                 )
             )
@@ -4243,7 +4261,7 @@ fun GorgeousSettingsScreen(
                 )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // LIVE PREVIEW CARD
             Card(
@@ -4265,7 +4283,7 @@ fun GorgeousSettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("پیش‌نمایش زنده قلم:", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("${fontSize.toInt()} sp", color = Color(0xFFFF1E56), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("${fontSize.toInt()} sp - ${activeFontPreset.name}", color = Color(0xFFFF1E56), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Box(
@@ -4275,26 +4293,22 @@ fun GorgeousSettingsScreen(
                             .border(1.dp, Color(0xFF381A54), RoundedCornerShape(8.dp))
                             .padding(14.dp)
                     ) {
-                        val activeFamily = fontFamilies.getOrNull(selectedFontIndex)?.second ?: FontFamily.Default
-                        val activeWeight = if (selectedFontIndex == 2) FontWeight.Bold else FontWeight.Normal
-                        val activeStyle = if (selectedFontIndex == 1) FontStyle.Italic else FontStyle.Normal
-                        val activeSpacing = if (selectedFontIndex == 3) 2.sp else 0.sp
-
                         Text(
-                            text = "در دل تاریکی شب، نجوایی از اعماق قلعه به گوش می‌رسید... این یک نمونه متن برای بررسی خوانایی و زیبایی فونت [${fontFamilies.getOrNull(selectedFontIndex)?.first}] در عمارت وحشت است.",
+                            text = "در دل تاریکی شب، نجوایی از اعماق عمارت به گوش می‌رسید... این یک نمونه متن برای بررسی خوانایی و زیبایی قلم [${activeFontPreset.name}] در عمارت وحشت است.",
                             color = Color(0xFFEDE4F5),
                             fontSize = fontSize.sp,
-                            fontFamily = activeFamily,
-                            fontWeight = activeWeight,
-                            fontStyle = activeStyle,
-                            letterSpacing = activeSpacing,
+                            fontFamily = activeFontPreset.fontFamily,
+                            fontWeight = activeFontPreset.fontWeight,
+                            fontStyle = activeFontPreset.fontStyle,
+                            letterSpacing = activeFontPreset.letterSpacing,
+                            lineHeight = (fontSize * activeFontPreset.lineHeightMultiplier).sp,
                             textAlign = TextAlign.Start
                         )
                     }
                 }
             }
 
-            // FONT FAMILY SELECTION CARD
+            // FONT FAMILY SELECTION CARD (5 DISTINCT PRESETS)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -4307,35 +4321,36 @@ fun GorgeousSettingsScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "انتخاب قلم (فونت فارسی)",
+                        text = "انتخاب قلم (فونت و آرایش متنی)",
                         color = Color(0xFFDEC595),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
                     )
 
-                    fontFamilies.forEachIndexed { index, pair ->
-                        val isSelected = selectedFontIndex == index
+                    HorrorFontPresets.forEach { preset ->
+                        val isSelected = selectedFontIndex == preset.id
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(if (isSelected) Color(0xFF2E1225) else Color(0xFF181024))
                                 .border(1.dp, if (isSelected) Color(0xFFFF1E56) else Color(0xFF2E1A3F), RoundedCornerShape(8.dp))
-                                .clickable { viewModel.setFontFamily(index) }
+                                .clickable { viewModel.setFontFamily(preset.id) }
                                 .padding(horizontal = 12.dp, vertical = 10.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = pair.first,
+                                text = preset.name,
                                 color = if (isSelected) Color(0xFFFF1E56) else Color.White,
                                 fontSize = 13.sp,
-                                fontFamily = pair.second,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                fontFamily = preset.fontFamily,
+                                fontWeight = if (isSelected) FontWeight.Bold else preset.fontWeight,
+                                fontStyle = preset.fontStyle
                             )
                             RadioButton(
                                 selected = isSelected,
-                                onClick = { viewModel.setFontFamily(index) },
+                                onClick = { viewModel.setFontFamily(preset.id) },
                                 colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF1E56))
                             )
                         }
@@ -4383,19 +4398,6 @@ fun GorgeousSettingsScreen(
                         Text("بزرگ (26sp)", color = Color(0xFF8B8496), fontSize = 10.sp)
                     }
                 }
-            }
-
-            // ADMIN PORTAL LINK
-            Button(
-                onClick = onOpenAdminLogin,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E1225)),
-                border = BorderStroke(1.dp, Color(0xFFFF1E56)),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth().height(50.dp)
-            ) {
-                Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = Color(0xFFDEC595))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("ورود به درگاه ادمین و مدیریت ارواح", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold)
             }
         }
     }

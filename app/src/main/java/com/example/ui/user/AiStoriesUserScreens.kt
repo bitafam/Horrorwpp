@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.R
 import com.example.data.AiStory
+import com.example.data.StoryReport
+import com.example.ui.theme.HorrorFontPresets
 import com.example.util.HorrorSoundManager
 import com.example.viewmodel.HorrorViewModel
 
@@ -104,7 +106,7 @@ fun AiStoriesUserSection(
         // TOP APP BAR
         GamingTopBar(
             title = "داستان‌های هوش مصنوعی",
-            subtitle = "روایت‌های سیاه و هولناک Gemini AI",
+            subtitle = "روایت‌های سیاه و هولناک هوش مصنوعی",
             icon = Icons.Default.Psychology,
             badgeText = "${publishedStories.size} قصه",
             onBack = onBack
@@ -566,6 +568,193 @@ private fun UserAiStoryCard(
 }
 
 // ==========================================
+// STORY REPORT DIALOG (گزارش محتوای نامناسب)
+// ==========================================
+
+@Composable
+fun StoryReportDialog(
+    storyId: String,
+    storyTitle: String,
+    storyAuthor: String,
+    storyType: String,
+    viewModel: HorrorViewModel,
+    onDismiss: () -> Unit
+) {
+    var selectedReason by remember { mutableStateOf("محتوای نامناسب یا توهین‌آمیز") }
+    var additionalDetails by remember { mutableStateOf("") }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var isSubmitted by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    val reasons = listOf(
+        "محتوای نامناسب یا توهین‌آمیز",
+        "خشونت شدید یا آزاردهنده",
+        "نقض قوانین و کپی‌رایت",
+        "کیفیت بسیار پایین یا متن نامفهوم",
+        "سایر موارد"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF140A1E),
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(Icons.Default.ReportProblem, contentDescription = null, tint = Color(0xFFFF1E56))
+                Text(
+                    "گزارش محتوای نامناسب",
+                    color = Color(0xFFDEC595),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (isSubmitted) {
+                    Text(
+                        "گزارش شما با موفقیت ثبت شد و در پنل مدیریت عمارت وحشت بررسی خواهد شد. با تشکر از همکاری شما.",
+                        color = Color(0xFF4CAF50),
+                        fontSize = 12.5.sp,
+                        lineHeight = 20.sp
+                    )
+                } else {
+                    Text(
+                        "روایت: «$storyTitle»",
+                        color = Color(0xFFDEC595),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "علت گزارش را مشخص نمایید:",
+                        color = Color(0xFF8B8496),
+                        fontSize = 11.sp
+                    )
+
+                    reasons.forEach { reason ->
+                        val isSelected = selectedReason == reason
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) Color(0xFF2E1225) else Color(0xFF1E1428))
+                                .clickable { selectedReason = reason }
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                reason,
+                                color = if (isSelected) Color(0xFFFF1E56) else Color.White,
+                                fontSize = 11.sp
+                            )
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { selectedReason = reason },
+                                colors = RadioButtonDefaults.colors(selectedColor = Color(0xFFFF1E56))
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = additionalDetails,
+                        onValueChange = { additionalDetails = it },
+                        label = { Text("توضیحات تکمیلی (اختیاری)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFFFF1E56),
+                            unfocusedBorderColor = Color(0xFF381A54),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedLabelColor = Color(0xFFDEC595),
+                            unfocusedLabelColor = Color(0xFF8B8496)
+                        )
+                    )
+
+                    if (errorMessage != null) {
+                        Text(errorMessage!!, color = Color(0xFFE63956), fontSize = 11.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (isSubmitted) {
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A0A17)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("بستن", color = Color(0xFFDEC595), fontSize = 12.sp)
+                }
+            } else {
+                Button(
+                    onClick = {
+                        val finalReason = if (additionalDetails.isNotBlank()) {
+                            "$selectedReason - $additionalDetails"
+                        } else {
+                            selectedReason
+                        }
+                        isSubmitting = true
+                        viewModel.submitStoryReport(
+                            StoryReport(
+                                id = java.util.UUID.randomUUID().toString(),
+                                story_id = storyId,
+                                story_title = storyTitle,
+                                story_author = storyAuthor,
+                                story_type = storyType,
+                                reason = finalReason,
+                                createdAt = null
+                            )
+                        ) { success ->
+                            isSubmitting = false
+                            if (success) {
+                                isSubmitted = true
+                            } else {
+                                errorMessage = "خطا در ثبت گزارش. لطفاً اتصال اینترنت را بررسی کنید."
+                            }
+                        }
+                    },
+                    enabled = !isSubmitting,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    if (isSubmitting) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            "ارسال گزارش",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        },
+        dismissButton = {
+            if (!isSubmitted && !isSubmitting) {
+                TextButton(onClick = onDismiss) {
+                    Text("انصراف", color = Color(0xFF8B8496), fontSize = 12.sp)
+                }
+            }
+        }
+    )
+}
+
+// ==========================================
 // READER SCREEN: AI STORY READER
 // ==========================================
 
@@ -587,19 +776,12 @@ fun AiStoryReaderScreen(
 
     var userRating by remember { mutableIntStateOf(0) }
     var ratingSubmitted by remember { mutableStateOf(false) }
+    var showReportDialog by remember { mutableStateOf(false) }
 
     // Themes: 0 = Crypt Dark, 1 = Ancient Parchment, 2 = Pitch Black
     var themeIndex by remember { mutableIntStateOf(0) }
 
-    val fontFamilies = listOf(
-        Pair("وزیر", FontFamily.Default),
-        Pair("سریف", FontFamily.Serif),
-        Pair("سنز", FontFamily.SansSerif),
-        Pair("مونو", FontFamily.Monospace),
-        Pair("کورسیو", FontFamily.Cursive)
-    )
-
-    val activeFontFamily = fontFamilies.getOrNull(selectedFontIndex)?.second ?: FontFamily.Default
+    val activeFontPreset = HorrorFontPresets.getOrNull(selectedFontIndex) ?: HorrorFontPresets[0]
 
     val bgColor = when (themeIndex) {
         1 -> Color(0xFF16120C)
@@ -611,6 +793,17 @@ fun AiStoryReaderScreen(
         1 -> Color(0xFFE8DAC2)
         2 -> Color(0xFFE0DAE8)
         else -> Color(0xFFEDE4F5)
+    }
+
+    if (showReportDialog) {
+        StoryReportDialog(
+            storyId = story.id,
+            storyTitle = story.title,
+            storyAuthor = "هوش مصنوعی عمارت وحشت",
+            storyType = "AI",
+            viewModel = viewModel,
+            onDismiss = { showReportDialog = false }
+        )
     }
 
     Column(
@@ -629,7 +822,7 @@ fun AiStoryReaderScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -646,28 +839,44 @@ fun AiStoryReaderScreen(
                     color = Color(0xFFDEC595),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = activeFontFamily,
+                    fontFamily = activeFontPreset.fontFamily,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                    modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
                     textAlign = TextAlign.Center
                 )
 
-                // Share Button
-                IconButton(
-                    onClick = {
-                        val shareIntent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "💀 داستان هوش مصنوعی: ${story.title}\n\n${story.content}\n\n— خانه وحشت (Gemini AI)"
-                            )
-                            type = "text/plain"
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Report Button
+                    IconButton(
+                        onClick = {
+                            HorrorSoundManager.playClickSound()
+                            showReportDialog = true
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری داستان هوش مصنوعی"))
+                    ) {
+                        Icon(
+                            Icons.Default.ReportProblem,
+                            contentDescription = "گزارش تخلف یا محتوای نامناسب",
+                            tint = Color(0xFFFF4D4D)
+                        )
                     }
-                ) {
-                    Icon(Icons.Default.Share, contentDescription = "اشتراک‌گذاری", tint = Color(0xFFDEC595))
+
+                    // Share Button
+                    IconButton(
+                        onClick = {
+                            val shareIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(
+                                    Intent.EXTRA_TEXT,
+                                    "💀 داستان ترسناک: ${story.title}\n\n${story.content}\n\n— عمارت وحشت (هوش مصنوعی عمارت وحشت)"
+                                )
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری داستان هوش مصنوعی"))
+                        }
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "اشتراک‌گذاری", tint = Color(0xFFDEC595))
+                    }
                 }
             }
         }
@@ -693,7 +902,7 @@ fun AiStoryReaderScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("قلم:", color = Color(0xFF8B8496), fontSize = 11.sp)
+                        Text("اندازه قلم:", color = Color(0xFF8B8496), fontSize = 11.sp)
                         IconButton(
                             onClick = { if (fontSize > 12f) viewModel.setFontSize(fontSize - 1f) },
                             modifier = Modifier.size(28.dp)
@@ -731,29 +940,29 @@ fun AiStoryReaderScreen(
                     }
                 }
 
-                // Font Family Selector Chips
-                Row(
+                // Font Family Selector Chips (5 distinct presets)
+                LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("نوع فونت:", color = Color(0xFF8B8496), fontSize = 10.sp)
-                    fontFamilies.forEachIndexed { idx, pair ->
-                        val isSel = idx == selectedFontIndex
+                    items(HorrorFontPresets) { preset ->
+                        val isSel = preset.id == selectedFontIndex
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(if (isSel) Color(0xFF3B184F) else Color(0xFF140B1E))
                                 .border(1.dp, if (isSel) Color(0xFFFF1E56) else Color(0xFF2E1A3F), RoundedCornerShape(6.dp))
-                                .clickable { viewModel.setFontFamily(idx) }
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                .clickable { viewModel.setFontFamily(preset.id) }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
-                                text = pair.first,
+                                text = preset.name,
                                 color = if (isSel) Color(0xFFFF1E56) else Color.White,
                                 fontSize = 10.sp,
-                                fontFamily = pair.second,
-                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                                fontFamily = preset.fontFamily,
+                                fontWeight = if (isSel) FontWeight.Bold else preset.fontWeight,
+                                fontStyle = preset.fontStyle
                             )
                         }
                     }
@@ -804,7 +1013,7 @@ fun AiStoryReaderScreen(
                             color = Color(0xFFDEC595),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = activeFontFamily,
+                            fontFamily = activeFontPreset.fontFamily,
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(14.dp)
@@ -864,11 +1073,32 @@ fun AiStoryReaderScreen(
                             trackColor = Color(0xFF2D1426)
                         )
 
-                        Text(
-                            text = "🤖 پدید آمده از رازهای نهان هوش مصنوعی Gemini",
-                            color = Color(0xFF7A6B88),
-                            fontSize = 10.sp
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "🤖 نویسنده و منبع: هوش مصنوعی عمارت وحشت",
+                                color = Color(0xFFDEC595).copy(alpha = 0.8f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            TextButton(
+                                onClick = { showReportDialog = true },
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ReportProblem,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFF6B6B),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("گزارش محتوا", color = Color(0xFFFF6B6B), fontSize = 10.sp)
+                            }
+                        }
                     }
                 }
             }
@@ -895,8 +1125,10 @@ fun AiStoryReaderScreen(
                             text = "« $syn »",
                             color = Color(0xFFDEC595),
                             fontSize = (fontSize - 1).sp,
-                            fontFamily = activeFontFamily,
+                            fontFamily = activeFontPreset.fontFamily,
+                            fontWeight = activeFontPreset.fontWeight,
                             fontStyle = FontStyle.Italic,
+                            letterSpacing = activeFontPreset.letterSpacing,
                             lineHeight = (fontSize * 1.5f).sp
                         )
                     }
@@ -910,8 +1142,11 @@ fun AiStoryReaderScreen(
                         text = story.content,
                         color = textColor,
                         fontSize = fontSize.sp,
-                        lineHeight = (fontSize * 1.8f).sp,
-                        fontFamily = activeFontFamily,
+                        lineHeight = (fontSize * activeFontPreset.lineHeightMultiplier).sp,
+                        fontFamily = activeFontPreset.fontFamily,
+                        fontWeight = activeFontPreset.fontWeight,
+                        fontStyle = activeFontPreset.fontStyle,
+                        letterSpacing = activeFontPreset.letterSpacing,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
