@@ -3902,11 +3902,12 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
                                 }
                                 Text(
                                     text = when (model) {
-                                        "gemini-3.5-flash" -> "مدل 3.5flash - پرسرعت و متعادل برای روایات و سناریو"
-                                        "gemini-3.6-flash" -> "مدل 3.6flash - ارتقای سرعت و کیفیت ادبیات گوتیک"
-                                        "gemini-3.7-flash" -> "مدل 3.7flash - پیشرفته‌ترین مدل تحلیلی و خلاقانه"
-                                        "gemini-3.5-flash-lite" -> "مدل 3.5flashlite - سبک، فوق‌العاده سریع با کمترین تاخیر"
-                                        else -> ""
+                                        "gemini-3.7-flash" -> "مدل 3.7 Flash - پیشرفته‌ترین و قدرتمندترین مدل هوش مصنوعی"
+                                        "gemini-3.6-flash" -> "مدل 3.6 Flash - بهینه‌شده برای سرعت و تحلیل پیشرفته"
+                                        "gemini-3.5-flash" -> "مدل 3.5 Flash - پرسرعت و متعادل برای تولید روایات و سناریو"
+                                        "gemini-3.5-flash-lite" -> "مدل 3.5 Flash Lite - بسیار سبک، سریع و کاملاً مناسب کلید رایگان"
+                                        "gemini-3.1-flash-lite" -> "مدل 3.1 Flash Lite - فوق‌العاده سریع با حداقل مصرف توکن"
+                                        else -> "مدل هوش مصنوعی گوگل"
                                     },
                                     color = MutedAsh,
                                     fontSize = 11.sp,

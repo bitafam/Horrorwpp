@@ -45,10 +45,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         const val PREF_SUPABASE_ANON_KEY = "pref_supabase_anon_key"
 
         val SUPPORTED_GEMINI_MODELS = listOf(
-            "gemini-2.5-flash",
-            "gemini-2.5-pro",
-            "gemini-1.5-flash",
-            "gemini-1.5-pro"
+            "gemini-3.7-flash",
+            "gemini-3.6-flash",
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite"
         )
 
         const val PREF_AI_STORY_PROMPT = "pref_ai_story_prompt"
@@ -110,9 +111,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
 
     private val _selectedGeminiModel = MutableStateFlow(
-        prefs.getString(PREF_GEMINI_MODEL, "gemini-2.5-flash")?.let {
-            if (it.contains("3.5") || it.contains("3.6") || it.contains("3.7")) "gemini-2.5-flash" else it
-        } ?: "gemini-2.5-flash"
+        prefs.getString(PREF_GEMINI_MODEL, "gemini-3.5-flash-lite") ?: "gemini-3.5-flash-lite"
     )
     val selectedGeminiModel: StateFlow<String> = _selectedGeminiModel.asStateFlow()
 
