@@ -44,7 +44,7 @@ import com.example.util.HorrorSoundManager
 import com.example.viewmodel.HorrorViewModel
 
 // ==========================================
-// USER SECTION: AI STORIES (داستان‌های هوش مصنوعی)
+// USER SECTION: AI STORIES (داستان‌های هوش تاریکی)
 // ==========================================
 
 @Composable
@@ -105,8 +105,8 @@ fun AiStoriesUserSection(
     ) {
         // TOP APP BAR
         GamingTopBar(
-            title = "داستان‌های هوش مصنوعی",
-            subtitle = "روایت‌های سیاه و هولناک هوش مصنوعی",
+            title = "داستان‌های هوش تاریکی",
+            subtitle = "روایت‌های سیاه و هولناک هوش تاریکی",
             icon = Icons.Default.Psychology,
             badgeText = "${publishedStories.size} قصه",
             onBack = onBack
@@ -127,7 +127,7 @@ fun AiStoriesUserSection(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("جستجو در قصه‌های هوش مصنوعی...", color = Color(0xFF7A6B88), fontSize = 13.sp) },
+                        placeholder = { Text("جستجو در قصه‌های هوش تاریکی...", color = Color(0xFF7A6B88), fontSize = 13.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFFDEC595)) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
@@ -254,7 +254,7 @@ fun AiStoriesUserSection(
                             )
                             Text(
                                 text = if (publishedStories.isEmpty())
-                                    "هنوز داستانی توسط هوش مصنوعی منتشر نشده است. ادمین می‌تواند از پنل مدیریت داستان‌های اختصاصی جدید جنریت کند."
+                                    "هنوز داستانی توسط هوش تاریکی منتشر نشده است. ادمین می‌تواند از پنل مدیریت داستان‌های اختصاصی جدید جنریت کند."
                                 else
                                     "با تغییر فیلترها یا جستجوی عبارت دیگر، داستان‌های دیگری را پیدا کنید.",
                                 color = Color(0xFF8B8496),
@@ -329,7 +329,7 @@ fun AiStoryPosterGraphic(
     if (isRemote) {
         AsyncImage(
             model = posterUrl,
-            contentDescription = "پوستر داستان هوش مصنوعی",
+            contentDescription = "پوستر داستان هوش تاریکی",
             modifier = modifier,
             contentScale = contentScale,
             error = painterResource(id = defaultRes),
@@ -338,7 +338,7 @@ fun AiStoryPosterGraphic(
     } else {
         Image(
             painter = painterResource(id = defaultRes),
-            contentDescription = "پوستر داستان هوش مصنوعی",
+            contentDescription = "پوستر داستان هوش تاریکی",
             modifier = modifier,
             contentScale = contentScale
         )
@@ -799,7 +799,7 @@ fun AiStoryReaderScreen(
         StoryReportDialog(
             storyId = story.id,
             storyTitle = story.title,
-            storyAuthor = "هوش مصنوعی عمارت وحشت",
+            storyAuthor = "هوش تاریکی عمارت وحشت",
             storyType = "AI",
             viewModel = viewModel,
             onDismiss = { showReportDialog = false }
@@ -868,11 +868,11 @@ fun AiStoryReaderScreen(
                                 action = Intent.ACTION_SEND
                                 putExtra(
                                     Intent.EXTRA_TEXT,
-                                    "💀 داستان ترسناک: ${story.title}\n\n${story.content}\n\n— عمارت وحشت (هوش مصنوعی عمارت وحشت)"
+                                    "💀 داستان ترسناک: ${story.title}\n\n${story.content}\n\n— عمارت وحشت (هوش تاریکی عمارت وحشت)"
                                 )
                                 type = "text/plain"
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری داستان هوش مصنوعی"))
+                            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری داستان هوش تاریکی"))
                         }
                     ) {
                         Icon(Icons.Default.Share, contentDescription = "اشتراک‌گذاری", tint = Color(0xFFDEC595))
@@ -1079,7 +1079,7 @@ fun AiStoryReaderScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "🤖 نویسنده و منبع: هوش مصنوعی عمارت وحشت",
+                                text = "🤖 نویسنده و منبع: هوش تاریکی عمارت وحشت",
                                 color = Color(0xFFDEC595).copy(alpha = 0.8f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -1170,7 +1170,7 @@ fun AiStoryReaderScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = "به این داستان هوش مصنوعی چه امتیازی می‌دهید؟",
+                            text = "به این داستان هوش تاریکی چه امتیازی می‌دهید؟",
                             color = Color(0xFFDEC595),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,

@@ -56,7 +56,7 @@ data class AiStory(
     val cover_url: String?
         get() = cover_image_url ?: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80"
     val prompt_used: String?
-        get() = tags ?: "هوش مصنوعی"
+        get() = tags ?: "هوش تاریکی"
 }
 
 @JsonClass(generateAdapter = true)

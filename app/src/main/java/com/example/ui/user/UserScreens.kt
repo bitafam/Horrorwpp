@@ -1171,8 +1171,6 @@ fun GothicGamingHomeScreen(
         label = "glowPulse"
     )
 
-    val isAmbientPlaying by HorrorSoundManager.isAmbientPlaying.collectAsState()
-
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1241,7 +1239,12 @@ fun GothicGamingHomeScreen(
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    GamingStoryBannerCanvas(modifier = Modifier.fillMaxSize())
+                    Image(
+                        painter = painterResource(id = R.drawable.img_poster_1_1788266550537),
+                        contentDescription = "پوستر کتابخانه روایات",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
 
                     // Dark gradient vignette
                     Box(
@@ -1335,7 +1338,7 @@ fun GothicGamingHomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // CARD 2: AI STORIES (داستان‌های هوش مصنوعی)
+                // CARD 2: AI STORIES (داستان‌های هوش تاریکی)
                 Card(
                     modifier = Modifier
                         .weight(1.1f)
@@ -1349,7 +1352,12 @@ fun GothicGamingHomeScreen(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        GamingScenarioBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Image(
+                            painter = painterResource(id = R.drawable.img_ai_story_poster_1_1788531305066),
+                            contentDescription = "پوستر داستان‌های هوش تاریکی",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1369,12 +1377,12 @@ fun GothicGamingHomeScreen(
                                 color = Color(0xFFB8143F),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
-                                Text("هوش مصنوعی", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                Text("هوش تاریکی", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
                             }
 
                             Column {
                                 Text(
-                                    text = "داستان‌های هوش مصنوعی",
+                                    text = "داستان‌های هوش تاریکی",
                                     color = Color(0xFFDEC595),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.ExtraBold,
@@ -1419,7 +1427,12 @@ fun GothicGamingHomeScreen(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        GamingGrimFortuneBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Image(
+                            painter = painterResource(id = R.drawable.img_poster_3_1788266577786),
+                            contentDescription = "پوستر طالع شوم",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1495,7 +1508,12 @@ fun GothicGamingHomeScreen(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        GamingSubmitStoryBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Image(
+                            painter = painterResource(id = R.drawable.img_sorcery_temple_1788114860980),
+                            contentDescription = "پوستر ارسال روایت",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1565,7 +1583,12 @@ fun GothicGamingHomeScreen(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFF0E040A))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        GamingAudioSettingsBannerCanvas(modifier = Modifier.fillMaxSize())
+                        Image(
+                            painter = painterResource(id = R.drawable.img_poster_2_1788266563762),
+                            contentDescription = "پوستر تنظیمات",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -1658,10 +1681,6 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
 
     var activeReadingStory by remember { mutableStateOf<RealStory?>(null) }
     var activeReadingAiStory by remember { mutableStateOf<AiStory?>(null) }
-
-    LaunchedEffect(Unit) {
-        HorrorSoundManager.startAmbientDrone()
-    }
 
     fun navigateTo(dest: UserDestination) {
         if (dest == UserDestination.HOME) {
@@ -4414,7 +4433,7 @@ fun AIGeneratorDialog(viewModel: HorrorViewModel, onDismiss: () -> Unit) {
         containerColor = Color(0xFF0F0918),
         title = {
             Text(
-                text = "احضار کاتب ارواح (هوش مصنوعی)",
+                text = "احضار کاتب ارواح (هوش تاریکی)",
                 color = Color(0xFFDEC595),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp,

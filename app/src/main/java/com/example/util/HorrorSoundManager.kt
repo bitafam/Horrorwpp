@@ -26,19 +26,11 @@ object HorrorSoundManager {
 
     fun toggleSound(enabled: Boolean) {
         _isSoundEnabled.value = enabled
-        if (!enabled) {
-            stopAmbientDrone()
-        } else {
-            startAmbientDrone()
-        }
+        stopAmbientDrone()
     }
 
     fun toggleAmbient() {
-        if (_isAmbientPlaying.value) {
-            stopAmbientDrone()
-        } else {
-            startAmbientDrone()
-        }
+        stopAmbientDrone()
     }
 
     /**
@@ -123,6 +115,16 @@ object HorrorSoundManager {
             delay(260)
             // Heavy crypt earthquake doom impact
             playHorrorCreak(durationMs = 850, startFreq = 80.0, endFreq = 30.0, amplitude = 0.85f, addCryptThud = true)
+        }
+    }
+
+    /**
+     * Short ominous screech warning.
+     */
+    fun playScreamShort() {
+        if (!_isSoundEnabled.value) return
+        scope.launch {
+            playHorrorCreak(durationMs = 300, startFreq = 580.0, endFreq = 120.0, amplitude = 0.65f, addDissonantOvertone = true)
         }
     }
 
@@ -316,97 +318,12 @@ object HorrorSoundManager {
     }
 
     /**
-     * Continuously synthesizes an authentic gothic horror ambient loop in background:
-     * - Haunting howling winter wind noise with slow sweeping modulation
-     * - Eerie sub-harmonic crypt drones (43Hz + 55Hz + 61Hz binaural beats)
-     * - Periodic distant ghostly whispers & antique wood creaks
+     * Background ambient music has been removed per user request.
      */
     fun startAmbientDrone() {
-        if (!_isSoundEnabled.value || _isAmbientPlaying.value) return
-        _isAmbientPlaying.value = true
+        _isAmbientPlaying.value = false
         ambientJob?.cancel()
-        ambientJob = scope.launch {
-            val sampleRate = 16000
-            val chunkDurationMs = 2500
-            val numSamples = (sampleRate * (chunkDurationMs / 1000.0)).toInt()
-            val buffer = ShortArray(numSamples)
-            var cycleCount = 0
-
-            while (isActive && _isAmbientPlaying.value && _isSoundEnabled.value) {
-                cycleCount++
-                val windBaseFreq = 90.0 + sin(cycleCount * 0.3) * 35.0
-                val hasCreak = cycleCount % 4 == 0
-                val hasWhisper = cycleCount % 3 == 0
-
-                for (i in 0 until numSamples) {
-                    val t = i.toDouble() / sampleRate
-                    val chunkProgress = i.toDouble() / numSamples
-
-                    // Smooth crossfade envelope to ensure seamless looping without clicks
-                    val loopEnvelope = when {
-                        chunkProgress < 0.12 -> (chunkProgress / 0.12)
-                        chunkProgress > 0.88 -> ((1.0 - chunkProgress) / 0.12)
-                        else -> 1.0
-                    }
-
-                    // 1. Deep Sub-Bass Crypt Resonance (43Hz + 55Hz + 58Hz eerie acoustic beating)
-                    val subDrone = (sin(2.0 * Math.PI * 43.0 * t) * 0.35 +
-                            sin(2.0 * Math.PI * 55.0 * t) * 0.25 +
-                            sin(2.0 * Math.PI * 58.5 * t) * 0.20)
-
-                    // 2. Haunting Howling Wind (Sweeping filtered white noise with wind gusting)
-                    val gustEnvelope = 0.5 + 0.5 * sin(2.0 * Math.PI * 0.4 * t + cycleCount)
-                    val noise = (Random.nextFloat() * 2.0 - 1.0)
-                    val windTone = sin(2.0 * Math.PI * windBaseFreq * t) * 0.35
-                    val windSound = (noise * 0.25 + windTone * 0.75) * gustEnvelope * 0.35
-
-                    // 3. Spooky distant creak / whisper overlay on specific cycles
-                    var fxSound = 0.0
-                    if (hasCreak && chunkProgress in 0.3..0.7) {
-                        val creakProg = (chunkProgress - 0.3) / 0.4
-                        val creakFreq = 280.0 - creakProg * 140.0
-                        fxSound += sin(2.0 * Math.PI * creakFreq * t) * 0.18 * sin(creakProg * Math.PI)
-                    }
-                    if (hasWhisper && chunkProgress in 0.4..0.8) {
-                        val whisperProg = (chunkProgress - 0.4) / 0.4
-                        fxSound += (Random.nextFloat() * 2.0 - 1.0) * 0.14 * sin(whisperProg * Math.PI)
-                    }
-
-                    val mixed = (subDrone * 0.45 + windSound * 0.40 + fxSound) * loopEnvelope * 0.28
-                    buffer[i] = (mixed * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
-                }
-
-                try {
-                    val track = AudioTrack.Builder()
-                        .setAudioAttributes(
-                            AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_MEDIA)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                .build()
-                        )
-                        .setAudioFormat(
-                            AudioFormat.Builder()
-                                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                                .setSampleRate(sampleRate)
-                                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                                .build()
-                        )
-                        .setBufferSizeInBytes(buffer.size * 2)
-                        .setTransferMode(AudioTrack.MODE_STATIC)
-                        .build()
-
-                    track.write(buffer, 0, buffer.size)
-                    track.play()
-                    delay(chunkDurationMs - 120L)
-                    try {
-                        track.stop()
-                        track.release()
-                    } catch (ignored: Exception) { }
-                } catch (e: Exception) {
-                    delay(chunkDurationMs.toLong())
-                }
-            }
-        }
+        ambientJob = null
     }
 
     fun stopAmbientDrone() {

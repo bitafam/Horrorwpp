@@ -43,6 +43,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         const val PREF_SCENARIO_PROMPT = "pref_scenario_prompt"
         const val PREF_SUPABASE_URL = "pref_supabase_url"
         const val PREF_SUPABASE_ANON_KEY = "pref_supabase_anon_key"
+        const val PREF_AGE_HEALTH_CONSENT = "pref_age_health_consent_confirmed"
 
         val SUPPORTED_GEMINI_MODELS = listOf(
             "gemini-3.7-flash",
@@ -59,9 +60,12 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
 یک داستان ترسناک کاملاً تخیلی، اورجینال و غیرقابل‌پیش‌بینی بنویس که هدف اصلی آن میخکوب کردن مخاطب تا آخرین جمله باشد.
 
-مهم‌ترین اصل:
+مهم‌ترین اصل
+
 هر بار خودت تشخیص بده چه نوع داستانی برای این ایده مناسب‌تر است. خودت را به یک ژانر محدود نکن.
+
 داستان می‌تواند یکی از این‌ها باشد یا ترکیبی از چند مورد:
+
 - وحشت روانشناختی
 - جنایی و معمایی
 - ماورایی
@@ -79,29 +83,47 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 - سفر در زمان یا دستکاری حافظه
 - یا یک ایده کاملاً جدید که در هیچ‌کدام از این دسته‌ها قرار نمی‌گیرد.
 
-ایرانی بودن داستان:
-فضا، رفتار شخصیت‌ها، دیالوگ‌ها، مکان‌ها و جزئیات زندگی باید برای مخاطب ایرانی طبیعی و قابل لمس باشد.
-از جزئیات واقعی زندگی روزمره ایران استفاده کن؛ مثل: خانه‌های قدیمی، آپارتمان، کوچه، پارکینگ، آسانسور، پشت‌بام، روستا، جاده‌های بین‌شهری، مغازه، نانوایی، مسجد، قهوه‌خانه، مدرسه، بیمارستان، باغ، خانه مادربزرگ، انباری، زیرزمین، تلفن ثابت، ماشین‌های معمولی و هر چیزی که به فضای داستان کمک می‌کند.
+ایرانی بودن داستان
 
-اگر داستان به فرهنگ عامه یا افسانه‌های ایرانی مربوط است، از آن‌ها الهام بگیر؛ برای مثال موجودات و باورهایی مانند: جن، آل، بختک، اجنه، دیو، پری، سایه، مرده‌زنده، موجودات ناشناخته محلی و افسانه‌های مناطق مختلف ایران.
+فضا، رفتار شخصیت‌ها، دیالوگ‌ها، مکان‌ها و جزئیات زندگی باید برای مخاطب ایرانی طبیعی و قابل لمس باشد.
+
+از جزئیات واقعی زندگی روزمره ایران استفاده کن؛ مثل:
+خانه‌های قدیمی، آپارتمان، کوچه، پارکینگ، آسانسور، پشت‌بام، روستا، جاده‌های بین‌شهری، مغازه، نانوایی، مسجد، قهوه‌خانه، مدرسه، بیمارستان، باغ، خانه مادربزرگ، انباری، زیرزمین، تلفن ثابت، ماشین‌های معمولی و هر چیزی که به فضای داستان کمک می‌کند.
+
+اگر داستان به فرهنگ عامه یا افسانه‌های ایرانی مربوط است، از آن‌ها الهام بگیر؛ برای مثال موجودات و باورهایی مانند:
+جن، آل، بختک، اجنه، دیو، پری، سایه، مرده‌زنده، موجودات ناشناخته محلی و افسانه‌های مناطق مختلف ایران.
+
 اما:
+
 - موجودات را کلیشه‌ای و کارتونی ننویس.
 - هر موجود یا پدیده باید قوانین، رفتار و ویژگی‌های خاص خودش را داشته باشد.
 - لازم نیست همیشه موجودات واقعیِ فولکلور را دقیقاً همان‌طور که در افسانه‌ها آمده‌اند استفاده کنی؛ می‌توانی نسخه‌ای تازه و ترسناک از آن‌ها بسازی.
 - اگر استفاده از موجودات فولکلور داستان را مصنوعی می‌کند، اصلاً از آن‌ها استفاده نکن.
 
-ساختار داستان:
+ساختار داستان
+
 داستان باید از یک اتفاق نسبتاً عادی شروع شود.
+
 در چند پاراگراف اول، یک چیز کوچک اما غیرعادی وارد داستان کن که مخاطب را کنجکاو کند.
+
 سپس اطلاعات را قطره‌قطره آشکار کن.
-مخاطب باید دائماً خودش نظریه بسازد: «نکنه دلیلش اینه؟» اما بعداً بفهمد اشتباه کرده است.
+
+مخاطب باید دائماً خودش نظریه بسازد:
+«نکنه دلیلش اینه؟»
+اما بعداً بفهمد اشتباه کرده است.
+
 حداقل دو بار برداشت مخاطب از اتفاقات را تغییر بده.
+
 سرنخ‌های مهم را از ابتدا داخل داستان قرار بده، اما طوری که در لحظه اول بی‌اهمیت به نظر برسند.
+
 در پایان، بخشی از همان سرنخ‌های اولیه باید معنای جدید و ترسناک پیدا کنند.
 
-درباره ترس:
+درباره ترس
+
 از جامپ‌اسکر و جملات کلیشه‌ای مثل «ناگهان روح ظاهر شد» بیش از حد استفاده نکن.
+
 ترس باید بیشتر از این چیزها ساخته شود:
+
 - انتظار
 - سکوت
 - ناشناخته بودن
@@ -116,37 +138,86 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 - یک قانون عجیب که شخصیت دیر متوجه آن می‌شود
 - یا فهمیدن اینکه شخصیت از ابتدا چیزی را اشتباه فهمیده است.
 
-منطق داستان:
+منطق داستان
+
 حتی اگر داستان کاملاً ماورایی باشد، اتفاقات آن باید درون جهان داستان منطق داشته باشند.
+
 از اتفاقات تصادفی و بی‌دلیل برای جلو بردن داستان استفاده نکن.
+
 اگر موجود یا نیرویی وجود دارد، برای رفتار آن دلیل و قانون مشخص داشته باش.
+
 اگر پایان یک پیچش داستانی دارد، باید سرنخ‌هایی از آن قبل از افشاگری وجود داشته باشد.
+
 از اغراق‌های غیرضروری، توضیحات علمی بی‌اساس و اتفاقات غیرمنطقی که فقط برای ترساندن مخاطب اضافه شده‌اند خودداری کن.
 
-شخصیت‌ها:
+شخصیت‌ها
+
 شخصیت‌ها باید مثل آدم‌های واقعی رفتار کنند، نه مثل شخصیت‌های فیلم ترسناک.
+
 آن‌ها ممکن است بترسند، شک کنند، اشتباه کنند، دروغ بگویند یا تصمیم اشتباه بگیرند.
+
 دیالوگ‌ها کاملاً طبیعی و متناسب با فرهنگ و زبان محاوره‌ای ایرانی باشند.
 
-پایان:
+پایان
+
 پایان باید یکی از این حالت‌ها باشد:
+
 - یک افشاگری بزرگ
 - یک پیچش داستانی
 - فهمیدن حقیقتی وحشتناک
 - پایان مبهم اما قابل تفسیر
 - پیروزی ظاهری که مشخص می‌شود شکست بوده
 - یا پایان باز که نشان دهد اتفاق هنوز تمام نشده است.
+
 اما پایان نباید بی‌دلیل عجیب یا نامفهوم باشد.
+
 آخرین چند خط باید بیشترین اثر را روی مخاطب بگذارند.
+
 ترجیحاً آخرین جمله کوتاه، ساده و ماندگار باشد؛ جمله‌ای که بعد از تمام شدن داستان، مخاطب چند ثانیه به آن فکر کند.
 
-قانون تنوع:
+قانون تنوع
+
 هر بار که این دستور اجرا می‌شود، ایده، مکان، شخصیت‌ها، نوع تهدید، ساختار و پایان را تغییر بده.
+
 اگر داستان قبلی جنایی بود، داستان بعدی الزاماً جنایی نباشد.
 اگر داستان قبلی درباره جن بود، دوباره همان الگو را تکرار نکن.
 از تکرار خانه متروکه، روح زن، قتل قدیمی و صدای بچه در تاریکی به عنوان فرمول ثابت خودداری کن.
+
 مخاطب نباید بعد از چند داستان بتواند الگوی داستان بعدی را حدس بزند.
+
+فرمت خروجی
+
+      "title": "عنوان خوفناک و جذاب",
+      "genre": "ژانر دقیق",
+      "content": "متن کامل و سناریوی غنی داستان",
+      "synopsis": "خلاصه در ۲ الی ۳ جمله کنجکاوی‌برانگیز",
+
+طول داستان: حدود ۱۵۰۰ تا ۲۵۰۰ کلمه.
+
+حالا یک داستان کاملاً اورجینال بنویس.
 """.trimIndent()
+
+        fun buildPromptWithGenre(basePrompt: String, genre: String?): String {
+            val isSpecific = !genre.isNullOrBlank() && !genre.startsWith("همه")
+            if (!isSpecific) {
+                return DEFAULT_AI_STORY_PROMPT
+            }
+            val genreInjection = """
+مهم‌ترین اصل
+
+دسته‌بندی و ژانر انتخابی برای این داستان دقیقاً: «$genre» است.
+تمام وقایع، فضاسازی، شخصیت‌ها، پیرنگ و تعلیق باید با محوریت کامل و تسلط ژانر «$genre» و تلفیق خلاقانه با جزئیات ملموس فرهنگ و محیط ایرانی و اصول داستان‌نویسی نوشته شود.
+""".trimIndent()
+
+            val promptToUse = if (basePrompt.isNotBlank()) basePrompt else DEFAULT_AI_STORY_PROMPT
+            return if (promptToUse.contains("مهم‌ترین اصل") && promptToUse.contains("ایرانی بودن داستان")) {
+                val prefix = promptToUse.substringBefore("مهم‌ترین اصل")
+                val suffix = promptToUse.substringAfter("ایرانی بودن داستان")
+                "$prefix$genreInjection\n\nایرانی بودن داستان$suffix"
+            } else {
+                "$promptToUse\n\n[دسته‌بندی و ژانر انتخابی این داستان: «$genre»]"
+            }
+        }
 
         val PERSIAN_MONTHS = listOf(
             "فروردین", "اردیبهشت", "خرداد",
@@ -198,6 +269,15 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _currentUserId = MutableStateFlow<String?>(null)
     val currentUserId: StateFlow<String?> = _currentUserId.asStateFlow()
 
+    // Age and Health Consent State
+    private val _hasConfirmedAgeAndHealth = MutableStateFlow(prefs.getBoolean(PREF_AGE_HEALTH_CONSENT, false))
+    val hasConfirmedAgeAndHealth: StateFlow<Boolean> = _hasConfirmedAgeAndHealth.asStateFlow()
+
+    fun confirmAgeAndHealth() {
+        prefs.edit().putBoolean(PREF_AGE_HEALTH_CONSENT, true).apply()
+        _hasConfirmedAgeAndHealth.value = true
+    }
+
     // Gemini API & Admin Preferences State
     private val _geminiApiKey = MutableStateFlow(prefs.getString(PREF_GEMINI_KEY, "") ?: "")
     val geminiApiKey: StateFlow<String> = _geminiApiKey.asStateFlow()
@@ -215,7 +295,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _aiStoryPrompt = MutableStateFlow(
         prefs.getString(PREF_AI_STORY_PROMPT, null).let { saved ->
-            if (saved.isNullOrBlank() || saved.startsWith("تو کاتب باستانی") || saved.length < 150) {
+            if (saved.isNullOrBlank() || !saved.contains("۱۵۰۰ تا ۲۵۰۰ کلمه") || saved.length < 150) {
                 DEFAULT_AI_STORY_PROMPT
             } else {
                 saved
@@ -440,7 +520,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                             val aiConfig = _automationConfigs.value.find { it.id == "AUTO_AI_STORIES" || it.id == "AUTO_SCENARIOS" }
                             val count = aiConfig?.batch_count ?: 3
                             generateAiStoriesWithAI(customPrompt = aiConfig?.custom_prompt, count = count) { success, msg, genCount ->
-                                val logMsg = if (success) "✅ $genCount داستان هوش مصنوعی با موفقیت خلق و در پایگاه داده ثبت شد." else "خطا در تولید داستان: $msg"
+                                val logMsg = if (success) "✅ $genCount داستان هوش تاریکی با موفقیت خلق و در پایگاه داده ثبت شد." else "خطا در تولید داستان: $msg"
                                 viewModelScope.launch {
                                     repository.insertAutomationLog("AUTO_AI_STORIES", if (success) "SUCCESS" else "FAILED", logMsg)
 
@@ -1621,7 +1701,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             val apiKey = getEffectiveGeminiApiKey()
             if (apiKey.isBlank()) {
                 withContext(Dispatchers.Main) {
-                    onResult("خطا: کلید هوش مصنوعی یافت نشد. لطفاً در تنظیمات پنل ادمین کلید Gemini API را وارد و ذخیره کنید.")
+                    onResult("خطا: کلید هوش تاریکی یافت نشد. لطفاً در تنظیمات پنل ادمین کلید Gemini API را وارد و ذخیره کنید.")
                 }
                 return@launch
             }
@@ -1680,12 +1760,12 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        onResult("خطا در پاسخ هوش مصنوعی (${response.code}): $bodyStr")
+                        onResult("خطا در پاسخ هوش تاریکی (${response.code}): $bodyStr")
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
-                    onResult("خطا در اتصال به هوش مصنوعی: ${e.localizedMessage}")
+                    onResult("خطا در اتصال به هوش تاریکی: ${e.localizedMessage}")
                 }
             }
         }
@@ -1719,7 +1799,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 val startIndex = responseText.indexOf("{")
                 val endIndex = responseText.lastIndexOf("}")
                 if (startIndex == -1 || endIndex == -1) {
-                    throw Exception("ساختار پاسخ هوش مصنوعی قالب معتبر JSON ندارد.")
+                    throw Exception("ساختار پاسخ هوش تاریکی قالب معتبر JSON ندارد.")
                 }
                 val jsonStr = responseText.substring(startIndex, endIndex + 1)
                 val root = org.json.JSONObject(jsonStr)
@@ -1779,7 +1859,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "Parsing JSON batch fortunes failed", e)
-                onResult(false, "خطا در پردازش پاسخ هوش مصنوعی: ${e.localizedMessage}", 0)
+                onResult(false, "خطا در پردازش پاسخ هوش تاریکی: ${e.localizedMessage}", 0)
             }
         }
     }
@@ -1917,7 +1997,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 repository.deleteAiStory(id)
                 _adminAiStories.value = _adminAiStories.value.filter { it.id != id }
                 _aiStoriesList.value = _aiStoriesList.value.filter { it.id != id }
-                onResult(true, "داستان هوش مصنوعی با موفقیت حذف گردید.")
+                onResult(true, "داستان هوش تاریکی با موفقیت حذف گردید.")
             } catch (e: Exception) {
                 onResult(false, "خطا در حذف داستان: ${e.localizedMessage}")
             } finally {
@@ -1997,7 +2077,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             isGenerating = true,
             totalRequested = safeCount,
             completedCount = 0,
-            statusMessage = "آغاز صف تولید $safeCount داستان..."
+            statusMessage = "آغاز صف تولید $safeCount داستان بلند (۱۵۰۰ تا ۲۵۰۰ کلمه)..."
         )
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -2018,161 +2098,183 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=600&auto=format&fit=crop&q=80"
             )
 
-            val chunkSize = 2
-            var totalGenerated = 0
+            val apiKey = getEffectiveGeminiApiKey()
+            if (apiKey.isBlank()) {
+                withContext(Dispatchers.Main) {
+                    _aiGenQueueState.value = AiGenQueueState(
+                        isGenerating = false,
+                        totalRequested = safeCount,
+                        completedCount = 0,
+                        statusMessage = "خطا: کلید API هوش تاریکی یافت نشد."
+                    )
+                    onResult(false, "کلید API هوش تاریکی یافت نشد. لطفاً در تنظیمات ثبت کنید.", 0)
+                }
+                return@launch
+            }
+
+            val actualModel = _selectedGeminiModel.value.trim()
+            val client = OkHttpClient.Builder()
+                .connectTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(120, java.util.concurrent.TimeUnit.SECONDS)
+                .build()
+
+            val basePrompt = customPrompt?.ifBlank { null } ?: _aiStoryPrompt.value
+            val isSpecificGenre = !genre.isNullOrBlank() && genre != "همه" && !genre.startsWith("همه")
+
+            // Inject the selected category into the prompt dynamically
+            val promptWithGenre = buildPromptWithGenre(basePrompt, genre)
+
             val allCreatedStories = mutableListOf<AiStory>()
+            var lastErrorMsg = ""
 
-            var remaining = safeCount
-            while (remaining > 0) {
-                val batchCount = minOf(remaining, chunkSize)
-                _aiGenQueueState.value = _aiGenQueueState.value.copy(
-                    statusMessage = "در حال تولید دسته ${totalGenerated + 1} تا ${totalGenerated + batchCount} از $safeCount..."
-                )
-
-                val basePrompt = customPrompt?.ifBlank { null } ?: _aiStoryPrompt.value
-                val genreText = if (!genre.isNullOrBlank() && genre != "همه") {
-                    "در ژانر مشخص وحشت «$genre»"
-                } else {
-                    "با تنوع کامل در ژانرها، فضاها و سناریوهای مختلف (مطابق با قانون تنوع و فهرست ژانرها در دستورالعمل بالا: وحشت روانشناختی، ماورایی، جنایی-معمایی، موجودات ناشناخته، فولکلور و باورهای عامیانه ایرانی، فضاهای شهری/روستایی/جاده‌ای)"
+            // Send requests sequentially, one story per request, to support 1500-2500 word length without truncation
+            for (storyIndex in 1..safeCount) {
+                val currentGenreDesc = if (isSpecificGenre) "ژانر: $genre" else "تنوع آزاد"
+                withContext(Dispatchers.Main) {
+                    _aiGenQueueState.value = _aiGenQueueState.value.copy(
+                        statusMessage = "در حال نگارش داستان بلند $storyIndex از $safeCount ($currentGenreDesc - ۱۵۰۰ تا ۲۵۰۰ کلمه)..."
+                    )
                 }
 
-                val prompt = "$basePrompt\n\n" +
-                        "دستور تولید داستان:\n" +
-                        "دقیقاً تعداد $batchCount داستان ترسناک و دلهره‌آور تازه، غافلگیرکننده، عمیق و پرتعلیق $genreText خلق کن.\n" +
-                        "تمام اصول دستورالعمل بالا (فضاسازی ملموس ایرانی، دوری از کلیشه‌ها، کاشت سرنخ، پیچش‌های داستانی و پایان تکان‌دهنده) باید در داستان‌ها رعایت شود.\n" +
-                        "پاسخ خود را دقیقاً و صرفاً به صورت یک JSON استاندارد با ساختار زیر ارائه کن (بدون هیچ کلمه اضافی، مارک‌داون یا توضیحات دیگر):\n" +
+                val finalStoryPrompt = "$promptWithGenre\n\n" +
+                        "دستور نهایی نگارش این داستان:\n" +
+                        "یک داستان کامل، بسیار عمیق، غنی و پرکشش با طول حدود ۱۵۰۰ تا ۲۵۰۰ کلمه بنویس.\n" +
+                        "پاسخ خود را دقیقاً و صرفاً به صورت یک شیء استاندارد JSON تحویل بده (بدون هیچ مارک‌داون یا توضیح اضافه قبل و بعد از JSON):\n" +
                         "{\n" +
-                        "  \"stories\": [\n" +
-                        "    {\n" +
-                        "      \"title\": \"یک عنوان جذاب، غافلگیرکننده و خوفناک\",\n" +
-                        "      \"genre\": \"ژانر دقیق داستان (مثلاً: روانشناختی، ماورایی، فولکلور ایرانی، جنایی، موجودات ناشناخته، شهری)\",\n" +
-                        "      \"content\": \"متن کامل، منسجم و سینمایی داستان با توصیف فضاسازی قوی، تعلیق نفس‌گیر و پایان شگفت‌آور\",\n" +
-                        "      \"synopsis\": \"خلاصه داستان در ۲ یا ۳ جمله کنجکاوی‌برانگیز\",\n" +
-                        "      \"doom_score\": 85\n" +
-                        "    }\n" +
-                        "  ]\n" +
-                        "}\n" +
-                        "تعداد داستان‌های خروجی در آرایه stories باید دقیقاً $batchCount عدد باشد."
+                        "  \"title\": \"یک عنوان خوفناک و جذاب\",\n" +
+                        "  \"genre\": \"${if (isSpecificGenre) genre else "ژانر دقیق داستان"}\",\n" +
+                        "  \"content\": \"متن کامل و عمیق داستان با توصیف فضاسازی قوی، تعلیق نفس‌گیر و پایان شگفت‌آور (طول داستان: حدود ۱۵۰۰ تا ۲۵۰۰ کلمه)\",\n" +
+                        "  \"synopsis\": \"خلاصه و قلاب کنجکاوی‌برانگیز در ۲ الی ۳ جمله\",\n" +
+                        "  \"doom_score\": ${(78..98).random()}\n" +
+                        "}"
 
-                var batchSuccess = false
-                var batchErrorMsg = ""
-
+                var storySuccess = false
                 try {
-                    val apiKey = getEffectiveGeminiApiKey()
-                    if (apiKey.isBlank()) {
-                        batchErrorMsg = "کلید هوش مصنوعی یافت نشد."
-                    } else {
-                        val actualModel = _selectedGeminiModel.value.trim()
-                        val client = OkHttpClient.Builder()
-                            .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                            .build()
-
-                        val requestJson = JSONObject().apply {
-                            val contentsArray = JSONArray().apply {
-                                put(JSONObject().apply {
-                                    put("parts", JSONArray().apply {
-                                        put(JSONObject().apply { put("text", prompt) })
-                                    })
-                                })
-                            }
-                            put("contents", contentsArray)
-                            put("systemInstruction", JSONObject().apply {
+                    val requestJson = JSONObject().apply {
+                        val contentsArray = JSONArray().apply {
+                            put(JSONObject().apply {
                                 put("parts", JSONArray().apply {
-                                    put(JSONObject().apply {
-                                        put("text", "تو کاتب باستانی و نگهبان ارواح عمارت وحشت گوتیک هستی. لحن تو باید کاملاً ادبی، رازآلود، گوتیک، مهیج و فوق‌العاده ترسناک باشد. فقط به زبان فارسی روان و شکیل پاسخ بنویس.")
-                                    })
+                                    put(JSONObject().apply { put("text", finalStoryPrompt) })
                                 })
                             })
                         }
+                        put("contents", contentsArray)
+                        put("generationConfig", JSONObject().apply {
+                            put("maxOutputTokens", 8192)
+                            put("temperature", 0.85)
+                        })
+                        put("systemInstruction", JSONObject().apply {
+                            put("parts", JSONArray().apply {
+                                put(JSONObject().apply {
+                                    put("text", "تو یک نویسنده حرفه‌ای داستان‌های ترسناک ایرانی هستی که در داستان‌گویی سینمایی، وحشت روانشناختی، افسانه‌های عامیانه و تعلیق مهارت بسیار بالایی دارد. پاسخ فقط به زبان فارسی و صرفاً در قالب شیء استاندارد JSON باشد.")
+                                })
+                            })
+                        })
+                    }
 
-                        val request = Request.Builder()
-                            .url("https://generativelanguage.googleapis.com/v1beta/models/$actualModel:generateContent?key=$apiKey")
-                            .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
-                            .build()
+                    val request = Request.Builder()
+                        .url("https://generativelanguage.googleapis.com/v1beta/models/$actualModel:generateContent?key=$apiKey")
+                        .post(requestJson.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
+                        .build()
 
-                        val response = client.newCall(request).execute()
-                        val bodyStr = response.body?.string() ?: ""
-                        if (response.isSuccessful) {
-                            val responseObj = JSONObject(bodyStr)
-                            val candidates = responseObj.getJSONArray("candidates")
+                    val response = client.newCall(request).execute()
+                    val bodyStr = response.body?.string() ?: ""
+
+                    if (response.isSuccessful) {
+                        val responseObj = JSONObject(bodyStr)
+                        val candidates = responseObj.optJSONArray("candidates")
+                        if (candidates != null && candidates.length() > 0) {
                             val firstCandidate = candidates.getJSONObject(0)
-                            val content = firstCandidate.getJSONObject("content")
-                            val parts = content.getJSONArray("parts")
-                            val responseText = parts.getJSONObject(0).getString("text").trim()
+                            val content = firstCandidate.optJSONObject("content")
+                            val parts = content?.optJSONArray("parts")
+                            val responseText = parts?.optJSONObject(0)?.optString("text")?.trim() ?: ""
 
                             val startIndex = responseText.indexOf("{")
                             val endIndex = responseText.lastIndexOf("}")
-                            if (startIndex != -1 && endIndex != -1) {
+                            if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
                                 val jsonStr = responseText.substring(startIndex, endIndex + 1)
-                                val root = org.json.JSONObject(jsonStr)
-                                val array = root.getJSONArray("stories")
+                                val root = JSONObject(jsonStr)
 
-                                for (i in 0 until array.length()) {
-                                    val item = array.getJSONObject(i)
-                                    val title = item.optString("title", "روایت هوش مصنوعی")
-                                    val storyGenre = item.optString("genre", genre ?: "ماورایی")
-                                    val contentText = item.optString("content", "")
-                                    val synopsis = item.optString("synopsis", contentText.take(120))
-                                    val doomScore = item.optInt("doom_score", (75..98).random())
-                                    val poster = horrorPosters.random()
+                                val storyObj = if (root.has("stories")) {
+                                    root.getJSONArray("stories").optJSONObject(0) ?: root
+                                } else {
+                                    root
+                                }
 
-                                    if (contentText.isNotBlank()) {
-                                        val pseudoId = java.util.UUID.randomUUID().toString()
-                                        val story = AiStory(
-                                            id = pseudoId,
-                                            title = title,
-                                            content = contentText,
-                                            genre = storyGenre,
-                                            synopsis = synopsis,
-                                            cover_image_url = poster,
-                                            tags = "$storyGenre, هوش مصنوعی",
-                                            status = "PUBLISHED",
-                                            rating = 0f,
-                                            rating_count = 0,
-                                            view_count = 0,
-                                            createdAt = null,
-                                            updatedAt = null
+                                val title = (if (storyObj.has("title")) storyObj.optString("title") else storyObj.optString("عنوان", "روایت تاریک عمارت")).ifBlank { "روایت تاریک عمارت" }
+                                val storyGenre = (if (storyObj.has("genre")) storyObj.optString("genre") else storyObj.optString("ژانر", if (isSpecificGenre) genre!! else "وحشت روانشناختی")).ifBlank { if (isSpecificGenre) genre!! else "وحشت روانشناختی" }
+                                val contentText = if (storyObj.has("content")) storyObj.optString("content") else if (storyObj.has("داستان")) storyObj.optString("داستان") else storyObj.optString("متن", "")
+                                val rawSynopsis = if (storyObj.has("synopsis")) storyObj.optString("synopsis")
+                                    else if (storyObj.has("کنجکاوبرانگیزی")) storyObj.optString("کنجکاوبرانگیزی")
+                                    else if (storyObj.has("کنجکاوی")) storyObj.optString("کنجکاوی")
+                                    else storyObj.optString("خلاصه", "")
+                                val synopsis = rawSynopsis.ifBlank { contentText.take(160) }
+                                val poster = horrorPosters.random()
+
+                                if (contentText.isNotBlank()) {
+                                    val pseudoId = java.util.UUID.randomUUID().toString()
+                                    val newStory = AiStory(
+                                        id = pseudoId,
+                                        title = title,
+                                        content = contentText,
+                                        genre = storyGenre,
+                                        synopsis = synopsis,
+                                        cover_image_url = poster,
+                                        tags = "$storyGenre, هوش تاریکی",
+                                        status = "PUBLISHED",
+                                        rating = 0f,
+                                        rating_count = 0,
+                                        view_count = 0,
+                                        createdAt = null,
+                                        updatedAt = null
+                                    )
+
+                                    // Persist directly to local Room database immediately
+                                    repository.upsertAiStories(listOf(newStory))
+                                    allCreatedStories.add(newStory)
+                                    storySuccess = true
+
+                                    withContext(Dispatchers.Main) {
+                                        _adminAiStories.value = listOf(newStory) + _adminAiStories.value
+                                        _aiStoriesList.value = listOf(newStory) + _aiStoriesList.value
+                                        _aiGenQueueState.value = _aiGenQueueState.value.copy(
+                                            completedCount = allCreatedStories.size,
+                                            statusMessage = "داستان $storyIndex از $safeCount («$title») با موفقیت ذخیره شد."
                                         )
-                                        allCreatedStories.add(story)
-                                        repository.upsertAiStories(listOf(story))
                                     }
                                 }
-                                batchSuccess = true
                             }
+                        }
+                    } else {
+                        val errBody = bodyStr
+                        lastErrorMsg = if (response.code == 429 || errBody.contains("RESOURCE_EXHAUSTED") || errBody.contains("quota")) {
+                            "سهمیه کلید هوش تاریکی به اتمام رسیده است (429 Resource Exhausted)."
                         } else {
-                            val errBody = bodyStr
-                            batchErrorMsg = if (response.code == 429 || errBody.contains("RESOURCE_EXHAUSTED") || errBody.contains("quota")) {
-                                "سهمیه رایگان کلید Gemini به اتمام رسیده است (Resource Exhausted). لطفاً کلید API معتبر دیگری در تنظیمات وارد کنید."
-                            } else {
-                                "خطای سرور گوگل (${response.code})"
-                            }
+                            "خطای سرور گوگل (${response.code})"
                         }
                     }
                 } catch (e: Exception) {
-                    batchErrorMsg = e.localizedMessage ?: "خطای ناشناخته"
+                    lastErrorMsg = e.localizedMessage ?: "خطای ناشناخته در ارتباط"
                 }
 
-                if (!batchSuccess && allCreatedStories.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        _aiGenQueueState.value = AiGenQueueState(isGenerating = false, totalRequested = safeCount, completedCount = totalGenerated, statusMessage = "خطا در صف: $batchErrorMsg")
-                        onResult(false, "خطا در تولید داستان‌ها: $batchErrorMsg", totalGenerated)
+                if (!storySuccess) {
+                    // If the first story fails and nothing was created, stop and notify
+                    if (allCreatedStories.isEmpty() && storyIndex == 1) {
+                        withContext(Dispatchers.Main) {
+                            _aiGenQueueState.value = AiGenQueueState(
+                                isGenerating = false,
+                                totalRequested = safeCount,
+                                completedCount = 0,
+                                statusMessage = "خطا در نگارش داستان: $lastErrorMsg"
+                            )
+                            onResult(false, "خطا در نگارش داستان: $lastErrorMsg", 0)
+                        }
+                        return@launch
                     }
-                    return@launch
                 }
 
-                totalGenerated += batchCount
-                remaining -= batchCount
-                withContext(Dispatchers.Main) {
-                    _aiGenQueueState.value = _aiGenQueueState.value.copy(
-                        completedCount = totalGenerated,
-                        statusMessage = "تکمیل شده: $totalGenerated از $safeCount داستان"
-                    )
-                    _adminAiStories.value = allCreatedStories + _adminAiStories.value
-                    _aiStoriesList.value = allCreatedStories + _aiStoriesList.value
-                }
-
-                kotlinx.coroutines.delay(800)
+                // Brief pause between sequential calls to ensure smooth execution
+                kotlinx.coroutines.delay(600)
             }
 
             withContext(Dispatchers.Main) {
@@ -2180,9 +2282,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     isGenerating = false,
                     totalRequested = safeCount,
                     completedCount = allCreatedStories.size,
-                    statusMessage = "صف تولید با موفقیت کامل شد! (${allCreatedStories.size} داستان اضافه شد)"
+                    statusMessage = "صف تولید کامل شد! (${allCreatedStories.size} داستان بلند ثبت گردید)"
                 )
-                onResult(true, "تعداد ${allCreatedStories.size} داستان با موفقیت تولید و منتشر شدند.", allCreatedStories.size)
+                onResult(
+                    allCreatedStories.isNotEmpty(),
+                    if (allCreatedStories.isNotEmpty()) "تعداد ${allCreatedStories.size} داستان بلند (۱۵۰۰ تا ۲۵۰۰ کلمه) با موفقیت تولید و ذخیره شدند." else "خطا در تولید: $lastErrorMsg",
+                    allCreatedStories.size
+                )
             }
         }
     }

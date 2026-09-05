@@ -633,7 +633,7 @@ class HorrorRepository(context: Context) {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "getAiStories failed: $code - $errorBody")
-                    if (forceRefresh) throw Exception("خطا در دریافت داستان‌های هوش مصنوعی از سرور: $code")
+                    if (forceRefresh) throw Exception("خطا در دریافت داستان‌های هوش تاریکی از سرور: $code")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getAiStories exception: ${e.message}", e)
@@ -664,7 +664,7 @@ class HorrorRepository(context: Context) {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "getAllAiStoriesAdmin failed: $code - $errorBody")
-                    throw Exception("خطا در دریافت داستان‌های هوش مصنوعی ادمین: $code")
+                    throw Exception("خطا در دریافت داستان‌های هوش تاریکی ادمین: $code")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getAllAiStoriesAdmin exception: ${e.message}", e)
@@ -745,7 +745,7 @@ class HorrorRepository(context: Context) {
                 val code = if (resp.code() != 200 && resp.code() != 0) resp.code() else if (createResp.code() != 200 && createResp.code() != 0) createResp.code() else updateResp.code()
                 val errorBody = resp.errorBody()?.string() ?: createResp.errorBody()?.string() ?: updateResp.errorBody()?.string() ?: ""
                 android.util.Log.e("SupabaseError", "saveAiStory failed: $code - $errorBody")
-                throw Exception("خطا در ذخیره‌سازی داستان هوش مصنوعی در سرور: $code")
+                throw Exception("خطا در ذخیره‌سازی داستان هوش تاریکی در سرور: $code")
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "saveAiStory exception", e)
                 throw e

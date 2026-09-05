@@ -233,7 +233,7 @@ fun AdminPanelScreen(viewModel: HorrorViewModel, onExitAdmin: () -> Unit) {
                 title = {
                     Column {
                         Text("پنل مدیریت ابدی عمارت وحشت", fontWeight = FontWeight.Bold, color = BloodGlow, fontSize = 16.sp)
-                        Text("مدل هوش مصنوعی: $currentModel", style = MaterialTheme.typography.bodySmall, color = MutedAsh, fontSize = 11.sp)
+                        Text("مدل هوش تاریکی: $currentModel", style = MaterialTheme.typography.bodySmall, color = MutedAsh, fontSize = 11.sp)
                     }
                 },
                 actions = {
@@ -510,7 +510,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
             Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Icon(Icons.Default.Key, contentDescription = null, tint = BloodGlow)
-                    Text("کلید هوش مصنوعی در پایگاه داده (Supabase Secrets)", fontWeight = FontWeight.Bold, color = SpectralWhite)
+                    Text("کلید هوش تاریکی در پایگاه داده (Supabase Secrets)", fontWeight = FontWeight.Bold, color = SpectralWhite)
                 }
                 Text(
                     "کلید ثبت‌شده در این فیلد مستقیماً در جدول app_settings دیتابیس ذخیره شده و فانکشن‌های سروری مستقلاً از آن استفاده می‌کنند.",
@@ -743,7 +743,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Icon(Icons.Default.Psychology, contentDescription = null, tint = if (storyConfig.is_active) BloodGlow else MutedAsh)
                         Column {
-                            Text("۲. تولید خودکار داستان‌های هوش مصنوعی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                            Text("۲. تولید خودکار داستان‌های هوش تاریکی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
                             Text("تولید تا ۲۰ داستان خودکار در دیتابیس بدون نیاز به باز بودن برنامه", color = MutedAsh, fontSize = 11.sp)
                         }
                     }
@@ -759,7 +759,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                                     batch_count = storyBatchCount
                                 )
                             ) {
-                                feedbackMsg = "تنظیمات داستان‌های هوش مصنوعی ذخیره شد."
+                                feedbackMsg = "تنظیمات داستان‌های هوش تاریکی ذخیره شد."
                             }
                         },
                         colors = SwitchDefaults.colors(checkedThumbColor = SpectralWhite, checkedTrackColor = BloodCrimson)
@@ -905,9 +905,9 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
 
                 Text(
                     text = if (storyFreq == "TWICE_DAILY") {
-                        "تعداد $storyBatchCount داستان هوش مصنوعی، رأس ساعت‌های ${String.format("%02d", storyHour1)}:۰۰ و ${String.format("%02d", storyHour2)}:۰۰ به وقت تهران تولید و مستقیماً منتشر می‌شوند."
+                        "تعداد $storyBatchCount داستان هوش تاریکی، رأس ساعت‌های ${String.format("%02d", storyHour1)}:۰۰ و ${String.format("%02d", storyHour2)}:۰۰ به وقت تهران تولید و مستقیماً منتشر می‌شوند."
                     } else {
-                        "تعداد $storyBatchCount داستان هوش مصنوعی، رأس ساعت ${String.format("%02d", storyHour1)}:۰۰ به وقت تهران تولید و مستقیماً منتشر می‌شوند."
+                        "تعداد $storyBatchCount داستان هوش تاریکی، رأس ساعت ${String.format("%02d", storyHour1)}:۰۰ به وقت تهران تولید و مستقیماً منتشر می‌شوند."
                     },
                     color = BloodGlow,
                     fontSize = 11.sp
@@ -1038,7 +1038,7 @@ fun AdminAutomationTab(viewModel: HorrorViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("داستان‌های هوش مصنوعی (AUTO_AI_STORIES)", color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text("داستان‌های هوش تاریکی (AUTO_AI_STORIES)", color = SpectralWhite, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                             val schedText = if (storyConfig.frequency == "TWICE_DAILY") {
                                 "ساعت‌های ${String.format("%02d", storyConfig.schedule_hour_1)}:۰۰ و ${String.format("%02d", storyConfig.schedule_hour_2)}:۰۰ ایران"
                             } else {
@@ -1176,7 +1176,7 @@ fun AdminDashboardTab(
             style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = SpectralWhite)
         )
         Text(
-            text = "مدیریت محتوای چندرسانه‌ای، داستان‌ها با پوستر، آینه زمان و سناریوهای هوش مصنوعی.",
+            text = "مدیریت محتوای چندرسانه‌ای، داستان‌ها با پوستر، آینه زمان و سناریوهای هوش تاریکی.",
             color = MutedAsh,
             style = MaterialTheme.typography.bodyMedium
         )
@@ -1187,7 +1187,7 @@ fun AdminDashboardTab(
         }
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             StatCard(title = "طالع‌های ۱۲ ماه", count = tmCount.toString(), icon = Icons.Default.AutoAwesome, modifier = Modifier.weight(1f).clickable { onSwitchTab(2) })
-            StatCard(title = "داستان‌های هوش مصنوعی", count = scenCount.toString(), icon = Icons.Default.Psychology, modifier = Modifier.weight(1f).clickable { onSwitchTab(3) })
+            StatCard(title = "داستان‌های هوش تاریکی", count = scenCount.toString(), icon = Icons.Default.Psychology, modifier = Modifier.weight(1f).clickable { onSwitchTab(3) })
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -1221,7 +1221,7 @@ fun AdminDashboardTab(
                 ) {
                     Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = BloodGlow)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("تولید یک‌جای طالع شوم ۱۲ ماه با هوش مصنوعی (کم‌مصرف)", color = BloodGlow)
+                    Text("تولید یک‌جای طالع شوم ۱۲ ماه با هوش تاریکی (کم‌مصرف)", color = BloodGlow)
                 }
 
                 OutlinedButton(
@@ -1231,7 +1231,7 @@ fun AdminDashboardTab(
                 ) {
                     Icon(Icons.Default.Psychology, contentDescription = null, tint = SpectralWhite)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("تولید داستان‌های هوش مصنوعی با پرامپت اختصاصی (تا ۲۰ عدد)", color = SpectralWhite)
+                    Text("تولید داستان‌های هوش تاریکی با پرامپت اختصاصی (تا ۲۰ عدد)", color = SpectralWhite)
                 }
             }
         }
@@ -2419,7 +2419,7 @@ fun AdminSubmissionCard(
 }
 
 // ----------------------------------------------------
-// TAB 2: GRIM FORTUNES (طالع شوم ۱۲ ماه با تولید تک‌درخواستی کم‌مصرف هوش مصنوعی)
+// TAB 2: GRIM FORTUNES (طالع شوم ۱۲ ماه با تولید تک‌درخواستی کم‌مصرف هوش تاریکی)
 // ----------------------------------------------------
 @Composable
 fun AdminGrimFortuneTab(
@@ -2483,7 +2483,7 @@ fun AdminGrimFortuneTab(
 
                 if (promptExpanded) {
                     Text(
-                        text = "این پرامپت در یک پیام به هوش مصنوعی فرستاده می‌شود و با فرمت عددگذاری ===1=== تا ===12=== هر ۱۲ ماه را در یک پاسخ دریافت و خودکار ذخیره می‌کند تا توکن بهینه‌سازی شود.",
+                        text = "این پرامپت در یک پیام به هوش تاریکی فرستاده می‌شود و با فرمت عددگذاری ===1=== تا ===12=== هر ۱۲ ماه را در یک پاسخ دریافت و خودکار ذخیره می‌کند تا توکن بهینه‌سازی شود.",
                         color = MutedAsh,
                         fontSize = 11.sp,
                         lineHeight = 18.sp
@@ -2546,7 +2546,7 @@ fun AdminGrimFortuneTab(
                     } else {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = SpectralWhite)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("تولید همزمان ۱۲ ماه با هوش مصنوعی (یک پیام - صرفه‌جویی توکن)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("تولید همزمان ۱۲ ماه با هوش تاریکی (یک پیام - صرفه‌جویی توکن)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
 
@@ -2776,7 +2776,7 @@ fun AdminGrimFortuneTab(
                     }
                 } else {
                     Text(
-                        text = "برای ماه $selectedMonthName هنوز طالعی ثبت نشده است. می‌توانید با زدن دکمه هوش مصنوعی یا نوشتن دستی طالع این ماه را ثبت کنید.",
+                        text = "برای ماه $selectedMonthName هنوز طالعی ثبت نشده است. می‌توانید با زدن دکمه هوش تاریکی یا نوشتن دستی طالع این ماه را ثبت کنید.",
                         color = MutedAsh,
                         fontSize = 12.sp
                     )
@@ -2807,7 +2807,7 @@ fun AdminGrimFortuneTab(
                             } else {
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("خلق طالع با هوش مصنوعی", fontWeight = FontWeight.Bold)
+                                Text("خلق طالع با هوش تاریکی", fontWeight = FontWeight.Bold)
                             }
                         }
 
@@ -2911,20 +2911,25 @@ fun AdminAiStoriesTab(
     LaunchedEffect(currentPrompt) { savedPrompt = currentPrompt }
 
     var storyCountToGenerate by remember { mutableIntStateOf(3) }
-    var selectedGenre by remember { mutableStateOf("همه") }
     val genres = listOf(
-        "همه",
+        "همه (تنوع آزاد و خودکار)",
         "وحشت روانشناختی",
         "جنایی و معمایی",
         "ماورایی",
-        "افسانه‌ها و باورهای عامیانه",
-        "جن و فولکلور",
-        "آپارتمان و شهری",
-        "روستا و مناطق دورافتاده",
-        "جاده و جنگل",
-        "خانه‌های قدیمی",
-        "علمی‌تخیلی تاریک"
+        "موجودات ناشناخته",
+        "افسانه‌ها و باورهای عامیانه ایرانی",
+        "جن و موجودات فولکلور ایرانی",
+        "روستاها و مناطق دورافتاده",
+        "آپارتمان و زندگی شهری",
+        "جاده، کویر، جنگل، کوهستان یا شمال ایران",
+        "داستان‌های مربوط به خانه‌های قدیمی",
+        "وحشت خانوادگی",
+        "سفر و گم‌شدن",
+        "اتفاقات عجیب و غیرقابل توضیح",
+        "علمی‌تخیلی تاریک",
+        "سفر در زمان یا دستکاری حافظه"
     )
+    var selectedGenre by remember { mutableStateOf(genres[0]) }
 
     var isGeneratingAI by remember { mutableStateOf(false) }
     var genResultFeedback by remember { mutableStateOf<String?>(null) }
@@ -2976,7 +2981,7 @@ fun AdminAiStoriesTab(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Psychology, contentDescription = null, tint = BloodGlow)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("تنظیم پرامپت داستان‌های هوش مصنوعی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
+                        Text("تنظیم پرامپت داستان‌های هوش تاریکی", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
                     }
                     Icon(
                         if (promptExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
@@ -2987,7 +2992,7 @@ fun AdminAiStoriesTab(
 
                 if (promptExpanded) {
                     Text(
-                        text = "این پرامپت به عنوان دستورالعمل دائمی برای تولید داستان‌های ترسناک هوش مصنوعی به کار می‌رود.",
+                        text = "این پرامپت به عنوان دستورالعمل دائمی برای تولید داستان‌های ترسناک هوش تاریکی به کار می‌رود.",
                         color = MutedAsh,
                         fontSize = 11.sp
                     )
@@ -3054,9 +3059,9 @@ fun AdminAiStoriesTab(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "تولید همزمان داستان با هوش مصنوعی (تا ۲۰ عدد)", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 14.sp)
+                    Text(text = "تولید متوالی داستان‌های بلند با هوش تاریکی (۱۵۰۰ تا ۲۵۰۰ کلمه)", fontWeight = FontWeight.Bold, color = SpectralWhite, fontSize = 13.sp)
                     Badge(containerColor = BloodCrimson) {
-                        Text("انتشار مستقیم در لیست", color = SpectralWhite, fontSize = 10.sp, modifier = Modifier.padding(4.dp))
+                        Text("درخواست تک‌به‌تک + ذخیره مستقیم", color = SpectralWhite, fontSize = 10.sp, modifier = Modifier.padding(4.dp))
                     }
                 }
 
@@ -3093,7 +3098,19 @@ fun AdminAiStoriesTab(
 
                 // Genre Filter Chips
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("ژانر داستان:", color = MutedAsh, fontSize = 12.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("دسته‌بندی و ژانر داستان (جای‌گذاری خودکار در پرامپت):", color = MutedAsh, fontSize = 12.sp)
+                        Text(
+                            text = if (selectedGenre.startsWith("همه")) "تنوع خودکار" else selectedGenre,
+                            color = Color(0xFFC084FC),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -3107,10 +3124,15 @@ fun AdminAiStoriesTab(
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(if (isSel) Color(0xFF3B184F) else CryptCardElevated)
                                     .border(1.dp, if (isSel) BloodGlow else Color.Transparent, RoundedCornerShape(8.dp))
-                                    .clickable { selectedGenre = g }
-                                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                                    .clickable {
+                                        selectedGenre = g
+                                        val newPrompt = HorrorViewModel.buildPromptWithGenre(viewModel.aiStoryPrompt.value, g)
+                                        savedPrompt = newPrompt
+                                        viewModel.setAiStoryPrompt(newPrompt)
+                                    }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                Text(g, color = if (isSel) SpectralWhite else MutedAsh, fontSize = 10.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal)
+                                Text(g, color = if (isSel) SpectralWhite else MutedAsh, fontSize = 11.sp, fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal)
                             }
                         }
                     }
@@ -3123,7 +3145,7 @@ fun AdminAiStoriesTab(
                         viewModel.generateAiStoriesWithAI(
                             customPrompt = savedPrompt,
                             count = storyCountToGenerate,
-                            genre = if (selectedGenre == "همه") null else selectedGenre
+                            genre = if (selectedGenre.startsWith("همه")) null else selectedGenre
                         ) { success, msg, count ->
                             isGeneratingAI = false
                             genResultFeedback = msg
@@ -3140,11 +3162,11 @@ fun AdminAiStoriesTab(
                     if (isGeneratingAI) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), color = SpectralWhite)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("در حال نگارش صف $storyCountToGenerate داستان هولناک...")
+                        Text("در حال نگارش متوالی $storyCountToGenerate داستان بلند...")
                     } else {
                         Icon(Icons.Default.AutoAwesome, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("تولید صف $storyCountToGenerate داستان با هوش مصنوعی")
+                        Text("تولید متوالی $storyCountToGenerate داستان بلند (۱۵۰۰ تا ۲۵۰۰ کلمه)")
                     }
                 }
 
@@ -3645,7 +3667,7 @@ fun AdminAiStoriesTab(
         AlertDialog(
             onDismissRequest = { showManualAddDialog = false },
             containerColor = CryptCardElevated,
-            title = { Text("افزودن دستی داستان هوش مصنوعی", color = BloodGlow, fontWeight = FontWeight.Bold) },
+            title = { Text("افزودن دستی داستان هوش تاریکی", color = BloodGlow, fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -3811,7 +3833,7 @@ fun AdminAiStoriesTab(
     // ----------------------------------------------------
     if (showSqlScriptDialog) {
         val sqlScript = """
--- 1. جدول داستان‌های هوش مصنوعی
+-- 1. جدول داستان‌های هوش تاریکی
 CREATE TABLE IF NOT EXISTS public.ai_stories (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
@@ -3819,7 +3841,7 @@ CREATE TABLE IF NOT EXISTS public.ai_stories (
     synopsis TEXT,
     genre TEXT DEFAULT 'ماورایی',
     cover_image_url TEXT,
-    tags TEXT DEFAULT 'هوش مصنوعی',
+    tags TEXT DEFAULT 'هوش تاریکی',
     status TEXT DEFAULT 'PUBLISHED',
     rating REAL DEFAULT 0,
     rating_count INT DEFAULT 0,
@@ -3828,14 +3850,14 @@ CREATE TABLE IF NOT EXISTS public.ai_stories (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. جدول پرامپت‌ها و تنظیمات هوش مصنوعی
+-- 2. جدول پرامپت‌ها و تنظیمات هوش تاریکی
 CREATE TABLE IF NOT EXISTS public.ai_prompts (
     prompt_key TEXT PRIMARY KEY,
     prompt_text TEXT NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. جدول امتیازدهی کاربران به داستان‌های هوش مصنوعی
+-- 3. جدول امتیازدهی کاربران به داستان‌های هوش تاریکی
 CREATE TABLE IF NOT EXISTS public.ai_story_ratings (
     id BIGSERIAL PRIMARY KEY,
     story_id TEXT NOT NULL,
@@ -3963,7 +3985,7 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "تنظیمات اختصاصی کلید و مدل‌های هوش مصنوعی",
+            text = "تنظیمات اختصاصی کلید و مدل‌های هوش تاریکی",
             style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = BloodGlow)
         )
         Text(
@@ -4045,7 +4067,7 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(text = "انتخاب مدل فعال هوش مصنوعی (سهمیه اختصاصی)", fontWeight = FontWeight.Bold, color = SpectralWhite)
+                Text(text = "انتخاب مدل فعال هوش تاریکی (سهمیه اختصاصی)", fontWeight = FontWeight.Bold, color = SpectralWhite)
 
                 supportedModels.forEach { model ->
                     val isSelected = currentModel == model
@@ -4089,12 +4111,12 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
                                 }
                                 Text(
                                     text = when (model) {
-                                        "gemini-3.7-flash" -> "مدل 3.7 Flash - پیشرفته‌ترین و قدرتمندترین مدل هوش مصنوعی"
+                                        "gemini-3.7-flash" -> "مدل 3.7 Flash - پیشرفته‌ترین و قدرتمندترین مدل هوش تاریکی"
                                         "gemini-3.6-flash" -> "مدل 3.6 Flash - بهینه‌شده برای سرعت و تحلیل پیشرفته"
                                         "gemini-3.5-flash" -> "مدل 3.5 Flash - پرسرعت و متعادل برای تولید روایات و سناریو"
                                         "gemini-3.5-flash-lite" -> "مدل 3.5 Flash Lite - بسیار سبک، سریع و کاملاً مناسب کلید رایگان"
                                         "gemini-3.1-flash-lite" -> "مدل 3.1 Flash Lite - فوق‌العاده سریع با حداقل مصرف توکن"
-                                        else -> "مدل هوش مصنوعی گوگل"
+                                        else -> "مدل هوش تاریکی گوگل"
                                     },
                                     color = MutedAsh,
                                     fontSize = 11.sp,
@@ -4489,7 +4511,7 @@ fun AdminReportsTab(viewModel: HorrorViewModel, onOpenStory: (RealStory) -> Unit
 
                                 val badgeText = when (report.story_type) {
                                     "USER" -> "روایت کاربر"
-                                    "AI" -> "داستان هوش مصنوعی"
+                                    "AI" -> "داستان هوش تاریکی"
                                     else -> "داستان اصلی"
                                 }
                                 val badgeColor = when (report.story_type) {
@@ -4508,7 +4530,7 @@ fun AdminReportsTab(viewModel: HorrorViewModel, onOpenStory: (RealStory) -> Unit
                                             shape = RoundedCornerShape(4.dp)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
+                                 )
                             }
 
                             Text(
@@ -4555,8 +4577,8 @@ fun AdminReportsTab(viewModel: HorrorViewModel, onOpenStory: (RealStory) -> Unit
                                                     id = ai.id,
                                                     title = ai.title,
                                                     content = ai.content,
-                                                    author = "هوش مصنوعی عمارت وحشت",
-                                                    source = "هوش مصنوعی عمارت وحشت",
+                                                    author = "هوش تاریکی عمارت وحشت",
+                                                    source = "هوش تاریکی عمارت وحشت",
                                                     cover_image_url = ai.cover_image_url,
                                                     tags = ai.tags,
                                                     rating = ai.rating,
