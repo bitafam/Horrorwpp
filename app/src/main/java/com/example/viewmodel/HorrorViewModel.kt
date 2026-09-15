@@ -305,6 +305,63 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
             "گزینه ۱: [پاسخ هوشمندانه برای شکستن طلسم و نجات] -> [بقا و رهایی پیروزمندانه از عمارت]\n" +
             "گزینه ۲: [پاسخ جسورانه یا مادی کاربر] -> [کشف گنجینه و فرار موفقیت‌آمیز]\n" +
             "گزینه ۳: [پاسخ اشتباه، تسلیم یا طمع مرگبار] -> [فرجام شوم و مرگ]"
+
+        const val PREF_IS_PREMIUM = "pref_is_premium_lifetime"
+        const val PREF_SUBSCRIPTION_PRICE = "pref_subscription_price_toman"
+        const val DEFAULT_SUBSCRIPTION_PRICE = 49000
+    }
+
+    private val _isPremiumUser = MutableStateFlow(prefs.getBoolean(PREF_IS_PREMIUM, false))
+    val isPremiumUser: StateFlow<Boolean> = _isPremiumUser.asStateFlow()
+
+    private val _subscriptionPriceToman = MutableStateFlow(prefs.getInt(PREF_SUBSCRIPTION_PRICE, DEFAULT_SUBSCRIPTION_PRICE))
+    val subscriptionPriceToman: StateFlow<Int> = _subscriptionPriceToman.asStateFlow()
+
+    private val _regularAndAiReadCount = MutableStateFlow(0)
+    val regularAndAiReadCount: StateFlow<Int> = _regularAndAiReadCount.asStateFlow()
+
+    fun setPremiumUser(isPremium: Boolean) {
+        _isPremiumUser.value = isPremium
+        prefs.edit().putBoolean(PREF_IS_PREMIUM, isPremium).apply()
+    }
+
+    fun updateSubscriptionPrice(newPrice: Long, onResult: ((Boolean, String) -> Unit)? = null) {
+        _subscriptionPriceToman.value = newPrice.toInt()
+        prefs.edit().putInt(PREF_SUBSCRIPTION_PRICE, newPrice.toInt()).apply()
+        viewModelScope.launch {
+            try {
+                val item = mapOf(
+                    "key" to "subscription_price_toman",
+                    "value" to newPrice.toString(),
+                    "description" to "قیمت خرید اشتراک دائمی به تومان",
+                    "updated_at" to java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US).format(java.util.Date())
+                )
+                val resp = api.upsertAppSetting(item)
+                if (resp.isSuccessful) {
+                    onResult?.invoke(true, "${"%,d".format(newPrice)} تومان")
+                } else {
+                    onResult?.invoke(false, "کد خطا: ${resp.code()}")
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("HorrorViewModel", "Failed to update subscription price in Supabase", e)
+                onResult?.invoke(false, e.localizedMessage ?: "خطای اتصال")
+            }
+        }
+    }
+
+    /**
+     * Checks if reading regular or AI story should trigger an ad.
+     * Returns true if ad should be shown (4th consecutive story), and increments counter.
+     */
+    fun onReadRegularOrAiStory(): Boolean {
+        if (_isPremiumUser.value) return false
+        val next = _regularAndAiReadCount.value + 1
+        _regularAndAiReadCount.value = next
+        return (next % 4 == 0)
+    }
+
+    fun resetReadCounter() {
+        _regularAndAiReadCount.value = 0
     }
 
     private val _appMode = MutableStateFlow(AppMode.USER)
@@ -479,6 +536,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 if (!remoteModel.isNullOrBlank()) {
                     _selectedGeminiModel.value = remoteModel
                     prefs.edit().putString(PREF_GEMINI_MODEL, remoteModel).apply()
+                }
+                val remotePrice = settings.find { it.key == "subscription_price_toman" }?.value?.toIntOrNull()
+                if (remotePrice != null && remotePrice > 0) {
+                    _subscriptionPriceToman.value = remotePrice
+                    prefs.edit().putInt(PREF_SUBSCRIPTION_PRICE, remotePrice).apply()
                 }
             } catch (e: Exception) {
                 android.util.Log.e("HorrorViewModel", "loadAutomationData error: ${e.message}")
@@ -698,6 +760,14 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                             syncAndSeedPrompts(promptResp.body()!!)
                         } else if (promptResp.code() == 404 || (promptResp.isSuccessful && promptResp.body().isNullOrEmpty())) {
                             syncAndSeedPrompts(emptyList())
+                        }
+                    } catch (_: Exception) {}
+                    try {
+                        val settings = repository.getAppSettings()
+                        val remotePrice = settings.find { it.key == "subscription_price_toman" }?.value?.toIntOrNull()
+                        if (remotePrice != null && remotePrice > 0) {
+                            _subscriptionPriceToman.value = remotePrice
+                            prefs.edit().putInt(PREF_SUBSCRIPTION_PRICE, remotePrice).apply()
                         }
                     } catch (_: Exception) {}
                 }

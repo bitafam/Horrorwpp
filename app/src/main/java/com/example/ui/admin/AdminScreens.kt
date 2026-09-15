@@ -4266,6 +4266,145 @@ fun AdminAiSettingsTab(viewModel: HorrorViewModel) {
                 }
             }
         }
+
+        // ==========================================
+        // MYKET SUBSCRIPTION & IN-APP PURCHASE PRICE
+        // ==========================================
+        val currentPriceToman by viewModel.subscriptionPriceToman.collectAsState()
+        var priceInput by remember { mutableStateOf("") }
+        var isSavingPrice by remember { mutableStateOf(false) }
+        var priceSaveStatus by remember { mutableStateOf<String?>(null) }
+
+        LaunchedEffect(currentPriceToman) {
+            priceInput = currentPriceToman.toString()
+        }
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f), RoundedCornerShape(16.dp)),
+            colors = CardDefaults.cardColors(containerColor = CryptCard),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.WorkspacePremium,
+                            contentDescription = null,
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "قیمت اشتراک دائمی (مایکت / دیتابیس)",
+                            fontWeight = FontWeight.Bold,
+                            color = SpectralWhite,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    Badge(containerColor = Color(0xFFDEC595)) {
+                        Text(
+                            text = "${"%,d".format(currentPriceToman)} تومان",
+                            color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = "قیمت نمایشی خرید اشتراک دائمی مایکت در دیتابیس Supabase ثبت می‌شود و برای تمامی کاربران بدون نیاز به آپدیت تغییر می‌کند.",
+                    color = MutedAsh,
+                    fontSize = 11.5.sp,
+                    lineHeight = 17.sp
+                )
+
+                OutlinedTextField(
+                    value = priceInput,
+                    onValueChange = { priceInput = it.filter { ch -> ch.isDigit() } },
+                    label = { Text("مبلغ به تومان") },
+                    placeholder = { Text("49000") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    leadingIcon = {
+                        Icon(Icons.Default.MonetizationOn, contentDescription = null, tint = Color(0xFFDEC595))
+                    },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFDEC595),
+                        focusedTextColor = SpectralWhite,
+                        unfocusedTextColor = SpectralWhite
+                    )
+                )
+
+                // Quick presets
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    listOf(29000, 39000, 49000, 79000, 99000).forEach { preset ->
+                        OutlinedButton(
+                            onClick = { priceInput = preset.toString() },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+                            border = BorderStroke(
+                                1.dp,
+                                if (priceInput == preset.toString()) Color(0xFFDEC595) else MutedAsh.copy(alpha = 0.3f)
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "${preset / 1000}k",
+                                fontSize = 10.sp,
+                                color = if (priceInput == preset.toString()) Color(0xFFDEC595) else SpectralWhite
+                            )
+                        }
+                    }
+                }
+
+                Button(
+                    onClick = {
+                        val parsed = priceInput.toLongOrNull() ?: 49000L
+                        isSavingPrice = true
+                        priceSaveStatus = null
+                        viewModel.updateSubscriptionPrice(parsed) { success, msg ->
+                            isSavingPrice = false
+                            priceSaveStatus = if (success) "قیمت با موفقیت در دیتابیس ثبت شد: $msg" else "خطا در ثبت: $msg"
+                        }
+                    },
+                    enabled = !isSavingPrice && priceInput.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDEC595)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isSavingPrice) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.Black)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("در حال ذخیره در دیتابیس...", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("ثبت و به‌روزرسانی قیمت در Supabase", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+
+                if (priceSaveStatus != null) {
+                    Text(
+                        text = priceSaveStatus!!,
+                        color = if (priceSaveStatus!!.contains("خطا")) BloodGlow else SuccessNeon,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }
 }
 

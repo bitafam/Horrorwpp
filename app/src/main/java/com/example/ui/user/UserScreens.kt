@@ -52,10 +52,23 @@ import com.example.util.HorrorSoundManager
 import com.example.util.NetworkUtils
 import com.example.viewmodel.HorrorViewModel
 import com.example.viewmodel.AppMode
+import com.example.ads.AdiveryAdManager
+import com.example.ads.AdiveryBottomBannerAd
+import com.example.billing.MyketBillingManager
 
 // ==========================================
-// PREMIUM HORROR GRAPHICS (DYNAMIC CUSTOM CANVASES)
+// NAVIGATION DESTINATIONS
 // ==========================================
+
+enum class UserDestination {
+    HOME,
+    STORIES,
+    GRIM_FORTUNES,
+    SUBMIT_STORY,
+    AI_STORIES,
+    SETTINGS,
+    SUBSCRIPTION
+}
 
 @Composable
 fun ModernSpookyBannerCanvas(modifier: Modifier = Modifier) {
@@ -1001,19 +1014,6 @@ fun GamingAiSummonerBannerCanvas(modifier: Modifier = Modifier) {
 }
 
 // ==========================================
-// USER APP NAVIGATION DESTINATIONS
-// ==========================================
-
-enum class UserDestination {
-    HOME,
-    STORIES,
-    GRIM_FORTUNES,
-    SUBMIT_STORY,
-    AI_STORIES,
-    SETTINGS
-}
-
-// ==========================================
 // GAMING FANTASY TOP BAR COMPONENT
 // ==========================================
 
@@ -1645,6 +1645,98 @@ fun GothicGamingHomeScreen(
                 }
             }
 
+            // CARD 6: VIP PERMANENT MEMBERSHIP & NO ADS BANNER
+            val isPremiumUser by viewModel.isPremiumUser.collectAsState()
+            
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(
+                        borderColor = if (isPremiumUser) Color(0xFF2ECC71).copy(alpha = 0.8f) else Color(0xFFDEC595).copy(alpha = 0.8f),
+                        cornerRadiusDp = 14f
+                    )
+                    .clickable {
+                        HorrorSoundManager.playScenarioChoiceSound()
+                        onNavigate(UserDestination.SUBSCRIPTION)
+                    },
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isPremiumUser) Color(0xFF071B0E) else Color(0xFF19091F)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isPremiumUser) Color(0xFF12381F) else Color(0xFF380724)
+                            )
+                            .border(
+                                1.5.dp,
+                                if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WorkspacePremium,
+                            contentDescription = null,
+                            tint = if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isPremiumUser) "عضویت طلایی و دائمی عمارت" else "نسخه دائمی و بدون تبلیغات",
+                                color = if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            if (!isPremiumUser) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    color = Color(0xFFB8143F),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "VIP",
+                                        color = Color.White,
+                                        fontSize = 8.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = if (isPremiumUser) "تمامی امکانات باز و تبلیغات حذف شده‌اند 👑" else "حذف ۱۰۰٪ تبلیغات، دسترسی به ارسال داستان و امکانات ویژه",
+                            color = Color(0xFFEDE8F5).copy(alpha = 0.8f),
+                            fontSize = 10.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             // FOOTER SIGNATURE
@@ -1665,14 +1757,21 @@ fun GothicGamingHomeScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
+fun UserMainScreen(
+    viewModel: HorrorViewModel,
+    billingManager: MyketBillingManager,
+    onOpenAdminLogin: () -> Unit
+) {
     val context = LocalContext.current
+    val activity = context as? Activity
     val destinationStack = remember { mutableStateListOf(UserDestination.HOME) }
     val currentDestination = destinationStack.lastOrNull() ?: UserDestination.HOME
     var logoTapCount by remember { mutableIntStateOf(0) }
     var showNoInternetDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var showPremiumRequiredDialog by remember { mutableStateOf(false) }
 
+    val isPremium by viewModel.isPremiumUser.collectAsState()
     val isOnline by viewModel.isNetworkOnline.collectAsState()
     val grimFortunes by viewModel.grimFortunesList.collectAsState()
     val realStories by viewModel.realStoriesList.collectAsState()
@@ -1683,6 +1782,10 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
     var activeReadingAiStory by remember { mutableStateOf<AiStory?>(null) }
 
     fun navigateTo(dest: UserDestination) {
+        if (dest == UserDestination.SUBMIT_STORY && !isPremium) {
+            showPremiumRequiredDialog = true
+            return
+        }
         if (dest == UserDestination.HOME) {
             destinationStack.clear()
             destinationStack.add(UserDestination.HOME)
@@ -1710,199 +1813,345 @@ fun UserMainScreen(viewModel: HorrorViewModel, onOpenAdminLogin: () -> Unit) {
         popBack()
     }
 
+    fun handleReadRegularStory(story: RealStory) {
+        if (!NetworkUtils.isOnline(context)) {
+            showNoInternetDialog = true
+            return
+        }
+        if (isPremium) {
+            activeReadingStory = story
+            return
+        }
+        val shouldShowAd = viewModel.onReadRegularOrAiStory()
+        if (shouldShowAd && activity != null) {
+            AdiveryAdManager.showAppOpenAdIfAvailable(
+                activity = activity,
+                isPremium = false,
+                onComplete = {
+                    activeReadingStory = story
+                }
+            )
+        } else {
+            activeReadingStory = story
+        }
+    }
+
+    fun handleReadUserStory(story: RealStory) {
+        if (!NetworkUtils.isOnline(context)) {
+            showNoInternetDialog = true
+            return
+        }
+        if (isPremium) {
+            activeReadingStory = story
+            return
+        }
+        if (activity != null) {
+            AdiveryAdManager.showAppOpenAdIfAvailable(
+                activity = activity,
+                isPremium = false,
+                onComplete = {
+                    activeReadingStory = story
+                }
+            )
+        } else {
+            activeReadingStory = story
+        }
+    }
+
+    fun handleReadAiStory(story: AiStory) {
+        if (isPremium) {
+            activeReadingAiStory = story
+            return
+        }
+        val shouldShowAd = viewModel.onReadRegularOrAiStory()
+        if (shouldShowAd && activity != null) {
+            AdiveryAdManager.showAppOpenAdIfAvailable(
+                activity = activity,
+                isPremium = false,
+                onComplete = {
+                    activeReadingAiStory = story
+                }
+            )
+        } else {
+            activeReadingAiStory = story
+        }
+    }
+
     CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFF040207))
         ) {
-            if (loading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = Color(0xFFB8143F)
-                )
-            } else {
-                if (activeReadingStory != null) {
-                    StoryReaderScreen(
-                        story = activeReadingStory!!,
-                        viewModel = viewModel,
-                        onBack = { activeReadingStory = null }
-                    )
-                } else if (activeReadingAiStory != null) {
-                    AiStoryReaderScreen(
-                        story = activeReadingAiStory!!,
-                        viewModel = viewModel,
-                        onBack = { activeReadingAiStory = null }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                if (loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = Color(0xFFB8143F)
                     )
                 } else {
-                    when (currentDestination) {
-                        UserDestination.HOME -> {
-                            GothicGamingHomeScreen(
-                                viewModel = viewModel,
-                                onNavigate = { dest -> navigateTo(dest) },
-                                onLogoAdminClick = {
-                                    logoTapCount++
-                                    if (logoTapCount >= 7) {
-                                        logoTapCount = 0
-                                        onOpenAdminLogin()
+                    if (activeReadingStory != null) {
+                        StoryReaderScreen(
+                            story = activeReadingStory!!,
+                            viewModel = viewModel,
+                            onBack = { activeReadingStory = null }
+                        )
+                    } else if (activeReadingAiStory != null) {
+                        AiStoryReaderScreen(
+                            story = activeReadingAiStory!!,
+                            viewModel = viewModel,
+                            onBack = { activeReadingAiStory = null }
+                        )
+                    } else {
+                        when (currentDestination) {
+                            UserDestination.HOME -> {
+                                GothicGamingHomeScreen(
+                                    viewModel = viewModel,
+                                    onNavigate = { dest -> navigateTo(dest) },
+                                    onLogoAdminClick = {
+                                        logoTapCount++
+                                        if (logoTapCount >= 7) {
+                                            logoTapCount = 0
+                                            onOpenAdminLogin()
+                                        }
                                     }
-                                }
-                            )
-                        }
-                        UserDestination.STORIES -> {
-                            BeautifulStoriesDashboard(
-                                realStories = realStories,
-                                viewModel = viewModel,
-                                onLogoClick = {
-                                    logoTapCount++
-                                    if (logoTapCount >= 7) {
-                                        logoTapCount = 0
-                                        onOpenAdminLogin()
-                                    }
-                                },
-                                onStoryRead = { selected ->
-                                    if (!NetworkUtils.isOnline(context)) {
-                                        showNoInternetDialog = true
-                                    } else {
-                                        activeReadingStory = selected
-                                    }
-                                },
-                                onBack = { popBack() }
-                            )
-                        }
-                        UserDestination.GRIM_FORTUNES -> {
-                            GrimFortuneScreen(
-                                grimFortunes = grimFortunes,
-                                viewModel = viewModel,
-                                onBack = { popBack() }
-                            )
-                        }
-                        UserDestination.SUBMIT_STORY -> {
-                            BeautifulSubmitStoryScreen(
-                                viewModel = viewModel,
-                                onBack = { popBack() },
-                                onSubmissionComplete = { navigateTo(UserDestination.STORIES) }
-                            )
-                        }
-                        UserDestination.AI_STORIES -> {
-                            AiStoriesUserSection(
-                                aiStories = aiStories,
-                                viewModel = viewModel,
-                                onStoryRead = { selected ->
-                                    activeReadingAiStory = selected
-                                },
-                                onBack = { popBack() }
-                            )
-                        }
-                        UserDestination.SETTINGS -> {
-                            GorgeousSettingsScreen(
-                                viewModel = viewModel,
-                                onOpenAdminLogin = onOpenAdminLogin,
-                                onBack = { popBack() }
-                            )
+                                )
+                            }
+                            UserDestination.STORIES -> {
+                                BeautifulStoriesDashboard(
+                                    realStories = realStories,
+                                    viewModel = viewModel,
+                                    onLogoClick = {
+                                        logoTapCount++
+                                        if (logoTapCount >= 7) {
+                                            logoTapCount = 0
+                                            onOpenAdminLogin()
+                                        }
+                                    },
+                                    onStoryRead = { selected -> handleReadRegularStory(selected) },
+                                    onUserStoryRead = { selected -> handleReadUserStory(selected) },
+                                    onOpenSubscription = { navigateTo(UserDestination.SUBSCRIPTION) },
+                                    onBack = { popBack() }
+                                )
+                            }
+                            UserDestination.GRIM_FORTUNES -> {
+                                GrimFortuneScreen(
+                                    grimFortunes = grimFortunes,
+                                    viewModel = viewModel,
+                                    onBack = { popBack() }
+                                )
+                            }
+                            UserDestination.SUBMIT_STORY -> {
+                                BeautifulSubmitStoryScreen(
+                                    viewModel = viewModel,
+                                    onBack = { popBack() },
+                                    onSubmissionComplete = { navigateTo(UserDestination.STORIES) }
+                                )
+                            }
+                            UserDestination.AI_STORIES -> {
+                                AiStoriesUserSection(
+                                    aiStories = aiStories,
+                                    viewModel = viewModel,
+                                    onStoryRead = { selected -> handleReadAiStory(selected) },
+                                    onBack = { popBack() }
+                                )
+                            }
+                            UserDestination.SETTINGS -> {
+                                GorgeousSettingsScreen(
+                                    viewModel = viewModel,
+                                    onNavigate = { dest -> navigateTo(dest) },
+                                    onOpenAdminLogin = onOpenAdminLogin,
+                                    onBack = { popBack() }
+                                )
+                            }
+                            UserDestination.SUBSCRIPTION -> {
+                                SubscriptionScreen(
+                                    viewModel = viewModel,
+                                    billingManager = billingManager,
+                                    onBack = { popBack() }
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // Exit Confirmation Dialog
-            if (showExitDialog) {
-                AlertDialog(
-                    onDismissRequest = { showExitDialog = false },
-                    containerColor = Color(0xFF14081E),
-                    shape = RoundedCornerShape(16.dp),
-                    tonalElevation = 8.dp,
-                    icon = {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF380714))
-                                .border(1.5.dp, Color(0xFFB8143F), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ExitToApp,
-                                contentDescription = null,
-                                tint = Color(0xFFFF1E56),
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    },
-                    title = {
-                        Text(
-                            text = "میخوای بری؟! ",
-                            color = Color(0xFFDEC595),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Serif,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = "آیا مطمئنی که می‌خواهی از عمارت وحشت خارج شوی؟",
-                            color = Color(0xFFEDE8F5).copy(alpha = 0.85f),
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    },
-                    confirmButton = {
-                        Button(
-                            onClick = {
-                                showExitDialog = false
-                                (context as? Activity)?.finish()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        ) {
-                            Text("آره", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                    },
-                    dismissButton = {
-                        OutlinedButton(
-                            onClick = { showExitDialog = false },
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
-                            modifier = Modifier.padding(horizontal = 4.dp)
-                        ) {
-                            Text("نه", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                        }
-                    }
-                )
-            }
-
-            // Offline floating warning banner if network is disconnected
-            if (!isOnline) {
-                Surface(
-                    color = Color(0xFF4A0A17),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .statusBarsPadding()
-                ) {
-                    Row(
+                // Offline floating warning banner if network is disconnected
+                if (!isOnline) {
+                    Surface(
+                        color = Color(0xFF4A0A17),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                            Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text("عدم اتصال به اینترنت", color = Color(0xFFEDE8F5), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                        TextButton(onClick = { viewModel.loadUserData() }) {
-                            Text("اتصال مجدد 🔄", color = Color(0xFFFFD700), fontSize = 11.sp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.WifiOff, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("عدم اتصال به اینترنت", color = Color(0xFFEDE8F5), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                            TextButton(onClick = { viewModel.loadUserData() }) {
+                                Text("اتصال مجدد 🔄", color = Color(0xFFFFD700), fontSize = 11.sp)
+                            }
                         }
                     }
                 }
             }
+
+            // Bottom Banner Ad (Visible only on free version across all screens, centered at bottom)
+            AdiveryBottomBannerAd(isPremium = isPremium)
         }
+    }
+
+    // Premium Story Submission Required Dialog
+    if (showPremiumRequiredDialog) {
+        AlertDialog(
+            onDismissRequest = { showPremiumRequiredDialog = false },
+            containerColor = Color(0xFF14081E),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 8.dp,
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF280B18))
+                        .border(1.5.dp, Color(0xFFDEC595), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.WorkspacePremium,
+                        contentDescription = null,
+                        tint = Color(0xFFDEC595),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = "ارسال داستان مختص اعضای ویژه 👑",
+                    color = Color(0xFFDEC595),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "در نسخه رایگان، امکان ارسال داستان وجود ندارد. با خرید اشتراک دائمی، قابلیت ارسال روایات با نام اختصاصی شما باز شده و تمامی تبلیغات برنامه نیز برای همیشه محو خواهند شد.",
+                    color = Color(0xFFEDE8F5).copy(alpha = 0.85f),
+                    fontSize = 12.5.sp,
+                    lineHeight = 19.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPremiumRequiredDialog = false
+                        navigateTo(UserDestination.SUBSCRIPTION)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Text("خرید اشتراک دائمی", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showPremiumRequiredDialog = false },
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Text("فعلاً نه", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
+        )
+    }
+
+    // Exit Confirmation Dialog
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            containerColor = Color(0xFF14081E),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 8.dp,
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF380714))
+                        .border(1.5.dp, Color(0xFFB8143F), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ExitToApp,
+                        contentDescription = null,
+                        tint = Color(0xFFFF1E56),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = "میخوای بری؟! ",
+                    color = Color(0xFFDEC595),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "آیا مطمئنی که می‌خواهی از عمارت وحشت خارج شوی؟",
+                    color = Color(0xFFEDE8F5).copy(alpha = 0.85f),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showExitDialog = false
+                        (context as? Activity)?.finish()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Text("آره", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showExitDialog = false },
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Text("نه", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+            }
+        )
     }
 
     if (showNoInternetDialog) {
@@ -1959,10 +2208,14 @@ fun BeautifulStoriesDashboard(
     viewModel: HorrorViewModel,
     onLogoClick: () -> Unit,
     onStoryRead: (RealStory) -> Unit,
+    onUserStoryRead: ((RealStory) -> Unit)? = null,
+    onOpenSubscription: (() -> Unit)? = null,
     onBack: () -> Unit = {}
 ) {
+    val isPremium by viewModel.isPremiumUser.collectAsState()
     var storyTab by remember { mutableIntStateOf(0) } // 0 = داستان‌های واقعی, 1 = داستان‌های شما
     var showSubmitDialog by remember { mutableStateOf(false) }
+    var showPremiumPromptDialog by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = داغ‌ترین‌ها, 2 = محبوب‌ترین‌ها ♥️
     
@@ -2450,7 +2703,11 @@ fun BeautifulStoriesDashboard(
                                     onRead = {
                                         HorrorSoundManager.playPageTurnSound()
                                         viewModel.incrementSubmissionViews(sub.id)
-                                        onStoryRead(sub.toRealStory())
+                                        if (onUserStoryRead != null) {
+                                            onUserStoryRead(sub.toRealStory())
+                                        } else {
+                                            onStoryRead(sub.toRealStory())
+                                        }
                                     }
                                 )
                             }
@@ -2467,7 +2724,11 @@ fun BeautifulStoriesDashboard(
             FloatingActionButton(
                 onClick = {
                     HorrorSoundManager.playClickSound()
-                    showSubmitDialog = true
+                    if (isPremium) {
+                        showSubmitDialog = true
+                    } else {
+                        showPremiumPromptDialog = true
+                    }
                 },
                 containerColor = Color(0xFFB8143F),
                 contentColor = Color.White,
@@ -2504,6 +2765,76 @@ fun BeautifulStoriesDashboard(
         SubmitStoryDialog(viewModel) {
             showSubmitDialog = false
         }
+    }
+
+    if (showPremiumPromptDialog) {
+        AlertDialog(
+            onDismissRequest = { showPremiumPromptDialog = false },
+            containerColor = Color(0xFF14081E),
+            shape = RoundedCornerShape(16.dp),
+            tonalElevation = 8.dp,
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF280B18))
+                        .border(1.5.dp, Color(0xFFDEC595), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.WorkspacePremium,
+                        contentDescription = null,
+                        tint = Color(0xFFDEC595),
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = "ارسال داستان فقط برای اعضای طلایی 👑",
+                    color = Color(0xFFDEC595),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Serif,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "ارسال داستان و روایات کاربران تنها برای کاربرانی که اشتراک دائمی تهیه کرده‌اند فعال است. با تهیه اشتراک تمامی تبلیغات برنامه نیز برای شما حذف خواهد شد.",
+                    color = Color(0xFFEDE8F5).copy(alpha = 0.85f),
+                    fontSize = 12.5.sp,
+                    lineHeight = 19.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPremiumPromptDialog = false
+                        onOpenSubscription?.invoke()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Text("خرید اشتراک دائمی", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showPremiumPromptDialog = false },
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Text("فعلاً نه", color = Color(0xFFDEC595), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                }
+            }
+        )
     }
 }
 
@@ -4233,11 +4564,13 @@ fun BeautifulSubmitStoryScreen(
 @Composable
 fun GorgeousSettingsScreen(
     viewModel: HorrorViewModel,
+    onNavigate: (UserDestination) -> Unit = {},
     onOpenAdminLogin: () -> Unit = {},
     onBack: () -> Unit = {}
 ) {
     val selectedFontIndex by viewModel.selectedFontIndex.collectAsState()
     val fontSize by viewModel.fontSize.collectAsState()
+    val isPremiumUser by viewModel.isPremiumUser.collectAsState()
 
     val activeFontPreset = HorrorFontPresets.getOrNull(selectedFontIndex) ?: HorrorFontPresets[0]
 
@@ -4416,6 +4749,77 @@ fun GorgeousSettingsScreen(
                         Text("پیش‌فرض (16sp)", color = Color(0xFF8B8496), fontSize = 10.sp)
                         Text("بزرگ (26sp)", color = Color(0xFF8B8496), fontSize = 10.sp)
                     }
+                }
+            }
+
+            // VIP SUBSCRIPTION CARD
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(
+                        borderColor = if (isPremiumUser) Color(0xFF2ECC71).copy(alpha = 0.8f) else Color(0xFFDEC595).copy(alpha = 0.8f),
+                        cornerRadiusDp = 12f
+                    )
+                    .clickable {
+                        HorrorSoundManager.playClickSound()
+                        onNavigate(UserDestination.SUBSCRIPTION)
+                    },
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isPremiumUser) Color(0xFF071B0E) else Color(0xFF19091F)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isPremiumUser) Color(0xFF12381F) else Color(0xFF380724)
+                            )
+                            .border(
+                                1.dp,
+                                if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.WorkspacePremium,
+                            contentDescription = null,
+                            tint = if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isPremiumUser) "عضویت طلایی و دائمی (فعال)" else "خرید اشتراک دائمی (نسخه ویژه)",
+                            color = if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (isPremiumUser) "تمامی امکانات باز و تبلیغات برنامه حذف هستند 👑" else "حذف تبلیغات، امکان ارسال داستان و عضویت VIP",
+                            color = Color(0xFFEDE4F5).copy(alpha = 0.8f),
+                            fontSize = 10.5.sp
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = if (isPremiumUser) Color(0xFF2ECC71) else Color(0xFFDEC595),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }
