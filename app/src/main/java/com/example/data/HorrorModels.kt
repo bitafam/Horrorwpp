@@ -47,9 +47,13 @@ data class AiStory(
         get() = doomScore
     val ratingScore: Float
         get() = rating
+    val rating_score: Float
+        get() = rating
     val ratingCount: Int
         get() = rating_count
     val viewsCount: Int
+        get() = view_count
+    val viewCount: Int
         get() = view_count
     val coverUrl: String?
         get() = cover_image_url

@@ -2937,9 +2937,21 @@ fun AdminAiStoriesTab(
 
     // Sub-tabs: 0 = Published, 1 = Drafts
     var currentSubTab by remember { mutableIntStateOf(0) }
+    var adminSortOption by remember { mutableStateOf("جدیدترین‌ها") }
+    val adminSortOptions = listOf("جدیدترین‌ها", "قدیمی‌ترین‌ها", "پربازدیدترین‌ها", "بهترین‌ها (امتیاز)")
+
     val publishedStories = remember(stories) { stories.filter { it.status == "PUBLISHED" } }
     val draftStories = remember(stories) { stories.filter { it.status != "PUBLISHED" } }
-    val currentDisplayList = if (currentSubTab == 0) publishedStories else draftStories
+    
+    val currentDisplayList = remember(currentSubTab, publishedStories, draftStories, adminSortOption) {
+        val base = if (currentSubTab == 0) publishedStories else draftStories
+        when (adminSortOption) {
+            "قدیمی‌ترین‌ها" -> base.sortedBy { it.createdAt ?: it.id }
+            "پربازدیدترین‌ها" -> base.sortedByDescending { it.view_count }
+            "بهترین‌ها (امتیاز)" -> base.sortedWith(compareByDescending<AiStory> { it.rating }.thenByDescending { it.rating_count })
+            else -> base.sortedByDescending { it.createdAt ?: it.id }
+        }
+    }
 
     // Multi-selection state
     val selectedIds = remember { mutableStateListOf<String>() }
@@ -3304,6 +3316,38 @@ fun AdminAiStoriesTab(
             }
         }
 
+        // Sorting Filter Chips Row
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                text = "فیلتر و مرتب‌سازی داستان‌ها:",
+                color = MutedAsh,
+                fontSize = 11.sp
+            )
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(adminSortOptions) { sortOption ->
+                    val isSel = adminSortOption == sortOption
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (isSel) BloodCrimson else CryptCardElevated)
+                            .border(1.dp, if (isSel) BloodGlow else MutedAsh.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                            .clickable { adminSortOption = sortOption }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = sortOption,
+                            color = if (isSel) SpectralWhite else MutedAsh,
+                            fontSize = 11.sp,
+                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+
         // Bulk Actions Bar (Shown when 1 or more items selected)
         if (selectedIds.isNotEmpty()) {
             Surface(
@@ -3423,9 +3467,9 @@ fun AdminAiStoriesTab(
                                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                             Text("ژانر: ${story.genre}", color = BloodGlow, fontSize = 10.sp)
                                             Text("•", color = MutedAsh, fontSize = 10.sp)
-                                            Text("وحشت: ${story.doom_score}%", color = WarningAmber, fontSize = 10.sp)
-                                            Text("•", color = MutedAsh, fontSize = 10.sp)
                                             Text("بازدید: ${story.view_count}", color = MutedAsh, fontSize = 10.sp)
+                                            Text("•", color = MutedAsh, fontSize = 10.sp)
+                                            Text("⭐ ${String.format(java.util.Locale.US, "%.1f", story.rating_score)} (${story.rating_count} رأی)", color = WarningAmber, fontSize = 10.sp)
                                         }
                                     }
                                 }
@@ -3537,11 +3581,13 @@ fun AdminAiStoriesTab(
             title = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(s.title, color = BloodGlow, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Badge(containerColor = Color(0xFF3B184F)) {
                             Text(s.genre ?: "روانشناختی", color = SpectralWhite, fontSize = 10.sp, modifier = Modifier.padding(2.dp))
                         }
-                        Text("میزان وحشت: ${s.doom_score}%", color = WarningAmber, fontSize = 11.sp)
+                        Text("بازدید: ${s.view_count}", color = MutedAsh, fontSize = 11.sp)
+                        Text("•", color = MutedAsh, fontSize = 11.sp)
+                        Text("⭐ ${String.format(java.util.Locale.US, "%.1f", s.rating_score)} (${s.rating_count} رأی)", color = WarningAmber, fontSize = 11.sp)
                     }
                 }
             },

@@ -1,5 +1,6 @@
 package com.example.ui.user
 
+import android.app.Activity
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -37,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.R
+import com.example.ads.AdiveryAdManager
 import com.example.data.AiStory
 import com.example.data.StoryReport
 import com.example.ui.theme.HorrorFontPresets
@@ -61,19 +63,29 @@ fun AiStoriesUserSection(
     var selectedGenre by remember { mutableStateOf("همه") }
     var selectedSort by remember { mutableStateOf("جدیدترین") }
     var searchQuery by remember { mutableStateOf("") }
+    var displayLimit by remember { mutableIntStateOf(20) }
 
-    val genres = listOf(
-        "همه",
-        "روانشناختی",
-        "ماورایی",
-        "افسانه و فولکلور",
-        "جنایی و معمایی",
-        "شهری و آپارتمان",
-        "جاده و جنگل",
-        "خانه‌های قدیمی",
-        "علمی‌تخیلی"
-    )
-    val sortOptions = listOf("جدیدترین", "بیشترین وحشت", "محبوب‌ترین")
+    // Dynamic genres extracted strictly from existing generated stories
+    val genres = remember(publishedStories) {
+        val extracted = publishedStories.mapNotNull { it.genre?.trim() }
+            .filter { it.isNotBlank() && it != "همه" }
+            .distinct()
+        if (extracted.isEmpty()) listOf("همه") else listOf("همه") + extracted
+    }
+
+    // Reset selected genre to "همه" if the genre no longer exists
+    LaunchedEffect(genres) {
+        if (selectedGenre != "همه" && !genres.contains(selectedGenre)) {
+            selectedGenre = "همه"
+        }
+    }
+
+    // Reset pagination when filter or search changes
+    LaunchedEffect(selectedGenre, selectedSort, searchQuery) {
+        displayLimit = 20
+    }
+
+    val sortOptions = listOf("جدیدترین", "قدیمی‌ترین", "پربازدیدترین", "محبوب‌ترین")
 
     val filteredStories = remember(publishedStories, selectedGenre, selectedSort, searchQuery) {
         var list = publishedStories
@@ -92,10 +104,15 @@ fun AiStoriesUserSection(
         }
 
         when (selectedSort) {
-            "بیشترین وحشت" -> list.sortedByDescending { it.doomScore }
-            "محبوب‌ترین" -> list.sortedWith(compareByDescending<AiStory> { it.ratingScore }.thenByDescending { it.ratingCount })
-            else -> list.sortedByDescending { it.createdAt ?: "" }
+            "قدیمی‌ترین" -> list.sortedBy { it.createdAt ?: it.id }
+            "پربازدیدترین" -> list.sortedByDescending { it.view_count }
+            "محبوب‌ترین" -> list.sortedWith(compareByDescending<AiStory> { it.rating }.thenByDescending { it.rating_count })
+            else -> list.sortedByDescending { it.createdAt ?: it.id }
         }
+    }
+
+    val displayedStories = remember(filteredStories, displayLimit) {
+        filteredStories.take(displayLimit)
     }
 
     Column(
@@ -266,8 +283,8 @@ fun AiStoriesUserSection(
                     }
                 }
             } else {
-                // STORIES LIST
-                items(filteredStories, key = { it.id }) { story ->
+                // STORIES LIST (PAGINATED - 20 PER PAGE)
+                items(displayedStories, key = { it.id }) { story ->
                     UserAiStoryCard(
                         story = story,
                         onRead = {
@@ -275,6 +292,52 @@ fun AiStoriesUserSection(
                             onStoryRead(story)
                         }
                     )
+                }
+
+                // LOAD MORE BUTTON (IF MORE STORIES REMAIN)
+                if (filteredStories.size > displayLimit) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    HorrorSoundManager.playClickSound()
+                                    displayLimit += 20
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, Color(0xFFDEC595)),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = Color(0xFF160A22)
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth(0.9f)
+                                    .height(48.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.ExpandMore,
+                                        contentDescription = null,
+                                        tint = Color(0xFFDEC595),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "مشاهده داستان‌های بیشتر (${filteredStories.size - displayLimit} مورد باقی‌مانده)",
+                                        color = Color(0xFFDEC595),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -420,26 +483,21 @@ private fun UserAiStoryCard(
                         )
                     }
 
-                    // Doom Score Badge
-                    val doomColor = when {
-                        story.doomScore >= 80 -> Color(0xFFFF1E56)
-                        story.doomScore >= 50 -> Color(0xFFFF9800)
-                        else -> Color(0xFF4CAF50)
-                    }
+                    // Source Badge
                     Surface(
-                        color = Color(0xDD12040A),
+                        color = Color(0xDD12041A),
                         shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, doomColor)
+                        border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f))
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text("💀", fontSize = 10.sp)
+                            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(12.dp))
                             Text(
-                                text = "وحشت: ${story.doomScore}٪",
-                                color = doomColor,
+                                text = "هوش تاریکی",
+                                color = Color(0xFFDEC595),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -765,6 +823,8 @@ fun AiStoryReaderScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
+    val isPremium by viewModel.isPremiumUser.collectAsState()
 
     // Record view increment automatically
     LaunchedEffect(story.id) {
@@ -774,9 +834,15 @@ fun AiStoryReaderScreen(
     val fontSize by viewModel.fontSize.collectAsState()
     val selectedFontIndex by viewModel.selectedFontIndex.collectAsState()
 
-    var userRating by remember { mutableIntStateOf(0) }
-    var ratingSubmitted by remember { mutableStateOf(false) }
+    // Persistent User Vote State
+    val initialUserVote = remember(story.id) { viewModel.getAiStoryUserVote(story.id) }
+    var userRating by remember(story.id) { mutableIntStateOf(if (initialUserVote > 0) initialUserVote.toInt() else 0) }
+    var ratingSubmitted by remember(story.id) { mutableStateOf(initialUserVote > 0) }
     var showReportDialog by remember { mutableStateOf(false) }
+
+    // Live AI Story State from ViewModel
+    val allAiStories by viewModel.aiStoriesList.collectAsState()
+    val liveStory = allAiStories.find { it.id == story.id } ?: story
 
     // Themes: 0 = Crypt Dark, 1 = Ancient Parchment, 2 = Pitch Black
     var themeIndex by remember { mutableIntStateOf(0) }
@@ -794,6 +860,18 @@ fun AiStoryReaderScreen(
         2 -> Color(0xFFE0DAE8)
         else -> Color(0xFFEDE4F5)
     }
+
+    // Share Text format: Title + Synopsis + Download link
+    val shareSynopsis = if (!story.synopsis.isNullOrBlank()) story.synopsis else story.content.take(180) + "..."
+    val shareMessage = """
+📖 بخشی از روایت ترسناک «${story.title}»:
+
+«$shareSynopsis»
+
+━━━━━━━━━━━━━━━━━━━━
+🩸 برای مطالعه کامل و بی‌پایان این داستان و صدها روایت وحشت دیگر، برنامه «عمارت وحشت» را از مایکت دریافت کنید یا عنوان «${story.title}» را در برنامه جستجو نمایید:
+https://myket.ir/app/com.apps.hororhouse
+""".trimIndent()
 
     if (showReportDialog) {
         StoryReportDialog(
@@ -864,15 +942,16 @@ fun AiStoryReaderScreen(
                     // Share Button
                     IconButton(
                         onClick = {
-                            val shareIntent = Intent().apply {
+                            HorrorSoundManager.playClickSound()
+                            val sendIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
-                                putExtra(
-                                    Intent.EXTRA_TEXT,
-                                    "💀 داستان ترسناک: ${story.title}\n\n${story.content}\n\n— عمارت وحشت (هوش تاریکی عمارت وحشت)"
-                                )
+                                putExtra(Intent.EXTRA_TEXT, shareMessage)
                                 type = "text/plain"
                             }
-                            context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری داستان هوش تاریکی"))
+                            context.startActivity(Intent.createChooser(sendIntent, "اشتراک‌گذاری داستان هوش تاریکی"))
+                            if (activity != null) {
+                                AdiveryAdManager.showAppOpenAdIfAvailable(activity, isPremium) {}
+                            }
                         }
                     ) {
                         Icon(Icons.Default.Share, contentDescription = "اشتراک‌گذاری", tint = Color(0xFFDEC595))
@@ -1022,7 +1101,7 @@ fun AiStoryReaderScreen(
                 }
             }
 
-            // DOOM & GENRE HEADER CARD
+            // STORY META & GENRE HEADER CARD (NO DOOM SCORE)
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -1042,36 +1121,32 @@ fun AiStoryReaderScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "🔮 سبک: ${story.genre}",
+                                text = "🔮 ژانر: ${story.genre}",
                                 color = Color(0xFFDEC595),
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Bold
                             )
+
                             Surface(
                                 color = Color(0xFF260D18),
                                 shape = RoundedCornerShape(6.dp),
-                                border = BorderStroke(1.dp, Color(0xFFFF1E56).copy(alpha = 0.6f))
+                                border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f))
                             ) {
-                                Text(
-                                    text = "💀 شاخص وحشت: ${story.doomScore}٪",
-                                    color = Color(0xFFFF1E56),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.Visibility, contentDescription = null, tint = Color(0xFF8B8496), modifier = Modifier.size(12.dp))
+                                    Text(
+                                        text = "${liveStory.view_count} بازدید",
+                                        color = Color(0xFFE0DAE8),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
-
-                        // Doom score horizontal progress bar
-                        LinearProgressIndicator(
-                            progress = { story.doomScore / 100f },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp)),
-                            color = Color(0xFFFF1E56),
-                            trackColor = Color(0xFF2D1426)
-                        )
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -1079,7 +1154,7 @@ fun AiStoryReaderScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "🤖 نویسنده و منبع: هوش تاریکی عمارت وحشت",
+                                text = "🤖 مؤلف: هوش تاریکی عمارت وحشت",
                                 color = Color(0xFFDEC595).copy(alpha = 0.8f),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium
@@ -1152,7 +1227,7 @@ fun AiStoryReaderScreen(
                 }
             }
 
-            // RATING AND FEEDBACK BOX
+            // RATING AND FEEDBACK BOX (OVERHAULED 5-STAR SYSTEM)
             item {
                 Card(
                     modifier = Modifier
@@ -1167,62 +1242,93 @@ fun AiStoryReaderScreen(
                             .fillMaxWidth()
                             .padding(18.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "به این داستان هوش تاریکی چه امتیازی می‌دهید؟",
+                            text = if (ratingSubmitted) "⭐ امتیاز ثبت‌شده شما برای این داستان" else "به این روایت هوش تاریکی چه امتیازی می‌دهید؟",
                             color = Color(0xFFDEC595),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             textAlign = TextAlign.Center
                         )
 
+                        // 5 Stars Row (Empty by default, Filled on rating)
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             (1..5).forEach { star ->
+                                val isSelected = star <= userRating
                                 IconButton(
                                     onClick = {
-                                        userRating = star
-                                        ratingSubmitted = true
-                                        HorrorSoundManager.playScenarioChoiceSound()
-                                        viewModel.rateAiStory(story.id, star.toFloat())
+                                        if (!ratingSubmitted) {
+                                            userRating = star
+                                            ratingSubmitted = true
+                                            HorrorSoundManager.playStarRatingSound(star)
+                                            viewModel.rateAiStory(story.id, star.toFloat())
+                                        }
                                     },
-                                    modifier = Modifier.size(38.dp)
+                                    enabled = !ratingSubmitted,
+                                    modifier = Modifier.size(40.dp)
                                 ) {
                                     Icon(
-                                        if (star <= userRating || (userRating == 0 && star <= story.ratingScore.toInt()))
-                                            Icons.Default.Star
-                                        else
-                                            Icons.Default.StarBorder,
+                                        imageVector = if (isSelected) Icons.Default.Star else Icons.Default.StarBorder,
                                         contentDescription = "ستاره $star",
-                                        tint = if (star <= userRating || (userRating == 0 && star <= story.ratingScore.toInt()))
-                                            Color(0xFFFFD700)
-                                        else
-                                            Color(0xFF5A496B),
-                                        modifier = Modifier.size(28.dp)
+                                        tint = if (isSelected) Color(0xFFFFD700) else Color(0xFF6B587E),
+                                        modifier = Modifier.size(30.dp)
                                     )
                                 }
                             }
                         }
 
-                        if (ratingSubmitted) {
+                        // Rating Guide Hint
+                        Text(
+                            text = "راهنما: ۱ ستاره (ضعیف) ←──→ ۵ ستاره (شاهکار)",
+                            color = Color(0xFF8B8496),
+                            fontSize = 10.sp,
+                            textAlign = TextAlign.Center
+                        )
+
+                        HorizontalDivider(color = Color(0xFF2A153E), thickness = 0.8.dp)
+
+                        // Clear Distinction: User's Vote vs Community Average
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // User Rating Status
+                            if (ratingSubmitted) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(14.dp))
+                                    Text(
+                                        text = "رأی شما: $userRating ستاره",
+                                        color = Color(0xFF4CAF50),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = "هنوز رأی نداده‌اید",
+                                    color = Color(0xFF8B8496),
+                                    fontSize = 11.sp
+                                )
+                            }
+
+                            // Community Average
                             Text(
-                                text = "✨ امتیاز شما ($userRating ستاره) با موفقیت ثبت شد!",
-                                color = Color(0xFF4CAF50),
+                                text = "📊 میانگین کاربران: ${String.format(java.util.Locale.US, "%.1f", liveStory.rating_score)} از ۵ (${liveStory.rating_count} رأی)",
+                                color = Color(0xFFDEC595),
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Text(
-                                text = "میانگین فعلی: ${String.format("%.1f", story.ratingScore)} از ۵ (${story.ratingCount} رأی)",
-                                color = Color(0xFF8B8496),
-                                fontSize = 11.sp
+                                fontWeight = FontWeight.Medium
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
 
                         // Return to list button
                         Button(

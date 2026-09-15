@@ -3,6 +3,8 @@ name: Build Debug APK
 on:
   push:
     branches: [ "main", "master" ]
+    paths-ignore:
+      - 'web-admin/**'
   workflow_dispatch:
 
 permissions:

@@ -1,0 +1,61 @@
+name: Release Web Admin Panel
+
+on:
+  push:
+    paths:
+      - 'web-admin/**'
+      - '.github/workflows/admin-web-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  package-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare and Package Web Admin Archive
+        run: |
+          mkdir -p dist
+          # Package all web-admin assets into zip archives
+          cd web-admin
+          zip -r ../dist/HorrorHouse-Web-Admin-v${{ github.run_number }}.zip ./*
+          zip -r ../dist/HorrorHouse-Web-Admin.zip ./*
+          cd ..
+
+      - name: Upload Web Admin Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HorrorHouse-Web-Admin-v${{ github.run_number }}
+          path: dist/*.zip
+          retention-days: 14
+
+      - name: Create GitHub Release for Web Admin
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: admin-v${{ github.run_number }}
+          name: "HorrorHouse Web Admin v${{ github.run_number }}"
+          body: |
+            ## 🏰 نسخه جدید پنل وب مدیریت عمارت وحشت (Horror House Web Admin)
+            
+            - **شماره ساخت (Run Number):** ${{ github.run_number }}
+            - **شناسه کامیت:** ${{ github.sha }}
+            
+            ### 🌟 قابلیت‌های نسخه پنل وب:
+            - کنترل مستقل از مرورگر وب (کامپیوتر و موبایل) بدون نیاز به اپ اندروید
+            - استودیو هوش مصنوعی جمینای با فیلتر هوشمند ضد تکرار عناوین
+            - بررسی، تایید یا رد داستان‌های ارسالی کاربران
+            - مدیریت کتابخانه روایات واقعی، طالع شوم و تنظیمات مالی اشتراک
+            
+            فایل **HorrorHouse-Web-Admin-v${{ github.run_number }}.zip** را از بخش **Assets** دانلود و فایل `index.html` را در مرورگر باز کنید.
+          files: |
+            dist/HorrorHouse-Web-Admin-v${{ github.run_number }}.zip
+            dist/HorrorHouse-Web-Admin.zip
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

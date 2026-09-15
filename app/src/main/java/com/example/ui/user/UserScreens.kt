@@ -44,6 +44,7 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.res.painterResource
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.platform.LocalContext
 import com.example.R
 import com.example.data.*
@@ -1737,6 +1738,237 @@ fun GothicGamingHomeScreen(
                 }
             }
 
+            val context = LocalContext.current
+            val myketPackage = "ir.mservices.market"
+            val appPackageName = "com.apps.hororhouse"
+
+            // ROW: RATE ON MYKET + SHARE APP WITH MYKET LINK
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // BUTTON 1: RATE ON MYKET
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .gothicBorder(borderColor = Color(0xFFFFD700).copy(alpha = 0.5f), cornerRadiusDp = 12f)
+                        .clickable {
+                            HorrorSoundManager.playClickSound()
+                            try {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    data = Uri.parse("myket://comment?id=$appPackageName")
+                                    setPackage(myketPackage)
+                                }
+                                context.startActivity(intent)
+                            } catch (e: Exception) {
+                                try {
+                                    val fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://myket.ir/app/$appPackageName"))
+                                    context.startActivity(fallback)
+                                } catch (ex: Exception) {
+                                    android.widget.Toast.makeText(context, "خطا در باز کردن مایکت", android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF140F1E))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF2E2210))
+                                .border(1.dp, Color(0xFFFFD700).copy(alpha = 0.8f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = "امتیاز",
+                                tint = Color(0xFFFFD700),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "امتیاز به برنامه",
+                                color = Color(0xFFFFD700),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "ثبت دیدگاه در مایکت",
+                                color = Color(0xFFC5B6D4),
+                                fontSize = 9.sp
+                            )
+                        }
+                    }
+                }
+
+                // BUTTON 2: SHARE APP WITH MYKET LINK
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.5f), cornerRadiusDp = 12f)
+                        .clickable {
+                            HorrorSoundManager.playClickSound()
+                            val shareAppText = """
+🏰 اپلیکیشن «عمارت وحشت» | دنیای اسرارآمیز روایات واقعی و وحشت ماوراءالطبیعه
+
+🔮 قابلیت‌های هیجان‌انگیز:
+• خواندن صدها داستان ترسناک، رازهای کهن و طلسم‌ها
+• احضار کاتب ارواح (داستان‌نویس پیشرفته هوش مصنوعی)
+• طالع شوم و سرنوشت تاریک متولدین هر ماه
+• ثبت و انتشار داستان‌های ترسناک شخصی شما
+
+🩸 همین حالا رایگان از مایکت دریافت کنید:
+https://myket.ir/app/com.apps.hororhouse
+                            """.trimIndent()
+                            val shareIntent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, shareAppText)
+                                type = "text/plain"
+                            }
+                            context.startActivity(Intent.createChooser(shareIntent, "معرفی عمارت وحشت به دوستان"))
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF140F1E))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF271338))
+                                .border(1.dp, Color(0xFFDEC595).copy(alpha = 0.8f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "اشتراک‌گذاری",
+                                tint = Color(0xFFDEC595),
+                                modifier = Modifier.size(17.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "معرفی به دوستان",
+                                color = Color(0xFFDEC595),
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "اشتراک لینک مایکت",
+                                color = Color(0xFFC5B6D4),
+                                fontSize = 9.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // SINGLE ROW: CHECK FOR UPDATE IN MYKET
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(borderColor = Color(0xFF5C338A).copy(alpha = 0.8f), cornerRadiusDp = 12f)
+                    .clickable {
+                        HorrorSoundManager.playClickSound()
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                data = Uri.parse("myket://details?id=$appPackageName")
+                                setPackage(myketPackage)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            try {
+                                val fallback = Intent(Intent.ACTION_VIEW, Uri.parse("https://myket.ir/app/$appPackageName"))
+                                context.startActivity(fallback)
+                            } catch (ex: Exception) {
+                                android.widget.Toast.makeText(context, "خطا در اتصال به مایکت", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0818))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF28123C))
+                            .border(1.dp, Color(0xFF9B51E0), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = "بروزرسانی",
+                            tint = Color(0xFFC58BF2),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "بررسی بروزرسانی در مایکت",
+                                color = Color(0xFFEDE4F5),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = Color(0xFF381552),
+                                shape = RoundedCornerShape(4.dp),
+                                border = BorderStroke(0.5.dp, Color(0xFF9B51E0).copy(alpha = 0.6f))
+                            ) {
+                                Text(
+                                    text = "مایکت",
+                                    color = Color(0xFFC58BF2),
+                                    fontSize = 8.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "بررسی انتشار نسخه جدید و تغییرات تاریک عمارت وحشت",
+                            color = Color(0xFF8B8496),
+                            fontSize = 9.5.sp
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFFC58BF2),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             // FOOTER SIGNATURE
@@ -1784,6 +2016,18 @@ fun UserMainScreen(
     fun navigateTo(dest: UserDestination) {
         if (dest == UserDestination.SUBMIT_STORY && !isPremium) {
             showPremiumRequiredDialog = true
+            return
+        }
+        if (dest == UserDestination.GRIM_FORTUNES && !isPremium && activity != null) {
+            AdiveryAdManager.showAppOpenAdIfAvailable(
+                activity = activity,
+                isPremium = false,
+                onComplete = {
+                    if (destinationStack.lastOrNull() != dest) {
+                        destinationStack.add(dest)
+                    }
+                }
+            )
             return
         }
         if (dest == UserDestination.HOME) {
@@ -2223,6 +2467,17 @@ fun BeautifulStoriesDashboard(
     var userSearchQuery by remember { mutableStateOf("") }
     var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = داغ‌ترین‌ها, 2 = محبوب‌ترین‌ها ♥️
     
+    var realStoriesLimit by remember { mutableIntStateOf(20) }
+    var userStoriesLimit by remember { mutableIntStateOf(20) }
+
+    LaunchedEffect(searchQuery, selectedFilterIndex) {
+        realStoriesLimit = 20
+    }
+
+    LaunchedEffect(userSearchQuery, userFilterIndex) {
+        userStoriesLimit = 20
+    }
+
     var isAmbientPlaying by remember { mutableStateOf(false) }
 
     // Filter and sort real stories
@@ -2528,8 +2783,11 @@ fun BeautifulStoriesDashboard(
                         )
                     }
                 } else {
+                    val displayedStories = remember(filteredStories, realStoriesLimit) {
+                        filteredStories.take(realStoriesLimit)
+                    }
                     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        filteredStories.forEachIndexed { index, story ->
+                        displayedStories.forEachIndexed { index, story ->
                             StoryItemCard(
                                 story = story,
                                 index = index,
@@ -2539,6 +2797,36 @@ fun BeautifulStoriesDashboard(
                                     onStoryRead(story)
                                 }
                             )
+                        }
+
+                        if (filteredStories.size > realStoriesLimit) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    HorrorSoundManager.playClickSound()
+                                    realStoriesLimit += 20
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F112E)),
+                                border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f)),
+                                shape = RoundedCornerShape(10.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(Icons.Default.ExpandMore, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "مشاهده داستان‌های بیشتر (نمایش ${displayedStories.size} از ${filteredStories.size})",
+                                        color = Color(0xFFDEC595),
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -2695,8 +2983,11 @@ fun BeautifulStoriesDashboard(
                             )
                         }
                     } else {
+                        val displayedUserSubmissions = remember(filteredUserSubmissions, userStoriesLimit) {
+                            filteredUserSubmissions.take(userStoriesLimit)
+                        }
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            filteredUserSubmissions.forEachIndexed { idx, sub ->
+                            displayedUserSubmissions.forEachIndexed { idx, sub ->
                                 UserStoryItemCard(
                                     submission = sub,
                                     index = idx,
@@ -2710,6 +3001,36 @@ fun BeautifulStoriesDashboard(
                                         }
                                     }
                                 )
+                            }
+
+                            if (filteredUserSubmissions.size > userStoriesLimit) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Button(
+                                    onClick = {
+                                        HorrorSoundManager.playClickSound()
+                                        userStoriesLimit += 20
+                                    },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F112E)),
+                                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f)),
+                                    shape = RoundedCornerShape(10.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(Icons.Default.ExpandMore, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "مشاهده داستان‌های بیشتر (نمایش ${displayedUserSubmissions.size} از ${filteredUserSubmissions.size})",
+                                            color = Color(0xFFDEC595),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -3059,11 +3380,44 @@ fun GrimFortuneScreen(
     viewModel: HorrorViewModel,
     onBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val isPremium by viewModel.isPremiumUser.collectAsState()
+
+    val handleBack = {
+        if (activity != null && !isPremium) {
+            AdiveryAdManager.showAppOpenAdIfAvailable(activity, isPremium) {
+                onBack()
+            }
+        } else {
+            onBack()
+        }
+    }
+
+    BackHandler {
+        handleBack()
+    }
+
     var selectedMonthIndex by remember { mutableIntStateOf(1) }
     var showMonthPicker by remember { mutableStateOf(false) }
 
     val activeFortune = grimFortunes.find { it.month_index == selectedMonthIndex }
     val monthNames = HorrorViewModel.PERSIAN_MONTHS
+
+    val shareFortuneText = if (activeFortune != null) {
+        """
+🔮 فال و طالع شوم متولدین ماه «${activeFortune.month_name}»:
+
+«${activeFortune.title}»
+${if (!activeFortune.omen_poem.isNullOrBlank()) "\n📜 «${activeFortune.omen_poem}»\n" else ""}
+فرجام: ${activeFortune.doom_level ?: "بسیار شوم"}
+پیش‌گویی جادوگر: ${activeFortune.fortune_text}
+
+━━━━━━━━━━━━━━━━━━━━
+💀 برای دریافت طالع سایر ماه‌ها و خواندن صدها روایت ترسناک، اپلیکیشن «عمارت وحشت» را از مایکت دریافت کنید:
+https://myket.ir/app/com.apps.hororhouse
+""".trimIndent()
+    } else ""
 
     Column(
         modifier = Modifier
@@ -3075,7 +3429,7 @@ fun GrimFortuneScreen(
             subtitle = "پیش‌گویی ماهانه ارواح و کواکب تاریک",
             icon = Icons.Default.AutoAwesome,
             badgeText = monthNames.getOrNull(selectedMonthIndex - 1) ?: "طالع",
-            onBack = onBack
+            onBack = handleBack
         )
 
         Box(
@@ -3216,6 +3570,37 @@ fun GrimFortuneScreen(
                                     letterSpacing = 0.5.sp
                                 ),
                                 textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
+            // DISCLAIMER FOR ENTERTAINMENT
+            item {
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFF1B1124),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(1.dp, Color(0xFF533B6B))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFDEC595),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "توجه: این فال و طالع شوم صرفاً جنبه سرگرمی، داستانی و فضاسازی داشته و نباید به عنوان واقعیت تلقی شود.",
+                                color = Color(0xFFC5B6D4),
+                                fontSize = 11.sp,
+                                lineHeight = 17.sp
                             )
                         }
                     }
@@ -3398,11 +3783,37 @@ fun GrimFortuneScreen(
 
                                 Spacer(modifier = Modifier.height(16.dp))
 
+                                // Sharing Fortune Button with CTA and Ad
+                                Button(
+                                    onClick = {
+                                        HorrorSoundManager.playClickSound()
+                                        val sendIntent = Intent().apply {
+                                            action = Intent.ACTION_SEND
+                                            putExtra(Intent.EXTRA_TEXT, shareFortuneText)
+                                            type = "text/plain"
+                                        }
+                                        context.startActivity(Intent.createChooser(sendIntent, "اشتراک‌گذاری طالع شوم"))
+                                        if (activity != null) {
+                                            AdiveryAdManager.showAppOpenAdIfAvailable(activity, isPremium) {}
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF3B184F)),
+                                    border = BorderStroke(1.dp, Color(0xFFDEC595)),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Icon(Icons.Default.Share, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("اشتراک‌گذاری این طالع", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
                                 // Single Clean Action: Choose/Change birth month
                                 OutlinedButton(
                                     onClick = { showMonthPicker = true },
                                     modifier = Modifier.fillMaxWidth(),
-                                    border = BorderStroke(1.dp, Color(0xFFDEC595)),
+                                    border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.7f)),
                                     shape = RoundedCornerShape(8.dp)
                                 ) {
                                     Icon(Icons.Default.Refresh, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(16.dp))
@@ -3477,8 +3888,19 @@ fun GrimFortuneScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clickable {
-                                        selectedMonthIndex = monthIdx
+                                        HorrorSoundManager.playClickSound()
                                         showMonthPicker = false
+                                        if (!isPremium && activity != null) {
+                                            AdiveryAdManager.showAppOpenAdIfAvailable(
+                                                activity = activity,
+                                                isPremium = false,
+                                                onComplete = {
+                                                    selectedMonthIndex = monthIdx
+                                                }
+                                            )
+                                        } else {
+                                            selectedMonthIndex = monthIdx
+                                        }
                                     },
                                 colors = CardDefaults.cardColors(
                                     containerColor = if (isSelected) Color(0xFFB8143F) else Color(0xFF190F28)
@@ -3698,6 +4120,8 @@ fun StoryReaderScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val activity = context as? Activity
+    val isPremium by viewModel.isPremiumUser.collectAsState()
     
     val realStoriesState by viewModel.realStoriesList.collectAsState()
     val userSubmissionsState by viewModel.userSubmissionsList.collectAsState()
@@ -3756,16 +4180,17 @@ fun StoryReaderScreen(
         else -> Color(0xFFEDE4F5)
     }
 
-    val shareUrl = "https://ai.studio/build/horrorhouse/story?id=${story.id}"
-    val deepLinkSchema = "horrorhouse://story?id=${story.id}"
+    val shareSynopsis = remember(story.content) {
+        if (story.content.length > 180) story.content.take(180) + "..." else story.content
+    }
     val shareMessage = """
-📜 بخشی از روایت ترسناک «${story.title}» در عمارت وحشت:
+📖 بخشی از روایت ترسناک «${story.title}»:
 
-«${story.content.take(150)}...»
+«$shareSynopsis»
 
-👁️ برای خواندن کامل این لوح گرانبها و تجربه سناریوهای ماوراء الطبیعه عمارت، وارد معبد شوید:
-🔗 لینک برنامه: $shareUrl
-🔑 آدرس مستقیم کتیبه: $deepLinkSchema
+━━━━━━━━━━━━━━━━━━━━
+🩸 برای مطالعه کامل این داستان و صدها روایت وحشت، برنامه «عمارت وحشت» را از مایکت دریافت کنید یا عنوان «${story.title}» را در برنامه جستجو کنید:
+https://myket.ir/app/com.apps.hororhouse
 """.trimIndent()
 
     if (showReportDialog) {
@@ -3844,6 +4269,9 @@ fun StoryReaderScreen(
                                 type = "text/plain"
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "اشتراک‌گذاری روایت"))
+                            if (activity != null) {
+                                AdiveryAdManager.showAppOpenAdIfAvailable(activity, isPremium) {}
+                            }
                         }
                     ) {
                         Icon(Icons.Default.Share, contentDescription = "اشتراک‌گذاری", tint = Color(0xFFDEC595))
@@ -4131,10 +4559,17 @@ fun StoryReaderScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = if (ratingSubmitted) "رأی شما با موفقیت ثبت شد!" else "میزان وحشت و گیرایی این داستان از نظر شما چطور بود؟",
+                            text = if (ratingSubmitted) "رأی شما با موفقیت ثبت شد!" else "به این داستان امتیاز دهید:",
                             color = Color(0xFFDEC595),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+
+                        Text(
+                            text = "راهنما: ۱ ستاره (ضعیف) ←──────→ ۵ ستاره (شاهکار)",
+                            color = Color(0xFF8B8496),
+                            fontSize = 10.sp,
                             textAlign = TextAlign.Center
                         )
 
@@ -4143,7 +4578,11 @@ fun StoryReaderScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             (1..5).forEach { star ->
-                                val isFilled = star <= userRatingGiven || (userRatingGiven == 0 && star <= liveStory.rating.toInt())
+                                val isFilled = if (ratingSubmitted || userRatingGiven > 0) {
+                                    star <= userRatingGiven
+                                } else {
+                                    false
+                                }
                                 IconButton(
                                     onClick = {
                                         if (!ratingSubmitted) {
@@ -4166,12 +4605,13 @@ fun StoryReaderScreen(
                                             }
                                         }
                                     },
+                                    enabled = !ratingSubmitted,
                                     modifier = Modifier.size(38.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
                                         contentDescription = "ستاره $star",
-                                        tint = if (isFilled) Color(0xFFFFD700) else Color(0xFF5A496B),
+                                        tint = if (isFilled) Color(0xFFFFD700) else Color(0xFF6E5D80),
                                         modifier = Modifier.size(28.dp)
                                     )
                                 }
@@ -4180,14 +4620,14 @@ fun StoryReaderScreen(
 
                         if (ratingSubmitted) {
                             Text(
-                                text = "✨ امتیاز شما ($userRatingGiven ستاره) با موفقیت ثبت شد!",
+                                text = "✨ امتیاز شما: $userRatingGiven ستاره از ۵ | میانگین کاربران: ${String.format(java.util.Locale.US, "%.1f", liveStory.rating)} ★",
                                 color = Color(0xFF4CAF50),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         } else {
                             Text(
-                                text = String.format(java.util.Locale.US, "میانگین فعلی: %.1f از ۵ (%d رأی)", liveStory.rating, liveStory.rating_count),
+                                text = String.format(java.util.Locale.US, "میانگین فعلی جامعه: %.1f از ۵ (%d رأی ثبت شده)", liveStory.rating, liveStory.rating_count),
                                 color = Color(0xFF8B8496),
                                 fontSize = 11.sp
                             )
@@ -4212,7 +4652,7 @@ fun StoryReaderScreen(
                                         HorrorSoundManager.playClickSound()
                                         try {
                                             val intent = Intent(Intent.ACTION_VIEW).apply {
-                                                data = android.net.Uri.parse("https://t.me/share/url?url=${android.net.Uri.encode(shareUrl)}&text=${android.net.Uri.encode(shareMessage)}")
+                                                data = android.net.Uri.parse("https://t.me/share/url?url=${android.net.Uri.encode("https://myket.ir/app/com.apps.hororhouse")}&text=${android.net.Uri.encode(shareMessage)}")
                                             }
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
@@ -4222,6 +4662,9 @@ fun StoryReaderScreen(
                                                 type = "text/plain"
                                             }
                                             context.startActivity(Intent.createChooser(sendIntent, "اشتراک‌گذاری در تلگرام"))
+                                        }
+                                        if (activity != null) {
+                                            AdiveryAdManager.showAppOpenAdIfAvailable(activity, isPremium) {}
                                         }
                                     }
                                     .padding(vertical = 8.dp),
@@ -4252,6 +4695,9 @@ fun StoryReaderScreen(
                                             }
                                             context.startActivity(Intent.createChooser(sendIntent, "اشتراک‌گذاری در واتساپ"))
                                         }
+                                        if (activity != null) {
+                                            AdiveryAdManager.showAppOpenAdIfAvailable(activity, isPremium) {}
+                                        }
                                     }
                                     .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
@@ -4270,15 +4716,18 @@ fun StoryReaderScreen(
                                         HorrorSoundManager.playClickSound()
                                         try {
                                             val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                            val clip = android.content.ClipData.newPlainText("طومار وحشت", deepLinkSchema)
+                                            val clip = android.content.ClipData.newPlainText("روایت عمارت وحشت", shareMessage)
                                             clipboard.setPrimaryClip(clip)
-                                            android.widget.Toast.makeText(context, "نشانی کتیبه با موفقیت کپی شد!", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(context, "متن و لینک داستان کپی شد!", android.widget.Toast.LENGTH_SHORT).show()
                                         } catch (e: Exception) {}
+                                        if (activity != null) {
+                                            AdiveryAdManager.showAppOpenAdIfAvailable(activity, isPremium) {}
+                                        }
                                     }
                                     .padding(vertical = 8.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text("کپی نشانی 🔗", color = Color(0xFFDEC595), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("کپی متن و لینک 🔗", color = Color(0xFFDEC595), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                             }
                         }
 

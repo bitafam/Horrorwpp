@@ -22,50 +22,53 @@ data class HorrorFontOption(
 val HorrorFontPresets = listOf(
     HorrorFontOption(
         id = 0,
-        name = "وزیر کلاسیک",
-        subtitle = "قلم استاندارد، متعادل و روان برای مطالعه طولانی",
+        name = "وزیر استاندارد (متعادل)",
+        subtitle = "قلم متوازن، خوانا و کلاسیک برای مطالعه پیوسته",
         fontFamily = FontFamily.Default,
         fontWeight = FontWeight.Normal,
+        fontStyle = FontStyle.Normal,
         letterSpacing = 0.sp,
         lineHeightMultiplier = 1.75f
     ),
     HorrorFontOption(
         id = 1,
-        name = "نسخ باستانی (سریف)",
-        subtitle = "قلم کهن و ادبی با خطوط کلاسیک سنگی",
+        name = "نسخ ظریف و ادبی (باریک)",
+        subtitle = "خطوط سبک و با فاصله باز، مناسب رمان‌های کهن",
         fontFamily = FontFamily.Serif,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Light,
         fontStyle = FontStyle.Italic,
-        letterSpacing = (-0.3).sp,
-        lineHeightMultiplier = 1.9f
+        letterSpacing = 0.8.sp,
+        lineHeightMultiplier = 2.1f
     ),
     HorrorFontOption(
         id = 2,
-        name = "کتیبه سنگی (کوبنده)",
-        subtitle = "حروف درشت و ضخیم برای داستان‌های پرتعلیق و هولناک",
+        name = "کتیبه سنگین (بولد و کوبنده)",
+        subtitle = "حروف ضخیم و سیاه برای روایات دلهره‌آور و شوکه‌کننده",
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Black,
-        letterSpacing = 0.5.sp,
-        lineHeightMultiplier = 1.65f
+        fontStyle = FontStyle.Normal,
+        letterSpacing = (-0.4).sp,
+        lineHeightMultiplier = 1.6f
     ),
     HorrorFontOption(
         id = 3,
-        name = "دوات و طلسم (تحریری)",
-        subtitle = "سبک خوشنویسی دست‌نویس باستانی و رمزآلود",
+        name = "دوات و طلسم (تحریری و جادویی)",
+        subtitle = "حالت مایل و ادبی شبیه به دست‌نوشته‌های کهن طلسم‌شده",
         fontFamily = FontFamily.Cursive,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         fontStyle = FontStyle.Italic,
-        letterSpacing = 0.2.sp,
+        letterSpacing = 1.4.sp,
         lineHeightMultiplier = 2.0f
     ),
     HorrorFontOption(
         id = 4,
-        name = "مونوگرافیک تاریک (اسرارآمیز)",
-        subtitle = "قلم با فاصله‌گذاری مهندسی‌شده و مدرن گوتیک",
+        name = "مونوگرافیک با فاصله گوتیک (اسرارآمیز)",
+        subtitle = "فاصله‌گذاری مهندسی‌شده و پهن با وزن نیمه‌ضخیم",
         fontFamily = FontFamily.Monospace,
-        fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.2.sp,
-        lineHeightMultiplier = 1.85f
+        fontWeight = FontWeight.Bold,
+        fontStyle = FontStyle.Normal,
+        letterSpacing = 2.4.sp,
+        lineHeightMultiplier = 1.9f
     )
 )
 

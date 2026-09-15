@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت ابدی عمارت وحشت | Horror House Admin</title>
+    <!-- Vazirmatn Persian Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- ====================================================
+         1. LOGIN SCREEN (Matching AdminLoginScreen in Compose)
+         ==================================================== -->
+    <div id="loginScreenContainer">
+        <div class="login-card">
+            <div class="login-shield-icon">🛡️</div>
+            <h1 class="login-title">ورود امن ادمین عمارت وحشت</h1>
+            <div class="login-badge">کنترل‌کده تاریکی</div>
+            <p class="login-desc">برای دسترسی به پنل مدیریت، ایمیل و رمز عبور ادمین Supabase را وارد کنید.</p>
+
+            <form class="login-form" id="loginForm" onsubmit="return false;">
+                <div class="form-group">
+                    <label class="form-label" for="loginEmail">ایمیل ادمین</label>
+                    <input type="email" id="loginEmail" class="text-input" placeholder="admin@horrorhouse.com" required dir="ltr">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="loginPassword">رمز عبور ادمین</label>
+                    <div class="input-with-action">
+                        <input type="password" id="loginPassword" class="text-input" placeholder="••••••••" required dir="ltr">
+                        <button type="button" class="input-action-btn" id="btnToggleLoginPass">👁️</button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-blood" id="btnLoginSubmit" style="padding: 11px; margin-top: 6px; width: 100%;">
+                    <span>ورود به پنل مدیریت</span>
+                </button>
+            </form>
+
+            <div id="loginFeedback" class="login-feedback"></div>
+        </div>
+    </div>
+
+    <!-- ====================================================
+         2. MAIN ADMIN SHELL (Matching AdminPanelScreen)
+         ==================================================== -->
+    <div id="adminPanelContainer">
+        <!-- TOP APP BAR -->
+        <header class="admin-top-bar">
+            <div class="top-bar-info">
+                <div class="top-bar-title">پنل مدیریت ابدی عمارت وحشت</div>
+                <div class="top-bar-subtitle">
+                    <span>مدل هوش تاریکی:</span>
+                    <strong id="topBarActiveModel" style="color: var(--mystic-gold);">gemini-3.5-flash-lite</strong>
+                </div>
+            </div>
+
+            <div class="top-bar-actions">
+                <button class="btn btn-dark btn-sm" id="btnTopRefresh" title="بروزرسانی داده‌ها">
+                    <span>🔄</span> بروزرسانی
+                </button>
+                <button class="btn btn-outline-blood btn-sm" id="btnTopLogout" title="خروج از پنل">
+                    <span>🚪</span> خروج
+                </button>
+            </div>
+        </header>
+
+        <!-- NAVIGATION BAR (7 Tabs matching Jetpack Compose AdminScreens) -->
+        <nav class="compose-nav-bar">
+            <button class="nav-tab-button active" data-tab="tab-dashboard">
+                <span class="nav-icon">📊</span>
+                <span>داشبورد</span>
+            </button>
+            <button class="nav-tab-button" data-tab="tab-stories">
+                <span class="nav-icon">📖</span>
+                <span>داستان‌ها</span>
+                <span class="nav-tab-badge" id="badgeSubmissionsCount" style="display:none;">0</span>
+            </button>
+            <button class="nav-tab-button" data-tab="tab-fortune">
+                <span class="nav-icon">🔮</span>
+                <span>طالع</span>
+            </button>
+            <button class="nav-tab-button" data-tab="tab-ai-stories">
+                <span class="nav-icon">🧠</span>
+                <span>داستان AI</span>
+            </button>
+            <button class="nav-tab-button" data-tab="tab-ai-settings">
+                <span class="nav-icon">⚙️</span>
+                <span>تنظیم AI</span>
+            </button>
+            <button class="nav-tab-button" data-tab="tab-automation">
+                <span class="nav-icon">⚡</span>
+                <span>اتوماسیون</span>
+            </button>
+            <button class="nav-tab-button" data-tab="tab-reports">
+                <span class="nav-icon">🚩</span>
+                <span>گزارش‌ها</span>
+            </button>
+        </nav>
+
+        <!-- MAIN VIEWPORT -->
+        <main class="content-viewport">
+
+            <!-- TAB 0: DASHBOARD (AdminDashboardTab) -->
+            <section id="tab-dashboard" class="tab-pane active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon-box">📖</div>
+                        <div>
+                            <div class="stat-value" id="statRealCount">0</div>
+                            <div class="stat-label">داستان‌های واقعی و پوسترها</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-box gold">✉️</div>
+                        <div>
+                            <div class="stat-value" id="statSubmissionsCount">0</div>
+                            <div class="stat-label">دریافتی‌های کاربران</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-box purple">🔮</div>
+                        <div>
+                            <div class="stat-value" id="statFortunesCount">۱۲</div>
+                            <div class="stat-label">طالع‌های ۱۲ ماه</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-box">🧠</div>
+                        <div>
+                            <div class="stat-value" id="statAiCount">0</div>
+                            <div class="stat-label">داستان‌های هوش تاریکی</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions Card -->
+                <div class="crypt-card">
+                    <div class="card-header-row">
+                        <div class="card-title blood">⚡ دسترسی‌های سریع ادمین</div>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-blood" id="btnQuickNewStory">
+                            <span>➕</span> انتشار داستان جدید با پوستر اختصاصی
+                        </button>
+                        <button class="btn btn-gold" id="btnQuickBatchFortune">
+                            <span>🔮</span> تولید یک‌جای طالع شوم ۱۲ ماه با هوش تاریکی (کم‌مصرف)
+                        </button>
+                        <button class="btn btn-dark" id="btnQuickAiStories">
+                            <span>🧠</span> تولید داستان‌های هوش تاریکی با پرامپت اختصاصی (تا ۲۰ عدد)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Connection & Diagnostics Card -->
+                <div class="crypt-card-elevated">
+                    <div class="card-header-row">
+                        <div class="card-title gold">📡 راهنمای اتصال و وضعیت سیستم</div>
+                    </div>
+                    <p style="font-size: 0.84rem; color: var(--muted-ash); line-height: 1.6; margin-bottom: 12px;">
+                        پنل وب مدیریت عمارت وحشت به‌صورت مستقیم و دوطرفه به پایگاه داده Supabase و مدل‌های هوش مصنوعی Gemini متصل است.
+                        هرگونه تغییر قیمت، ثبت داستان، یا تولید طالع بلافاصله در اپلیکیشن تمامی کاربران اعمال خواهد شد.
+                    </p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <span class="badge gold" id="statusBadgeSupabase">پایگاه داده: در حال بررسی...</span>
+                        <span class="badge blood" id="statusBadgeGemini">هوش مصنوعی: در حال بررسی...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 1: STORIES (AdminStoriesManagerTab) -->
+            <section id="tab-stories" class="tab-pane">
+                <!-- Top Tabs: Real Stories vs Submissions -->
+                <div class="sub-tabs-bar">
+                    <button class="sub-tab-btn active" id="btnSubTabReal">داستان‌های واقعی و پوسترها</button>
+                    <button class="sub-tab-btn" id="btnSubTabSubmissions">داستان‌های کاربران</button>
+                </div>
+
+                <!-- 1. Real Stories Sub-View -->
+                <div id="realStoriesSubView">
+                    <!-- Filters & Search -->
+                    <div class="crypt-card" style="padding: 12px 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 6px; align-items: center;">
+                                <button class="chip-btn active" data-filter-status="ALL">همه</button>
+                                <button class="chip-btn" data-filter-status="PUBLISHED">منتشر شده</button>
+                                <button class="chip-btn" data-filter-status="DRAFT">منتشر نشده</button>
+                            </div>
+
+                            <div style="display: flex; gap: 8px; flex: 1; max-width: 400px;">
+                                <input type="text" id="searchRealStories" class="text-input" placeholder="جستجو در عنوان یا متن داستان...">
+                            </div>
+
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-dark btn-sm" id="btnOpenBulkAddStory">
+                                    <span>📥</span> افزودن گروهی
+                                </button>
+                                <button class="btn btn-blood btn-sm" id="btnOpenNewStory">
+                                    <span>➕</span> داستان جدید
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Actions Bar -->
+                    <div class="bulk-bar" id="realBulkBar" style="display: none;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="checkSelectAllReal">
+                            <label for="checkSelectAllReal" style="font-size: 0.8rem; cursor: pointer;">انتخاب همه (<span id="selectedRealCount">0</span>)</label>
+                        </div>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-sm btn-dark" id="btnBulkPublishReal">انتشار گروهی</button>
+                            <button class="btn btn-sm btn-dark" id="btnBulkDraftReal">پیش‌نویس گروهی</button>
+                            <button class="btn btn-sm btn-outline-blood" id="btnBulkDeleteReal">حذف گروهی</button>
+                        </div>
+                    </div>
+
+                    <!-- Stories List Container -->
+                    <div id="realStoriesListContainer">
+                        <div style="text-align: center; padding: 40px; color: var(--muted-ash);">در حال بارگذاری داستان‌های واقعی...</div>
+                    </div>
+                </div>
+
+                <!-- 2. User Submissions Sub-View -->
+                <div id="submissionsSubView" style="display: none;">
+                    <div class="crypt-card" style="padding: 12px 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 6px;">
+                                <button class="chip-btn active" data-sub-status="ALL">همه</button>
+                                <button class="chip-btn" data-sub-status="PENDING">در انتظار بررسی</button>
+                                <button class="chip-btn" data-sub-status="APPROVED">تأیید شده</button>
+                                <button class="chip-btn" data-sub-status="REJECTED">رد شده</button>
+                            </div>
+                            <input type="text" id="searchSubmissions" class="text-input" style="max-width: 320px;" placeholder="جستجو در روایات ارسالی...">
+                        </div>
+                    </div>
+
+                    <div id="submissionsListContainer">
+                        <div style="text-align: center; padding: 40px; color: var(--muted-ash);">در حال بارگذاری روایات ارسالی کاربران...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: GRIM FORTUNE (AdminGrimFortuneTab) -->
+            <section id="tab-fortune" class="tab-pane">
+                <!-- Prompt & Generation Box -->
+                <div class="crypt-card">
+                    <div class="card-header-row">
+                        <div class="card-title gold">🔮 تنظیم پرامپت و تولید گروهی طالع شوم ۱۲ ماه (AI)</div>
+                        <button class="btn btn-dark btn-sm" id="btnToggleGrimPrompt">نمایش / ویرایش پرامپت</button>
+                    </div>
+
+                    <div id="grimPromptContainer" style="display: none; margin-bottom: 14px;">
+                        <textarea id="txtGrimFortunePrompt" class="textarea-input" style="min-height: 120px;"></textarea>
+                        <div style="display: flex; gap: 8px; margin-top: 8px;">
+                            <button class="btn btn-dark btn-sm" id="btnSaveGrimPrompt">ذخیره پرامپت در Supabase</button>
+                            <button class="btn btn-dark btn-sm" id="btnResetGrimPrompt">بازنشانی به پیش‌فرض</button>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-gold" id="btnGenerateAllFortunes" style="width: 100%; padding: 12px;">
+                        <span>✨</span> تولید همزمان ۱۲ ماه با هوش تاریکی (یک پیام - صرفه‌جویی توکن)
+                    </button>
+
+                    <div id="fortuneGenFeedback" style="margin-top: 10px; font-size: 0.8rem; display: none;"></div>
+                </div>
+
+                <!-- 12 Months Grid -->
+                <div class="crypt-card-elevated">
+                    <div class="card-header-row">
+                        <div class="card-title">شبکه طالع ۱۲ ماهه سال</div>
+                        <span style="font-size: 0.75rem; color: var(--muted-ash);">ماه مورد نظر را برای مشاهده یا ویرایش انتخاب کنید</span>
+                    </div>
+
+                    <div class="months-grid" id="monthsGrid">
+                        <!-- Populated dynamically (Farvardin to Esfand) -->
+                    </div>
+
+                    <!-- Selected Month Detail Box -->
+                    <div id="selectedMonthBox" style="background: var(--void-black); border: 1px solid var(--blood-border); border-radius: var(--radius-md); padding: 16px; margin-top: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h3 id="selectedMonthTitle" style="color: var(--spectral-white); font-size: 1.05rem;">طالع ماه فروردین</h3>
+                            <span class="badge blood" id="selectedMonthDoom">بسیار شوم</span>
+                        </div>
+
+                        <div class="omen-poem-box" id="selectedMonthPoem">بیت شوم حافظ: « ... »</div>
+
+                        <p id="selectedMonthText" style="color: var(--spectral-white); font-size: 0.88rem; line-height: 1.7; margin-bottom: 14px;">
+                            متن طالع بارگذاری نشده است.
+                        </p>
+
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-blood btn-sm" id="btnRegenerateSingleMonth">تولید تک‌ماه با AI</button>
+                            <button class="btn btn-dark btn-sm" id="btnEditSingleMonth">ویرایش دستی</button>
+                            <button class="btn btn-dark btn-sm" id="btnToggleMonthPublish">پیش‌نویس / انتشار</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: AI STORIES (AdminAiStoriesTab) -->
+            <section id="tab-ai-stories" class="tab-pane">
+                <!-- Prompt Configuration -->
+                <div class="crypt-card">
+                    <div class="card-header-row">
+                        <div class="card-title blood">📜 تنظیمات پرامپت هوش تاریکی</div>
+                        <button class="btn btn-dark btn-sm" id="btnToggleAiPrompt">نمایش / ویرایش پرامپت</button>
+                    </div>
+
+                    <div id="aiPromptContainer" style="display: none; margin-bottom: 12px;">
+                        <textarea id="txtAiStoryPrompt" class="textarea-input" style="min-height: 140px;"></textarea>
+                        <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+                            <button class="btn btn-dark btn-sm" id="btnSaveAiPrompt">ذخیره پرامپت</button>
+                            <button class="btn btn-dark btn-sm" id="btnResetAiPrompt">بازنشانی</button>
+                            <button class="btn btn-dark btn-sm" id="btnOpenSqlScript">اسکریپت دیتابیس Supabase (SQL)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Studio Generator Box -->
+                <div class="crypt-card-elevated">
+                    <div class="card-header-row">
+                        <div class="card-title gold">✨ احضار و نگارش داستان‌های جدید (هوش تاریکی)</div>
+                        <button class="btn btn-dark btn-sm" id="btnOpenManualAddAi">افزودن دستی</button>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Story Count Pills -->
+                        <div>
+                            <div class="form-label" style="margin-bottom: 6px;">تعداد داستان مورد نیاز برای تولید:</div>
+                            <div class="chips-row" id="aiCountSelector">
+                                <button class="chip-btn active" data-count="1">۱ داستان</button>
+                                <button class="chip-btn" data-count="2">۲ داستان</button>
+                                <button class="chip-btn" data-count="3">۳ داستان</button>
+                                <button class="chip-btn" data-count="5">۵ داستان</button>
+                                <button class="chip-btn" data-count="10">۱۰ داستان</button>
+                                <button class="chip-btn" data-count="15">۱۵ داستان</button>
+                                <button class="chip-btn" data-count="20">۲۰ داستان</button>
+                            </div>
+                        </div>
+
+                        <!-- 16 Genres Pills -->
+                        <div>
+                            <div class="form-label" style="margin-bottom: 6px;">انتخاب ژانر و اتمسفر:</div>
+                            <div class="chips-row" id="aiGenreSelector">
+                                <button class="chip-btn active" data-genre="ماورایی">ماورایی</button>
+                                <button class="chip-btn" data-genre="جن و ارواح">جن و ارواح</button>
+                                <button class="chip-btn" data-genre="جنایی و معمایی">جنایی و معمایی</button>
+                                <button class="chip-btn" data-genre="روانشناختی">روانشناختی</button>
+                                <button class="chip-btn" data-genre="موجود ناشناخته">موجود ناشناخته</button>
+                                <button class="chip-btn" data-genre="افسانه‌های عامیانه">افسانه‌های عامیانه</button>
+                                <button class="chip-btn" data-genre="روستا و مناطق دورافتاده">روستا و مناطق دورافتاده</button>
+                                <button class="chip-btn" data-genre="آپارتمان و خانه قدیمی">آپارتمان و خانه قدیمی</button>
+                                <button class="chip-btn" data-genre="وحشت خانوادگی">وحشت خانوادگی</button>
+                                <button class="chip-btn" data-genre="سفر و جاده">سفر و جاده</button>
+                                <button class="chip-btn" data-genre="کویر و جنگل">کویر و جنگل</button>
+                                <button class="chip-btn" data-genre="بیمارستان و محیط متروکه">بیمارستان و محیط متروکه</button>
+                                <button class="chip-btn" data-genre="علمی‌تخیلی تاریک">علمی‌تخیلی تاریک</button>
+                                <button class="chip-btn" data-genre="دستکاری حافظه و زمان">دستکاری حافظه و زمان</button>
+                                <button class="chip-btn" data-genre="تصادفی و نوآورانه">تصادفی و نوآورانه</button>
+                            </div>
+                        </div>
+
+                        <!-- Generator Button & Progress -->
+                        <button class="btn btn-blood" id="btnStartAiGeneration" style="padding: 12px; margin-top: 4px;">
+                            <span>⚡</span> تولید متوالی <span id="lblSelectedCount">۱</span> داستان بلند (۱۵۰۰ تا ۲۵۰۰ کلمه)
+                        </button>
+
+                        <div id="aiQueueProgressBox" style="display: none; background: var(--void-black); border-radius: var(--radius-sm); padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;">
+                                <span id="aiQueueStatusText">در حال احضار داستان...</span>
+                                <span id="aiQueueCountText">0 / 1</span>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-fill" id="aiQueueProgressBar"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Stories Filter & SubTabs -->
+                <div class="crypt-card" style="padding: 12px 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                        <div style="display: flex; gap: 6px;">
+                            <button class="chip-btn active" data-ai-status="ALL">همه</button>
+                            <button class="chip-btn" data-ai-status="PUBLISHED">منتشر شده</button>
+                            <button class="chip-btn" data-ai-status="DRAFT">پیش‌نویس‌ها</button>
+                        </div>
+
+                        <div style="display: flex; gap: 6px;">
+                            <button class="chip-btn active" data-ai-sort="NEWEST">جدیدترین‌ها</button>
+                            <button class="chip-btn" data-ai-sort="OLDEST">قدیمی‌ترین‌ها</button>
+                            <button class="chip-btn" data-ai-sort="POPULAR">پربازدیدترین‌ها</button>
+                            <button class="chip-btn" data-ai-sort="RATING">بهترین‌ها (امتیاز)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Bulk Bar -->
+                <div class="bulk-bar" id="aiBulkBar" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <input type="checkbox" id="checkSelectAllAi">
+                        <label for="checkSelectAllAi" style="font-size: 0.8rem; cursor: pointer;">انتخاب همه (<span id="selectedAiCount">0</span>)</label>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="btn btn-sm btn-dark" id="btnBulkPublishAi">انتشار گروهی</button>
+                        <button class="btn btn-sm btn-dark" id="btnBulkDraftAi">پیش‌نویس گروهی</button>
+                        <button class="btn btn-sm btn-outline-blood" id="btnBulkDeleteAi">حذف گروهی</button>
+                    </div>
+                </div>
+
+                <!-- AI Stories List -->
+                <div id="aiStoriesListContainer">
+                    <div style="text-align: center; padding: 40px; color: var(--muted-ash);">در حال بارگذاری داستان‌های هوش تاریکی...</div>
+                </div>
+            </section>
+
+            <!-- TAB 4: AI & SUPABASE SETTINGS (AdminAiSettingsTab) -->
+            <section id="tab-ai-settings" class="tab-pane">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <h2 style="color: var(--blood-glow); font-size: 1.25rem; font-weight: 800; margin-bottom: 4px;">
+                            تنظیمات اختصاصی کلید و مدل‌های هوش تاریکی
+                        </h2>
+                        <p style="color: var(--muted-ash); font-size: 0.85rem;">
+                            شما می‌توانید کلید اختصاصی Google AI Studio خود را وارد کرده، بین ۵ مدل مشخص شده سوئیچ کرده و هر کدام را به صورت مجزا تست نمایید.
+                        </p>
+                    </div>
+
+                    <!-- 1. Gemini API Key -->
+                    <div class="crypt-card">
+                        <div class="card-title" style="margin-bottom: 12px;">🔑 کلید اختصاصی Gemini API Key</div>
+                        <div class="form-group" style="margin-bottom: 12px;">
+                            <div class="input-with-action">
+                                <input type="password" id="inputGeminiKey" class="text-input" placeholder="AIzaSy..." dir="ltr">
+                                <button type="button" class="input-action-btn" id="btnToggleGeminiKey">👁️</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-blood" id="btnSaveGeminiKey">ذخیره کلید API</button>
+                            <button class="btn btn-dark" id="btnResetGeminiKey">حذف کلید</button>
+                        </div>
+                    </div>
+
+                    <!-- 2. Models Selection -->
+                    <div class="crypt-card">
+                        <div class="card-title" style="margin-bottom: 12px;">🎯 انتخاب مدل فعال هوش تاریکی (سهمیه اختصاصی)</div>
+                        <div id="geminiModelsList" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Populated dynamically with the 5 supported models -->
+                        </div>
+                    </div>
+
+                    <!-- 3. Test Response Feedback -->
+                    <div id="modelTestResponseCard" class="crypt-card-elevated" style="display: none;">
+                        <div class="card-title gold" style="margin-bottom: 8px;">نتیجه آزمایش ارتباط با مدل:</div>
+                        <div class="code-display-box" id="modelTestResponseText"></div>
+                    </div>
+
+                    <!-- 4. Supabase DB Settings -->
+                    <div class="crypt-card">
+                        <div class="card-title" style="margin-bottom: 12px;">🗄️ تنظیمات اتصال پایگاه داده Supabase</div>
+                        <p style="color: var(--muted-ash); font-size: 0.8rem; margin-bottom: 12px;">
+                            شما می‌توانید تنظیمات دیتابیس Supabase خود را در این بخش تغییر داده و به صورت محلی ذخیره کنید.
+                        </p>
+
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label class="form-label">آدرس پروژه Supabase (URL)</label>
+                            <input type="text" id="inputSupabaseUrl" class="text-input" placeholder="https://your-project.supabase.co" dir="ltr">
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 14px;">
+                            <label class="form-label">کلید عمومی (Anon Key)</label>
+                            <div class="input-with-action">
+                                <input type="password" id="inputSupabaseKey" class="text-input" placeholder="eyJhbGciOiJIUzI1NiIsIn..." dir="ltr">
+                                <button type="button" class="input-action-btn" id="btnToggleSupabaseKey">👁️</button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-blood" id="btnSaveSupabaseConfig">ذخیره محلی</button>
+                            <button class="btn btn-dark" id="btnTestSupabaseConfig">تست اتصال</button>
+                        </div>
+                    </div>
+
+                    <!-- 5. In-App Purchase / Myket Subscription Price -->
+                    <div class="crypt-card" style="border-color: rgba(222, 197, 149, 0.4);">
+                        <div class="card-header-row">
+                            <div class="card-title gold">👑 قیمت اشتراک دائمی (مایکت / دیتابیس)</div>
+                            <span class="badge gold" id="badgeCurrentPrice">۴۹,۰۰۰ تومان</span>
+                        </div>
+                        <p style="color: var(--muted-ash); font-size: 0.82rem; margin-bottom: 12px; line-height: 1.5;">
+                            قیمت نمایشی خرید اشتراک دائمی مایکت در دیتابیس Supabase ثبت می‌شود و برای تمامی کاربران بدون نیاز به آپدیت تغییر می‌کند.
+                        </p>
+
+                        <div class="form-group" style="margin-bottom: 10px;">
+                            <label class="form-label">مبلغ به تومان</label>
+                            <input type="number" id="inputPriceToman" class="text-input" placeholder="49000" dir="ltr">
+                        </div>
+
+                        <div class="chips-row" style="margin-bottom: 12px;">
+                            <button class="chip-btn" data-preset-price="29000">29k</button>
+                            <button class="chip-btn" data-preset-price="39000">39k</button>
+                            <button class="chip-btn active" data-preset-price="49000">49k</button>
+                            <button class="chip-btn" data-preset-price="79000">79k</button>
+                            <button class="chip-btn" data-preset-price="99000">99k</button>
+                        </div>
+
+                        <button class="btn btn-gold" id="btnSavePrice" style="width: 100%;">
+                            ثبت و به‌روزرسانی قیمت در Supabase
+                        </button>
+                        <div id="priceSaveStatus" style="font-size: 0.8rem; margin-top: 8px; display: none;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: AUTOMATION (AdminAutomationTab) -->
+            <section id="tab-automation" class="tab-pane">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div>
+                        <h2 style="color: var(--blood-glow); font-size: 1.25rem; font-weight: 800; margin-bottom: 4px;">
+                            مرکز اتوماسیون هوشمند و Edge Functions
+                        </h2>
+                        <p style="color: var(--muted-ash); font-size: 0.85rem;">
+                            اتوماسیون به شما امکان می‌دهد طالع ماهانه و داستان‌های هوش تاریکی را به‌صورت خودکار و زمان‌بندی‌شده بر روی سرورهای Supabase تولید و ذخیره کنید.
+                        </p>
+                    </div>
+
+                    <!-- Task 1: Grim Fortunes Cron -->
+                    <div class="crypt-card">
+                        <div class="card-header-row">
+                            <div class="card-title gold">🔮 ۱. طالع شوم ۱۲ ماه (AUTO_GRIM_FORTUNES)</div>
+                            <label class="badge gold" style="cursor: pointer;">
+                                <input type="checkbox" id="autoGrimEnabled"> فعال‌سازی خودکار
+                            </label>
+                        </div>
+                        <p style="color: var(--muted-ash); font-size: 0.8rem; margin-bottom: 12px;">
+                            اجرای ماهانه در روز اول هر ماه شمسی جهت بازنویسی و غنی‌سازی طالع‌ها با شعر و درجه شوم جدید.
+                        </p>
+                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                            <label class="form-label" style="margin: 0;">ساعت اجرا:</label>
+                            <select id="autoGrimHour" class="select-input" style="max-width: 140px;">
+                                <option value="0">۰۰:۰۰ نیمه‌شب</option>
+                                <option value="3" selected>۰۳:۰۰ بامداد</option>
+                                <option value="6">۰۶:۰۰ صبح</option>
+                                <option value="12">۱۲:۰۰ ظهر</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-blood btn-sm" id="btnSaveAutoGrim">ذخیره تنظیمات</button>
+                            <button class="btn btn-dark btn-sm" id="btnTestRunAutoGrim">اجرای فوری آزمایشی (Test Run)</button>
+                        </div>
+                    </div>
+
+                    <!-- Task 2: AI Stories Cron -->
+                    <div class="crypt-card">
+                        <div class="card-header-row">
+                            <div class="card-title blood">🧠 ۲. داستان‌های هوش تاریکی (AUTO_AI_STORIES)</div>
+                            <label class="badge blood" style="cursor: pointer;">
+                                <input type="checkbox" id="autoAiEnabled"> فعال‌سازی خودکار
+                            </label>
+                        </div>
+                        <p style="color: var(--muted-ash); font-size: 0.8rem; margin-bottom: 12px;">
+                            تولید و انتشار روزانه ۱ الی ۳ داستان بلند ترسناک به‌صورت خودکار در پایگاه داده.
+                        </p>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <label class="form-label" style="margin: 0;">تعداد در هر نوبت:</label>
+                                <select id="autoAiCount" class="select-input" style="width: 110px;">
+                                    <option value="1" selected>۱ داستان</option>
+                                    <option value="2">۲ داستان</option>
+                                    <option value="3">۳ داستان</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <label class="form-label" style="margin: 0;">تناوب:</label>
+                                <select id="autoAiFreq" class="select-input" style="width: 140px;">
+                                    <option value="1" selected>۱ بار در روز</option>
+                                    <option value="2">۲ بار در روز</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-blood btn-sm" id="btnSaveAutoAi">ذخیره تنظیمات</button>
+                            <button class="btn btn-dark btn-sm" id="btnTestRunAutoAi">تولید و ثبت فوری آزمایشی</button>
+                        </div>
+                    </div>
+
+                    <!-- pg_cron instructions -->
+                    <div class="crypt-card-elevated">
+                        <div class="card-header-row">
+                            <div class="card-title">دستورات راه‌اندازی pg_cron در سرور Supabase</div>
+                            <button class="btn btn-dark btn-sm" id="btnCopyPgCron">کپی اسکریپت pg_cron</button>
+                        </div>
+                        <div class="code-display-box" id="pgCronScriptText">-- دستورات pg_cron برای زمان‌بندی Edge Functions در سرور Supabase:
+SELECT cron.schedule(
+    'auto-ai-stories-daily',
+    '0 3 * * *',
+    $$ SELECT net.http_post(
+        url:='https://YOUR_PROJECT.supabase.co/functions/v1/auto-ai-stories',
+        headers:='{"Content-Type": "application/json", "Authorization": "Bearer YOUR_SERVICE_ROLE_KEY"}'::jsonb,
+        body:='{"batch": 2}'::jsonb
+    ) as request_id; $$
+);</div>
+                    </div>
+
+                    <!-- Automation Logs -->
+                    <div class="crypt-card">
+                        <div class="card-header-row">
+                            <div class="card-title">تاریخچه آخرین اجراها و لاگ‌های خودکار</div>
+                            <button class="btn btn-dark btn-sm" id="btnRefreshAutoLogs">بروزرسانی لاگ‌ها</button>
+                        </div>
+                        <div id="automationLogsContainer">
+                            <div style="text-align: center; padding: 20px; color: var(--muted-ash);">هیچ لاگ ثبتی در پایگاه داده یافت نشد.</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: REPORTS (AdminReportsTab) -->
+            <section id="tab-reports" class="tab-pane">
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="card-header-row">
+                        <div>
+                            <h2 style="color: var(--blood-glow); font-size: 1.25rem; font-weight: 800; margin-bottom: 4px;">گزارش‌های کاربران</h2>
+                            <p style="color: var(--muted-ash); font-size: 0.85rem;" id="reportsSummaryCount">۰ مورد گزارش نامناسب دریافت شده</p>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-dark btn-sm" id="btnRefreshReports">🔄 بروزرسانی</button>
+                            <button class="btn btn-blood btn-sm" id="btnBulkDeleteReports" style="display: none;">حذف گروهی</button>
+                        </div>
+                    </div>
+
+                    <div id="reportsListContainer">
+                        <div style="text-align: center; padding: 40px; color: var(--muted-ash);">هیچ گزارش جدیدی ثبت نشده است.</div>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ====================================================
+         3. MODALS / DIALOGS (Matching Jetpack Compose AlertDialogs)
+         ==================================================== -->
+
+    <!-- DIALOG: SINGLE REAL STORY ADD / EDIT -->
+    <div class="modal-backdrop" id="modalStoryForm">
+        <div class="compose-dialog">
+            <div class="dialog-header">
+                <div class="dialog-title" id="modalStoryTitle">ثبت داستان واقعی جدید با پوستر</div>
+                <button class="btn btn-dark btn-sm" data-close="modalStoryForm">✕</button>
+            </div>
+            <div class="dialog-content">
+                <input type="hidden" id="formStoryId">
+                <div class="form-group">
+                    <label class="form-label">عنوان داستان</label>
+                    <input type="text" id="formStoryTitle" class="text-input" placeholder="عنوان دلهره‌آور داستان..." required>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">راوی / نویسنده</label>
+                        <input type="text" id="formStoryAuthor" class="text-input" placeholder="کاتب عمارت">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label class="form-label">منبع</label>
+                        <input type="text" id="formStorySource" class="text-input" placeholder="روایات واقعی">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">آدرس تصویر پوستر (Cover URL)</label>
+                    <input type="text" id="formStoryCover" class="text-input" placeholder="https://images.unsplash.com/photo-..." dir="ltr">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">تگ‌ها (با ویرگول جدا کنید)</label>
+                    <input type="text" id="formStoryTags" class="text-input" placeholder="وحشت, واقعی, ماورایی">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">متن کامل روایت</label>
+                    <textarea id="formStoryContent" class="textarea-input" style="min-height: 180px;" placeholder="متن کامل داستان..." required></textarea>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    <label class="form-label" style="margin: 0;">وضعیت انتشار:</label>
+                    <select id="formStoryStatus" class="select-input" style="width: 140px;">
+                        <option value="PUBLISHED">منتشر شده</option>
+                        <option value="DRAFT">پیش‌نویس</option>
+                    </select>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-dark" data-close="modalStoryForm">انصراف</button>
+                <button class="btn btn-blood" id="btnSaveStoryForm">ذخیره داستان</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIALOG: BULK STORIES ADD (Matching parseBulkStories in AdminScreens.kt) -->
+    <div class="modal-backdrop" id="modalBulkStories">
+        <div class="compose-dialog" style="max-width: 720px;">
+            <div class="dialog-header">
+                <div class="dialog-title">افزودن گروهی داستان‌ها (فرمت چندتایی)</div>
+                <button class="btn btn-dark btn-sm" data-close="modalBulkStories">✕</button>
+            </div>
+            <div class="dialog-content">
+                <p style="font-size: 0.8rem; color: var(--muted-ash); line-height: 1.5;">
+                    داستان‌ها را با <code>---</code> از هم جدا کنید. می‌توانید از کلیدواژه‌های <code>عنوان:</code>، <code>متن:</code>، <code>پوستر:</code>، <code>نویسنده:</code> استفاده کنید یا خط اول را عنوان و بقیه را متن قرار دهید.
+                </p>
+                <textarea id="txtBulkStoriesInput" class="textarea-input" style="min-height: 240px; font-family: monospace; font-size: 0.82rem;" placeholder="عنوان: کلبه متروکه
+نویسنده: سهراب
+پوستر: https://...
+متن: شبی سرد و بارانی بود که به آن کلبه رسیدیم...
+---
+عنوان: زمزمه‌های چاه
+متن: سال‌ها پیش در حیاط عمارت چاهی عمیق وجود داشت..."></textarea>
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-dark" data-close="modalBulkStories">انصراف</button>
+                <button class="btn btn-blood" id="btnExecuteBulkAdd">ثبت گروهی در پایگاه داده</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIALOG: FULL STORY READER (AdminAiStory / RealStory reader) -->
+    <div class="modal-backdrop" id="modalReader">
+        <div class="compose-dialog" style="max-width: 800px;">
+            <div class="dialog-header">
+                <div class="dialog-title" id="readerTitle">عنوان داستان</div>
+                <button class="btn btn-dark btn-sm" data-close="modalReader">✕</button>
+            </div>
+            <div class="dialog-content">
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <span class="badge blood" id="readerGenre">ژانر</span>
+                    <span class="badge gold" id="readerAuthor">راوی</span>
+                </div>
+                <div id="readerSynopsis" style="font-style: italic; background: rgba(222, 197, 149, 0.1); border-right: 3px solid var(--mystic-gold); padding: 10px; border-radius: 4px; font-size: 0.88rem; line-height: 1.6; margin-bottom: 12px;"></div>
+                <div id="readerContent" style="color: var(--spectral-white); font-size: 0.92rem; line-height: 1.8; white-space: pre-wrap;"></div>
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-dark" data-close="modalReader">بستن</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIALOG: EDIT GRIM FORTUNE -->
+    <div class="modal-backdrop" id="modalEditFortune">
+        <div class="compose-dialog">
+            <div class="dialog-header">
+                <div class="dialog-title" id="modalFortuneMonthName">ویرایش طالع ماه</div>
+                <button class="btn btn-dark btn-sm" data-close="modalEditFortune">✕</button>
+            </div>
+            <div class="dialog-content">
+                <input type="hidden" id="formFortuneMonthIndex">
+                <div class="form-group">
+                    <label class="form-label">عنوان طالع</label>
+                    <input type="text" id="formFortuneTitle" class="text-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">بیت شعر شوم</label>
+                    <input type="text" id="formFortunePoem" class="text-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">درجه شوم</label>
+                    <select id="formFortuneDoom" class="select-input">
+                        <option value="شوم">شوم</option>
+                        <option value="بسیار شوم">بسیار شوم</option>
+                        <option value="نفرین ابدی">نفرین ابدی</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">متن پیشگویی و هشدار</label>
+                    <textarea id="formFortuneText" class="textarea-input" style="min-height: 120px;"></textarea>
+                </div>
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-dark" data-close="modalEditFortune">انصراف</button>
+                <button class="btn btn-blood" id="btnSaveFortuneModal">ذخیره در دیتابیس</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIALOG: SQL SCRIPT & RLS (Exact copy from AdminScreens.kt) -->
+    <div class="modal-backdrop" id="modalSqlScript">
+        <div class="compose-dialog" style="max-width: 700px;">
+            <div class="dialog-header">
+                <div class="dialog-title" style="color: var(--mystic-gold);">اسکریپت SQL دیتابیس Supabase</div>
+                <button class="btn btn-dark btn-sm" data-close="modalSqlScript">✕</button>
+            </div>
+            <div class="dialog-content">
+                <p style="font-size: 0.8rem; color: var(--muted-ash); line-height: 1.5;">
+                    برای رفع خطای RLS (42501) و ثبت خودکار داستان‌ها، پرامپت‌ها و امتیازات، این اسکریپت را در بخش SQL Editor در داشبورد Supabase خود اجرا (Run) کنید:
+                </p>
+                <div class="code-display-box" id="supabaseSqlScriptText">-- 1. جدول داستان‌های هوش تاریکی
+CREATE TABLE IF NOT EXISTS public.ai_stories (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    synopsis TEXT,
+    genre TEXT DEFAULT 'ماورایی',
+    cover_image_url TEXT,
+    tags TEXT DEFAULT 'هوش تاریکی',
+    status TEXT DEFAULT 'PUBLISHED',
+    rating REAL DEFAULT 0,
+    rating_count INT DEFAULT 0,
+    view_count INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. جدول پرامپت‌ها و تنظیمات هوش تاریکی
+CREATE TABLE IF NOT EXISTS public.ai_prompts (
+    prompt_key TEXT PRIMARY KEY,
+    prompt_text TEXT NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. فعال‌سازی دسترسی کامل عمومی (رفع خطای RLS 42501)
+ALTER TABLE public.ai_stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_prompts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public full access on ai_stories" ON public.ai_stories;
+CREATE POLICY "Public full access on ai_stories" ON public.ai_stories FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on ai_prompts" ON public.ai_prompts;
+CREATE POLICY "Public full access on ai_prompts" ON public.ai_prompts FOR ALL USING (true) WITH CHECK (true);
+
+GRANT ALL ON public.ai_stories TO anon, authenticated, service_role;
+GRANT ALL ON public.ai_prompts TO anon, authenticated, service_role;</div>
+            </div>
+            <div class="dialog-actions">
+                <button class="btn btn-blood" id="btnCopySqlScript">کپی اسکریپت SQL</button>
+                <button class="btn btn-dark" data-close="modalSqlScript">بستن</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer"></div>
+
+    <!-- SCRIPTS -->
+    <script src="js/gemini.js"></script>
+    <script src="js/supabase.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
