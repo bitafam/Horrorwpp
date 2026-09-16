@@ -1159,7 +1159,7 @@ fun GamingTopBar(
 fun GothicGamingHomeScreen(
     viewModel: HorrorViewModel,
     onNavigate: (UserDestination) -> Unit,
-    onLogoAdminClick: () -> Unit
+    onLogoClick: () -> Unit = {}
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "homePulse")
     val ambientGlow by infiniteTransition.animateFloat(
@@ -1199,7 +1199,10 @@ fun GothicGamingHomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onLogoAdminClick() }
+                        .clickable {
+                            HorrorSoundManager.playClickSound()
+                            onLogoClick()
+                        }
                         .padding(horizontal = 14.dp, vertical = 12.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1991,14 +1994,12 @@ https://myket.ir/app/com.apps.hororhouse
 @Composable
 fun UserMainScreen(
     viewModel: HorrorViewModel,
-    billingManager: MyketBillingManager,
-    onOpenAdminLogin: () -> Unit
+    billingManager: MyketBillingManager
 ) {
     val context = LocalContext.current
     val activity = context as? Activity
     val destinationStack = remember { mutableStateListOf(UserDestination.HOME) }
     val currentDestination = destinationStack.lastOrNull() ?: UserDestination.HOME
-    var logoTapCount by remember { mutableIntStateOf(0) }
     var showNoInternetDialog by remember { mutableStateOf(false) }
     var showExitDialog by remember { mutableStateOf(false) }
     var showPremiumRequiredDialog by remember { mutableStateOf(false) }
@@ -2155,27 +2156,14 @@ fun UserMainScreen(
                             UserDestination.HOME -> {
                                 GothicGamingHomeScreen(
                                     viewModel = viewModel,
-                                    onNavigate = { dest -> navigateTo(dest) },
-                                    onLogoAdminClick = {
-                                        logoTapCount++
-                                        if (logoTapCount >= 7) {
-                                            logoTapCount = 0
-                                            onOpenAdminLogin()
-                                        }
-                                    }
+                                    onNavigate = { dest -> navigateTo(dest) }
                                 )
                             }
                             UserDestination.STORIES -> {
                                 BeautifulStoriesDashboard(
                                     realStories = realStories,
                                     viewModel = viewModel,
-                                    onLogoClick = {
-                                        logoTapCount++
-                                        if (logoTapCount >= 7) {
-                                            logoTapCount = 0
-                                            onOpenAdminLogin()
-                                        }
-                                    },
+                                    onLogoClick = {},
                                     onStoryRead = { selected -> handleReadRegularStory(selected) },
                                     onUserStoryRead = { selected -> handleReadUserStory(selected) },
                                     onOpenSubscription = { navigateTo(UserDestination.SUBSCRIPTION) },
@@ -2208,7 +2196,6 @@ fun UserMainScreen(
                                 GorgeousSettingsScreen(
                                     viewModel = viewModel,
                                     onNavigate = { dest -> navigateTo(dest) },
-                                    onOpenAdminLogin = onOpenAdminLogin,
                                     onBack = { popBack() }
                                 )
                             }
@@ -5014,7 +5001,6 @@ fun BeautifulSubmitStoryScreen(
 fun GorgeousSettingsScreen(
     viewModel: HorrorViewModel,
     onNavigate: (UserDestination) -> Unit = {},
-    onOpenAdminLogin: () -> Unit = {},
     onBack: () -> Unit = {}
 ) {
     val selectedFontIndex by viewModel.selectedFontIndex.collectAsState()
