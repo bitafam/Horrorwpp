@@ -12,7 +12,6 @@ let aiStoriesCache = [];
 let fortunesCache = [];
 let reportsCache = [];
 let automationLogsCache = [];
-let vipDevicesCache = [];
 
 let selectedRealStoryIds = new Set();
 let selectedAiStoryIds = new Set();
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initAiSettingsTab();
     initAutomationTab();
     initReportsTab();
-    initVipDevicesTab();
 
     if (SupabaseService.isLoggedIn()) {
         showAdminPanel();
@@ -303,14 +301,6 @@ async function loadAllData(showToastMsg = false) {
         console.warn('Automation logs fallback:', e);
     }
 
-    // 9. VIP Devices
-    try {
-        const vips = await SupabaseService.getVipDevices();
-        if (vips) vipDevicesCache = vips;
-    } catch (e) {
-        console.warn('VIP Devices fallback:', e);
-    }
-
     // Re-render UI views
     renderDashboard();
     renderRealStories();
@@ -320,7 +310,6 @@ async function loadAllData(showToastMsg = false) {
     renderAiStories();
     renderReports();
     renderAutomationLogs();
-    renderVipDevices();
 
     if (showToastMsg) showToast('تمامی اطلاعات به‌روزرسانی شدند.');
 }
@@ -384,19 +373,7 @@ function renderDashboard() {
         badgeSub.style.display = 'none';
     }
 
-    const activeVipCount = vipDevicesCache.filter(v => v.is_active).length;
-    const statVipEl = document.getElementById('statVipCount');
-    if (statVipEl) statVipEl.textContent = `${activeVipCount.toLocaleString('fa-IR')} فعال / ${vipDevicesCache.length.toLocaleString('fa-IR')} کل`;
 
-    const badgeVipEl = document.getElementById('badgeVipCount');
-    if (badgeVipEl) {
-        if (activeVipCount > 0) {
-            badgeVipEl.style.display = 'inline-block';
-            badgeVipEl.textContent = activeVipCount;
-        } else {
-            badgeVipEl.style.display = 'none';
-        }
-    }
 }
 
 // ====================================================
@@ -1942,282 +1919,4 @@ function renderReports() {
     });
 }
 
-// ====================================================
-// 12. TAB 7: VIP DEVICES (MANUAL VIP MANAGEMENT)
-// ====================================================
-let activeVipSearch = '';
-let activeVipStatusFilter = 'all';
 
-function initVipDevicesTab() {
-    // Search
-    document.getElementById('vipSearchInput')?.addEventListener('input', (e) => {
-        activeVipSearch = e.target.value.trim().toLowerCase();
-        renderVipDevices();
-    });
-
-    // Filter status
-    document.getElementById('vipFilterStatus')?.addEventListener('change', (e) => {
-        activeVipStatusFilter = e.target.value;
-        renderVipDevices();
-    });
-
-    // Refresh
-    document.getElementById('btnRefreshVipDevices')?.addEventListener('click', async () => {
-        try {
-            const vips = await SupabaseService.getVipDevices();
-            if (vips) vipDevicesCache = vips;
-            renderVipDevices();
-            renderDashboard();
-            showToast('لیست دستگاه‌های VIP به‌روز شد.');
-        } catch (e) {
-            showToast(`خطا در بارگذاری دستگاه‌ها: ${e.message}`, 'error');
-        }
-    });
-
-    // Open Add Modal
-    document.getElementById('btnOpenNewVipModal')?.addEventListener('click', () => {
-        document.getElementById('vipInputDeviceId').value = '';
-        document.getElementById('vipInputUserName').value = '';
-        document.getElementById('vipInputDuration').value = 'lifetime';
-        document.getElementById('vipInputIsActive').checked = true;
-        openModal('modalNewVipDevice');
-    });
-
-    // Submit Add New VIP Device
-    document.getElementById('btnSubmitNewVipDevice')?.addEventListener('click', async () => {
-        const rawDeviceId = document.getElementById('vipInputDeviceId').value.trim();
-        const userName = document.getElementById('vipInputUserName').value.trim();
-        const duration = document.getElementById('vipInputDuration').value;
-        const isActive = document.getElementById('vipInputIsActive').checked;
-
-        if (!rawDeviceId) {
-            showToast('لطفاً شناسه دستگاه را وارد کنید.', 'error');
-            return;
-        }
-
-        let expiresAt = null;
-        if (duration !== 'lifetime') {
-            const days = parseInt(duration, 10);
-            if (!isNaN(days) && days > 0) {
-                const d = new Date();
-                d.setDate(d.getDate() + days);
-                expiresAt = d.toISOString();
-            }
-        }
-
-        const newDevice = {
-            device_id: rawDeviceId,
-            user_name: userName || 'کاربر عمارت',
-            is_active: isActive,
-            expires_at: expiresAt,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        };
-
-        const submitBtn = document.getElementById('btnSubmitNewVipDevice');
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'در حال ثبت...';
-
-        try {
-            if (SupabaseService.isConfigured()) {
-                await SupabaseService.insertVipDevice(newDevice);
-            }
-            vipDevicesCache.unshift(newDevice);
-            renderVipDevices();
-            renderDashboard();
-            closeModal('modalNewVipDevice');
-            showToast(`اشتراک VIP برای دستگاه ${rawDeviceId} با موفقیت فعال شد! 👑`);
-        } catch (e) {
-            showToast(`خطا در ثبت دستگاه: ${e.message}`, 'error');
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '👑 اعطای اشتراک به دستگاه';
-        }
-    });
-
-    // Open SQL Script Modal
-    document.getElementById('btnOpenVipSqlModal')?.addEventListener('click', () => {
-        openModal('modalVipSqlScript');
-    });
-
-    // Copy SQL Script
-    document.getElementById('btnCopyVipSqlScript')?.addEventListener('click', () => {
-        const text = document.getElementById('vipSqlScriptText').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            showToast('اسکریپت SQL جدول vip_devices کپی شد.');
-        }).catch(() => {
-            showToast('خطا در کپی متن.', 'error');
-        });
-    });
-}
-
-function renderVipDevices() {
-    const container = document.getElementById('vipDevicesContainer');
-    if (!container) return;
-
-    let filtered = [...vipDevicesCache];
-
-    // Status filter
-    if (activeVipStatusFilter === 'active') {
-        filtered = filtered.filter(v => v.is_active);
-    } else if (activeVipStatusFilter === 'inactive') {
-        filtered = filtered.filter(v => !v.is_active);
-    }
-
-    // Search filter
-    if (activeVipSearch) {
-        filtered = filtered.filter(v => 
-            (v.device_id && v.device_id.toLowerCase().includes(activeVipSearch)) ||
-            (v.user_name && v.user_name.toLowerCase().includes(activeVipSearch))
-        );
-    }
-
-    if (filtered.length === 0) {
-        container.innerHTML = `
-            <div class="crypt-card" style="text-align: center; padding: 48px 20px;">
-                <div style="font-size: 3rem; margin-bottom: 12px;">📱</div>
-                <h3 style="color: var(--gold-accent); margin-bottom: 8px;">هیچ دستگاه VIP یافت نشد</h3>
-                <p style="color: var(--muted-ash); font-size: 0.85rem; max-width: 500px; margin: 0 auto 20px auto;">
-                    ${activeVipSearch ? 'نتیجه‌ای برای جستجوی شما یافت نشد.' : 'می‌توانید با زدن دکمه «ثبت دستگاه جدید»، شناسه دستگاه هر کاربری را ثبت کنید تا بدون خرید اشتراک، تمامی امکانات و داستان‌ها برای او باز شود.'}
-                </p>
-                <button class="btn btn-gold btn-sm" onclick="document.getElementById('btnOpenNewVipModal').click()">➕ ثبت اولین دستگاه VIP</button>
-            </div>
-        `;
-        return;
-    }
-
-    let html = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; color: var(--muted-ash); font-size: 0.8rem;">
-            <span>نمایش ${filtered.length.toLocaleString('fa-IR')} از ${vipDevicesCache.length.toLocaleString('fa-IR')} دستگاه</span>
-        </div>
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-    `;
-
-    filtered.forEach(dev => {
-        const isActive = Boolean(dev.is_active);
-        const isLifetime = !dev.expires_at;
-        let expireLabel = 'دائمی مادام‌العمر ♾️';
-
-        if (dev.expires_at) {
-            const expDate = new Date(dev.expires_at);
-            const isExpired = expDate < new Date();
-            expireLabel = isExpired ? `منقضی شده (${expDate.toLocaleDateString('fa-IR')}) ⚠️` : `تا ${expDate.toLocaleDateString('fa-IR')}`;
-        }
-
-        const createdDate = dev.created_at ? new Date(dev.created_at).toLocaleDateString('fa-IR') : 'نامشخص';
-
-        html += `
-            <div class="crypt-card" style="border-right: 4px solid ${isActive ? 'var(--neon-green, #2ecc71)' : 'var(--muted-ash)'};">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-                    <!-- Left / Main Info -->
-                    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 260px;">
-                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                            <span class="badge ${isActive ? 'published' : 'draft'}">
-                                ${isActive ? '🟢 اشتراک VIP فعال' : '⚪ اشتراک غیرفعال'}
-                            </span>
-                            <span style="color: var(--bone-white); font-weight: bold; font-size: 0.95rem;">
-                                👤 ${dev.user_name || 'کاربر عمارت'}
-                            </span>
-                        </div>
-
-                        <!-- Device ID Box -->
-                        <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.4); border: 1px solid var(--border-dark); border-radius: 6px; padding: 6px 10px; margin-top: 4px; width: fit-content;">
-                            <span style="color: var(--gold-accent); font-family: monospace; font-size: 0.95rem; font-weight: bold; direction: ltr; user-select: all;">
-                                ${dev.device_id}
-                            </span>
-                            <button class="btn btn-dark btn-sm btn-copy-device-id" data-dev-id="${dev.device_id}" title="کپی شناسه" style="padding: 2px 6px; font-size: 0.75rem;">
-                                📋 کپی
-                            </button>
-                        </div>
-
-                        <div style="display: flex; gap: 16px; font-size: 0.75rem; color: var(--muted-ash); margin-top: 4px; flex-wrap: wrap;">
-                            <span>📅 ثبت: ${createdDate}</span>
-                            <span>⏳ اعتبار: <strong style="color: ${isLifetime ? 'var(--gold-accent)' : 'var(--bone-white)'};">${expireLabel}</strong></span>
-                        </div>
-                    </div>
-
-                    <!-- Right Actions -->
-                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                        <button class="btn ${isActive ? 'btn-outline-blood' : 'btn-outline-gold'} btn-sm btn-toggle-vip-status" data-id="${dev.id || dev.device_id}" data-current="${isActive}">
-                            ${isActive ? 'غیرفعال‌سازی ⏸️' : 'فعال‌سازی مجدد ▶️'}
-                        </button>
-                        <button class="btn btn-outline-blood btn-sm btn-delete-vip-device" data-id="${dev.id || dev.device_id}" data-dev-id="${dev.device_id}">
-                            🗑️ حذف
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    html += `</div>`;
-    container.innerHTML = html;
-
-    // Attach row events
-    // 1. Copy Device ID
-    container.querySelectorAll('.btn-copy-device-id').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-dev-id');
-            navigator.clipboard.writeText(id).then(() => {
-                showToast(`شناسه ${id} کپی شد.`);
-            });
-        });
-    });
-
-    // 2. Toggle VIP status
-    container.querySelectorAll('.btn-toggle-vip-status').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const devKey = btn.getAttribute('data-id');
-            const current = btn.getAttribute('data-current') === 'true';
-            const newStatus = !current;
-
-            btn.disabled = true;
-            try {
-                if (SupabaseService.isConfigured()) {
-                    await SupabaseService.updateVipDevice(devKey, {
-                        is_active: newStatus,
-                        updated_at: new Date().toISOString()
-                    });
-                }
-                const found = vipDevicesCache.find(v => (v.id == devKey || v.device_id == devKey));
-                if (found) found.is_active = newStatus;
-
-                renderVipDevices();
-                renderDashboard();
-                showToast(`وضعیت اشتراک دستگاه به «${newStatus ? 'فعال' : 'غیرفعال'}» تغییر یافت.`);
-            } catch (e) {
-                showToast(`خطا: ${e.message}`, 'error');
-            } finally {
-                btn.disabled = false;
-            }
-        });
-    });
-
-    // 3. Delete VIP device
-    container.querySelectorAll('.btn-delete-vip-device').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const devKey = btn.getAttribute('data-id');
-            const devId = btn.getAttribute('data-dev-id');
-
-            if (!confirm(`آیا از حذف دستگاه «${devId}» و قطع اشتراک VIP آن اطمینان دارید؟`)) {
-                return;
-            }
-
-            btn.disabled = true;
-            try {
-                if (SupabaseService.isConfigured()) {
-                    await SupabaseService.deleteVipDevice(devKey);
-                }
-                vipDevicesCache = vipDevicesCache.filter(v => (v.id != devKey && v.device_id != devKey));
-
-                renderVipDevices();
-                renderDashboard();
-                showToast(`دستگاه ${devId} با موفقیت حذف شد.`);
-            } catch (e) {
-                showToast(`خطا: ${e.message}`, 'error');
-            } finally {
-                btn.disabled = false;
-            }
-        });
-    });
-}
