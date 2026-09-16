@@ -5,27 +5,37 @@
 
 const SupabaseService = {
     getUrl() {
-        return (localStorage.getItem('HORROR_SUPABASE_URL') || '').trim().replace(/\/+$/, '');
+        const stored = localStorage.getItem('HORROR_SUPABASE_URL');
+        const configVal = window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL;
+        return (stored || configVal || '').trim().replace(/\/+$/, '');
     },
     getAnonKey() {
-        return (localStorage.getItem('HORROR_SUPABASE_KEY') || '').trim();
+        const stored = localStorage.getItem('HORROR_SUPABASE_KEY');
+        const configVal = window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY;
+        return (stored || configVal || '').trim();
     },
     getToken() {
         return localStorage.getItem('HORROR_ADMIN_TOKEN') || this.getAnonKey();
     },
     getUserEmail() {
-        return localStorage.getItem('HORROR_ADMIN_EMAIL') || '';
+        return localStorage.getItem('HORROR_ADMIN_EMAIL') || 'admin@horrorhouse.com';
     },
 
     saveConfig(url, anonKey) {
-        localStorage.setItem('HORROR_SUPABASE_URL', (url || '').trim().replace(/\/+$/, ''));
-        localStorage.setItem('HORROR_SUPABASE_KEY', (anonKey || '').trim());
+        const cleanUrl = (url || '').trim().replace(/\/+$/, '');
+        const cleanKey = (anonKey || '').trim();
+        localStorage.setItem('HORROR_SUPABASE_URL', cleanUrl);
+        localStorage.setItem('HORROR_SUPABASE_KEY', cleanKey);
+        if (window.APP_CONFIG) {
+            window.APP_CONFIG.SUPABASE_URL = cleanUrl;
+            window.APP_CONFIG.SUPABASE_ANON_KEY = cleanKey;
+        }
     },
 
     isConfigured() {
         const url = this.getUrl();
         const key = this.getAnonKey();
-        return Boolean(url && key && !url.includes('your-project') && !key.includes('your-supabase'));
+        return Boolean(url && key && !url.includes('your-project') && !key.includes('your-supabase') && url.startsWith('http'));
     },
 
     getHeaders() {
@@ -41,7 +51,7 @@ const SupabaseService = {
 
     async request(endpoint, options = {}) {
         if (!this.isConfigured()) {
-            throw new Error('Supabase پیکربندی نشده است. لطفاً آدرس و کلید را در تب «تنظیم AI» وارد کنید.');
+            throw new Error('پایگاه داده Supabase متصل نیست. لطفاً آدرس و کلید را تنظیم کنید.');
         }
 
         const url = `${this.getUrl()}/${endpoint}`;
@@ -63,36 +73,52 @@ const SupabaseService = {
     },
 
     // ----------------------------------------------------
-    // AUTH
+    // AUTH & CONNECTION
     // ----------------------------------------------------
+    async directConnect(url, key) {
+        this.saveConfig(url, key);
+        if (!this.isConfigured()) {
+            throw new Error('آدرس یا کلید نامعتبر است.');
+        }
+        await this.testConnection();
+        localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
+        localStorage.setItem('HORROR_ADMIN_EMAIL', 'admin@supabase');
+        return { success: true };
+    },
+
     async login(email, password) {
         if (!this.isConfigured()) {
-            // Demo/Offline bypass if not configured
-            localStorage.setItem('HORROR_ADMIN_EMAIL', email);
-            localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
-            return { email, offline: true };
+            throw new Error('ابتدا آدرس و کلید Supabase را وارد کنید.');
         }
 
-        const url = `${this.getUrl()}/auth/v1/token?grant_type=password`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'apikey': this.getAnonKey()
-            },
-            body: JSON.stringify({ email, password })
-        });
+        // Try Supabase Auth first
+        try {
+            const url = `${this.getUrl()}/auth/v1/token?grant_type=password`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': this.getAnonKey()
+                },
+                body: JSON.stringify({ email, password })
+            });
 
-        if (!response.ok) {
-            const err = await response.json().catch(() => ({}));
-            throw new Error(err.error_description || err.msg || 'ایمیل یا رمز عبور نامعتبر است.');
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('HORROR_ADMIN_TOKEN', data.access_token);
+                localStorage.setItem('HORROR_ADMIN_EMAIL', data.user?.email || email);
+                localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
+                return data;
+            }
+        } catch (e) {
+            console.warn('Auth attempt error, checking direct DB connection:', e);
         }
 
-        const data = await response.json();
-        localStorage.setItem('HORROR_ADMIN_TOKEN', data.access_token);
-        localStorage.setItem('HORROR_ADMIN_EMAIL', data.user?.email || email);
+        // If auth failed, verify if database table access works directly via API key
+        await this.testConnection();
+        localStorage.setItem('HORROR_ADMIN_EMAIL', email || 'admin@horrorhouse.com');
         localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
-        return data;
+        return { email, direct: true };
     },
 
     logout() {
@@ -105,10 +131,15 @@ const SupabaseService = {
     },
 
     async testConnection() {
-        if (!this.isConfigured()) throw new Error('آدرس یا کلید نامعتبر است.');
-        // Try fetching 1 row from real_stories or ai_stories
-        const res = await this.request('rest/v1/real_stories?select=id&limit=1');
-        return `اتصال پایگاه داده برقرار است (${res.length} نمونه یافت شد).`;
+        if (!this.isConfigured()) throw new Error('آدرس و کلید معتبری برای Supabase ثبت نشده است.');
+        // First try app_settings, fallback to real_stories
+        try {
+            const res = await this.request('rest/v1/app_settings?select=key&limit=1');
+            return 'اتصال با پایگاه داده برقرار است و تنظیمات با موفقیت خوانده شد.';
+        } catch (e) {
+            const res2 = await this.request('rest/v1/real_stories?select=id&limit=1');
+            return 'اتصال با پایگاه داده با موفقیت برقرار شد.';
+        }
     },
 
     // ----------------------------------------------------
@@ -233,8 +264,34 @@ const SupabaseService = {
     },
 
     // ----------------------------------------------------
-    // PROMPTS & SETTINGS
+    // PROMPTS & SETTINGS (App Settings & Gemini Key)
     // ----------------------------------------------------
+    async getAppSettings() {
+        return await this.request('rest/v1/app_settings?select=*');
+    },
+
+    async upsertAppSetting(key, value, description = '') {
+        return await this.request('rest/v1/app_settings?on_conflict=key', {
+            method: 'POST',
+            body: JSON.stringify({
+                key,
+                value: String(value ?? ''),
+                description,
+                updated_at: new Date().toISOString()
+            })
+        });
+    },
+
+    async getAppSetting(key, defaultValue = '') {
+        try {
+            const rows = await this.request(`rest/v1/app_settings?key=eq.${encodeURIComponent(key)}`);
+            if (rows && rows.length > 0) return rows[0].value ?? defaultValue;
+        } catch (e) {
+            console.warn(`Error getting app setting ${key}:`, e);
+        }
+        return defaultValue;
+    },
+
     async getAiPrompts() {
         return await this.request('rest/v1/ai_prompts?select=*');
     },

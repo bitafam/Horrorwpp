@@ -31,17 +31,6 @@ const MONTH_NAMES = [
     "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
 ];
 
-// Fallback seed fortunes for 12 months if none in database yet
-const DEFAULT_FORTUNES = MONTH_NAMES.map((name, idx) => ({
-    month_index: idx + 1,
-    month_name: name,
-    title: `طالع شوم ماه ${name}`,
-    omen_poem: "در این شب سیاهم گم گشت راه مقصود / از گوشه‌ای برون آی ای کوکب هدایت",
-    fortune_text: `متولدین ماه ${name} در ماه‌های پیش‌رو با سایه‌هایی از گذشته روبرو خواهند شد. هرگز در نیمه‌شب تنها قدم در خانه‌های ناشناخته نگذارید.`,
-    doom_level: idx % 3 === 0 ? "نفرین ابدی" : (idx % 2 === 0 ? "بسیار شوم" : "شوم"),
-    status: "PUBLISHED"
-}));
-
 // ====================================================
 // INITIALIZATION
 // ====================================================
@@ -57,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAutomationTab();
     initReportsTab();
 
-    if (SupabaseService.isLoggedIn()) {
+    if (SupabaseService.isLoggedIn() || SupabaseService.isConfigured()) {
         showAdminPanel();
         loadAllData();
     } else {
@@ -103,14 +92,74 @@ function initModals() {
 // 1. AUTH & SCREEN SWITCHING
 // ====================================================
 function initAuth() {
-    const btnToggle = document.getElementById('btnToggleLoginPass');
-    const passInput = document.getElementById('loginPassword');
-    btnToggle?.addEventListener('click', () => {
-        const isPass = passInput.type === 'password';
-        passInput.type = isPass ? 'text' : 'password';
-        btnToggle.textContent = isPass ? '🔒' : '👁️';
+    // Fill existing Supabase URL/Key if saved
+    const inputLoginUrl = document.getElementById('loginSupabaseUrl');
+    const inputLoginKey = document.getElementById('loginSupabaseKey');
+    if (inputLoginUrl) inputLoginUrl.value = SupabaseService.getUrl();
+    if (inputLoginKey) inputLoginKey.value = SupabaseService.getAnonKey();
+
+    // Toggle DB key visibility
+    document.getElementById('btnToggleLoginDbKey')?.addEventListener('click', () => {
+        if (!inputLoginKey) return;
+        const isPass = inputLoginKey.type === 'password';
+        inputLoginKey.type = isPass ? 'text' : 'password';
+        document.getElementById('btnToggleLoginDbKey').textContent = isPass ? '🔒' : '👁️';
     });
 
+    // Toggle Login Password visibility
+    const passInput = document.getElementById('loginPassword');
+    document.getElementById('btnToggleLoginPass')?.addEventListener('click', () => {
+        if (!passInput) return;
+        const isPass = passInput.type === 'password';
+        passInput.type = isPass ? 'text' : 'password';
+        document.getElementById('btnToggleLoginPass').textContent = isPass ? '🔒' : '👁️';
+    });
+
+    // Toggle Auth Form
+    const toggleAuthBtn = document.getElementById('btnToggleAuthForm');
+    const loginForm = document.getElementById('loginForm');
+    toggleAuthBtn?.addEventListener('click', () => {
+        const isHidden = loginForm.style.display === 'none';
+        loginForm.style.display = isHidden ? 'block' : 'none';
+        toggleAuthBtn.textContent = isHidden ? 'بستن فرم ورود ایمیلی' : 'یا ورود با ایمیل و رمز عبور کاربری Supabase Auth';
+    });
+
+    // Direct Database Connect & Enter
+    document.getElementById('btnDirectDbConnect')?.addEventListener('click', async () => {
+        const url = (document.getElementById('loginSupabaseUrl')?.value || '').trim();
+        const key = (document.getElementById('loginSupabaseKey')?.value || '').trim();
+        const feedback = document.getElementById('loginFeedback');
+        const btn = document.getElementById('btnDirectDbConnect');
+
+        if (!url || !key) {
+            feedback.className = 'login-feedback error';
+            feedback.textContent = 'لطفاً آدرس و کلید دسترسی Supabase را وارد نمایید.';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span>در حال برقراری اتصال به دیتابیس...</span>';
+        feedback.className = 'login-feedback';
+        feedback.style.display = 'none';
+
+        try {
+            await SupabaseService.directConnect(url, key);
+            feedback.className = 'login-feedback success';
+            feedback.textContent = 'اتصال دیتابیس برقرار شد. ورود به پنل...';
+            setTimeout(() => {
+                showAdminPanel();
+                loadAllData();
+            }, 400);
+        } catch (err) {
+            feedback.className = 'login-feedback error';
+            feedback.textContent = `خطا در اتصال: ${err.message}`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<span>⚡ اتصال به دیتابیس و ورود مستقیم</span>';
+        }
+    });
+
+    // Supabase Auth Email/Password Submit
     document.getElementById('btnLoginSubmit')?.addEventListener('click', async () => {
         const email = document.getElementById('loginEmail').value.trim();
         const pass = document.getElementById('loginPassword').value.trim();
@@ -141,10 +190,11 @@ function initAuth() {
             feedback.textContent = err.message || 'خطا در ورود به سیستم.';
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<span>ورود به پنل مدیریت</span>';
+            btn.innerHTML = '<span>ورود با حساب کاربری Auth</span>';
         }
     });
 
+    // Top Bar Logout
     document.getElementById('btnTopLogout')?.addEventListener('click', () => {
         if (confirm('آیا از خروج از پنل مدیریت اطمینان دارید؟')) {
             SupabaseService.logout();
@@ -153,8 +203,15 @@ function initAuth() {
         }
     });
 
+    // Top Bar Refresh
     document.getElementById('btnTopRefresh')?.addEventListener('click', () => {
         loadAllData(true);
+    });
+
+    // Top Bar DB Status button -> switch to Settings Tab
+    document.getElementById('btnTopDbStatus')?.addEventListener('click', () => {
+        const settingsTabBtn = document.querySelector('[data-tab="tab-settings"]');
+        if (settingsTabBtn) settingsTabBtn.click();
     });
 }
 
@@ -167,11 +224,26 @@ function showAdminPanel() {
     document.getElementById('loginScreenContainer').style.display = 'none';
     document.getElementById('adminPanelContainer').style.display = 'flex';
     updateTopBarActiveModel();
+    updateTopBarDbStatus();
 }
 
 function updateTopBarActiveModel() {
     const el = document.getElementById('topBarActiveModel');
     if (el) el.textContent = GeminiService.getModel();
+}
+
+function updateTopBarDbStatus() {
+    const ind = document.getElementById('topDbIndicator');
+    const txt = document.getElementById('topDbStatusText');
+    if (!ind || !txt) return;
+
+    if (SupabaseService.isConfigured()) {
+        ind.textContent = '🟢';
+        txt.textContent = 'دیتابیس متصل';
+    } else {
+        ind.textContent = '🔴';
+        txt.textContent = 'دیتابیس نامتصل';
+    }
 }
 
 // ====================================================
@@ -192,114 +264,105 @@ function initNavigation() {
 }
 
 // ====================================================
-// 3. LOAD ALL DATA
+// 3. LOAD ALL DATA (Live Supabase Sync & Zero Fake Data)
 // ====================================================
 async function loadAllData(showToastMsg = false) {
-    if (showToastMsg) showToast('در حال همگام‌سازی اطلاعات با سرور...');
+    if (showToastMsg) showToast('در حال همگام‌سازی اطلاعات با پایگاه داده...');
 
     // 1. Diagnostics
-    checkDiagnostics();
+    await checkDiagnostics();
 
-    // 2. Real Stories
+    // 2. Sync App Settings (Gemini API Key, Active Model, etc.) from Supabase
+    try {
+        if (SupabaseService.isConfigured()) {
+            const settings = await SupabaseService.getAppSettings();
+            if (settings && Array.isArray(settings)) {
+                const geminiKeyRow = settings.find(s => s.key === 'GEMINI_API_KEY');
+                if (geminiKeyRow && geminiKeyRow.value && geminiKeyRow.value.trim()) {
+                    GeminiService.setApiKey(geminiKeyRow.value.trim());
+                    const inputGem = document.getElementById('inputGeminiKey');
+                    if (inputGem) inputGem.value = geminiKeyRow.value.trim();
+                }
+
+                const geminiModelRow = settings.find(s => s.key === 'GEMINI_MODEL');
+                if (geminiModelRow && geminiModelRow.value && geminiModelRow.value.trim()) {
+                    GeminiService.setModel(geminiModelRow.value.trim());
+                    updateTopBarActiveModel();
+                    renderGeminiModelsList();
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('App settings sync warning:', e);
+    }
+
+    // 3. Real Stories (Strictly from Database)
     try {
         const stories = await SupabaseService.getRealStories();
-        if (stories && stories.length >= 0) realStoriesCache = stories;
+        realStoriesCache = Array.isArray(stories) ? stories : [];
     } catch (e) {
-        console.warn('Using local real stories fallback:', e);
-        if (realStoriesCache.length === 0) {
-            realStoriesCache = [
-                {
-                    id: "sample-1",
-                    title: "خانه قدیمی کوچه ارامنه",
-                    content: "در زمستان سال ۱۳۶۸ در کوچه‌ای بن‌بست در محله قدیمی ارامنه تبریز، صدایی شبیه کوبیده شدن شیء فلزی بر کف حیاط شنیده می‌شد...",
-                    author: "فرهاد ناظمی",
-                    source: "روایات محلی آذربایجان",
-                    cover_image_url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=500&auto=format&fit=crop&q=80",
-                    tags: "تبریز, ارامنه, خانه متروکه",
-                    status: "PUBLISHED",
-                    views_count: 1420
-                },
-                {
-                    id: "sample-2",
-                    title: "سایه پشت پرده طبقه چهارم",
-                    content: "ساختمان نوساز بود و هنوز بیشتر واحدها خالی بودند. شب‌ها که به خانه برمی‌گشتم، از پنجره طبقه چهارم نوری آبی‌رنگ سوسو می‌زد...",
-                    author: "کاتب عمارت",
-                    source: "روایات شهری",
-                    cover_image_url: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80",
-                    tags: "آپارتمان, سایه, تهران",
-                    status: "PUBLISHED",
-                    views_count: 890
-                }
-            ];
-        }
+        console.warn('Real stories error:', e);
+        realStoriesCache = [];
     }
 
-    // 3. Submissions
+    // 4. Submissions
     try {
         const subs = await SupabaseService.getSubmissions();
-        if (subs) submissionsCache = subs;
+        submissionsCache = Array.isArray(subs) ? subs : [];
     } catch (e) {
-        console.warn('Submissions fallback:', e);
+        console.warn('Submissions error:', e);
+        submissionsCache = [];
     }
 
-    // 4. Fortunes
+    // 5. Fortunes (Strictly from Database)
     try {
         const forts = await SupabaseService.getGrimFortunes();
-        if (forts && forts.length > 0) {
-            fortunesCache = forts;
-        } else {
-            fortunesCache = DEFAULT_FORTUNES;
-        }
+        fortunesCache = Array.isArray(forts) ? forts : [];
     } catch (e) {
-        fortunesCache = DEFAULT_FORTUNES;
+        console.warn('Fortunes error:', e);
+        fortunesCache = [];
     }
 
-    // 5. AI Stories
+    // 6. AI Stories (Strictly from Database)
     try {
         const ai = await SupabaseService.getAiStories();
-        if (ai) aiStoriesCache = ai;
+        aiStoriesCache = Array.isArray(ai) ? ai : [];
     } catch (e) {
-        console.warn('AI stories fallback:', e);
-        if (aiStoriesCache.length === 0) {
-            aiStoriesCache = [
-                {
-                    id: "ai-sample-1",
-                    title: "چاه خاموش مرنجاب",
-                    genre: "کویر و بیابان",
-                    synopsis: "کاروانی در حاشیه کویر مرنجاب بر سر چاهی فرود می‌آیند که آب آن قرن‌هاست خشکیده، اما زمزمه‌هایی از درون آن طنین‌انداز است.",
-                    content: "باد گرم کویر دانه‌های ریز شن را به صورت می‌کوبید. چاهی باستانی در میان تپه‌های ماسه‌ای قد علم کرده بود...",
-                    status: "PUBLISHED",
-                    rating: 4.8,
-                    view_count: 512
-                }
-            ];
-        }
+        console.warn('AI stories error:', e);
+        aiStoriesCache = [];
     }
 
-    // 6. Subscription Price
+    // 7. Subscription Price
     try {
         const price = await SupabaseService.getSubscriptionPrice();
-        document.getElementById('badgeCurrentPrice').textContent = `${price.toLocaleString('fa-IR')} تومان`;
-        document.getElementById('inputPriceToman').value = price;
+        const badgePrice = document.getElementById('badgeCurrentPrice');
+        const inputPrice = document.getElementById('inputPriceToman');
+        if (badgePrice) badgePrice.textContent = `${price.toLocaleString('fa-IR')} تومان`;
+        if (inputPrice) inputPrice.value = price;
     } catch (e) {
-        console.warn('Price fallback:', e);
+        console.warn('Price warning:', e);
     }
 
-    // 7. Reports
+    // 8. Reports
     try {
         const reports = await SupabaseService.getReports();
-        if (reports) reportsCache = reports;
+        reportsCache = Array.isArray(reports) ? reports : [];
     } catch (e) {
-        console.warn('Reports fallback:', e);
+        console.warn('Reports warning:', e);
+        reportsCache = [];
     }
 
-    // 8. Automation logs
+    // 9. Automation logs
     try {
         const logs = await SupabaseService.getAutomationLogs();
-        if (logs) automationLogsCache = logs;
+        automationLogsCache = Array.isArray(logs) ? logs : [];
     } catch (e) {
-        console.warn('Automation logs fallback:', e);
+        console.warn('Automation logs warning:', e);
+        automationLogsCache = [];
     }
+
+    // Re-check diagnostics after settings sync
+    await checkDiagnostics();
 
     // Re-render UI views
     renderDashboard();
@@ -311,7 +374,7 @@ async function loadAllData(showToastMsg = false) {
     renderReports();
     renderAutomationLogs();
 
-    if (showToastMsg) showToast('تمامی اطلاعات به‌روزرسانی شدند.');
+    if (showToastMsg) showToast('اطلاعات با موفقیت از پایگاه داده همگام شدند.');
 }
 
 async function checkDiagnostics() {
@@ -321,24 +384,36 @@ async function checkDiagnostics() {
     if (SupabaseService.isConfigured()) {
         try {
             await SupabaseService.testConnection();
-            badgeDb.className = 'badge published';
-            badgeDb.textContent = 'پایگاه داده: متصل (Supabase)';
+            if (badgeDb) {
+                badgeDb.className = 'badge published';
+                badgeDb.textContent = 'پایگاه داده: متصل (Supabase)';
+            }
         } catch (e) {
-            badgeDb.className = 'badge draft';
-            badgeDb.textContent = 'پایگاه داده: خطا در ارتباط';
+            if (badgeDb) {
+                badgeDb.className = 'badge draft';
+                badgeDb.textContent = 'پایگاه داده: خطا در برقراری ارتباط';
+            }
         }
     } else {
-        badgeDb.className = 'badge blood';
-        badgeDb.textContent = 'پایگاه داده: پیکربندی نشده (حالت محلی)';
+        if (badgeDb) {
+            badgeDb.className = 'badge blood';
+            badgeDb.textContent = 'پایگاه داده: پیکربندی نشده';
+        }
     }
 
     if (GeminiService.getApiKey()) {
-        badgeAi.className = 'badge published';
-        badgeAi.textContent = `هوش مصنوعی: آماده (${GeminiService.getModel()})`;
+        if (badgeAi) {
+            badgeAi.className = 'badge published';
+            badgeAi.textContent = `هوش مصنوعی: آماده (${GeminiService.getModel()})`;
+        }
     } else {
-        badgeAi.className = 'badge blood';
-        badgeAi.textContent = 'هوش مصنوعی: کلید وارد نشده';
+        if (badgeAi) {
+            badgeAi.className = 'badge blood';
+            badgeAi.textContent = 'هوش مصنوعی: کلید در دیتابیس ثبت نشده';
+        }
     }
+
+    updateTopBarDbStatus();
 }
 
 // ====================================================
@@ -1109,14 +1184,14 @@ function renderSelectedMonthFortune() {
     const fortune = fortunesCache.find(f => f.month_index === selectedMonthIndex) || {
         month_index: selectedMonthIndex,
         month_name: MONTH_NAMES[selectedMonthIndex - 1],
-        title: `طالع شوم ماه ${MONTH_NAMES[selectedMonthIndex - 1]}`,
-        omen_poem: "در این شب سیاهم گم گشت راه مقصود / از گوشه‌ای برون آی ای کوکب هدایت",
-        fortune_text: "هنوز برای این ماه طالعی نوشته نشده است. با زدن دکمه «تولید تک‌ماه با AI» آن را ایجاد کنید.",
-        doom_level: "شوم"
+        title: `طالع ماه ${MONTH_NAMES[selectedMonthIndex - 1]} (در دیتابیس ثبت نشده)`,
+        omen_poem: "—",
+        fortune_text: "هنوز برای این ماه طالعی در پایگاه داده ذخیره نشده است. با زدن دکمه «تولید تک‌ماه با هوش تاریکی» یا «تولید همزمان ۱۲ ماه» در بالای همین صفحه، طالع این ماه مستقیماً با هوش مصنوعی احضار و در پایگاه داده ثبت می‌شود.",
+        doom_level: "نامشخص"
     };
 
     document.getElementById('selectedMonthTitle').textContent = fortune.title || `طالع ماه ${MONTH_NAMES[selectedMonthIndex - 1]}`;
-    document.getElementById('selectedMonthDoom').textContent = fortune.doom_level || 'شوم';
+    document.getElementById('selectedMonthDoom').textContent = fortune.doom_level || 'نامشخص';
     document.getElementById('selectedMonthPoem').textContent = `بیت شوم حافظ: « ${fortune.omen_poem || '—'} »`;
     document.getElementById('selectedMonthText').textContent = fortune.fortune_text || '';
 }
@@ -1521,18 +1596,32 @@ function initAiSettingsTab() {
         btnToggleGemini.textContent = isPass ? '🔒' : '👁️';
     });
 
-    document.getElementById('btnSaveGeminiKey')?.addEventListener('click', () => {
+    document.getElementById('btnSaveGeminiKey')?.addEventListener('click', async () => {
         const key = inputGemini.value.trim();
         GeminiService.setApiKey(key);
-        showToast('کلید Gemini API با موفقیت ذخیره شد.');
-        checkDiagnostics();
+        try {
+            if (SupabaseService.isConfigured()) {
+                await SupabaseService.upsertAppSetting('GEMINI_API_KEY', key, 'Google AI Studio Gemini API Key');
+            }
+            showToast('کلید Gemini API با موفقیت در پنل و پایگاه داده ذخیره شد.');
+        } catch (e) {
+            showToast(`کلید ذخیره شد (خطای همگام‌سازی دیتابیس: ${e.message})`);
+        }
+        await checkDiagnostics();
     });
 
-    document.getElementById('btnResetGeminiKey')?.addEventListener('click', () => {
+    document.getElementById('btnResetGeminiKey')?.addEventListener('click', async () => {
         inputGemini.value = '';
         GeminiService.setApiKey('');
-        showToast('کلید Gemini API حذف شد.');
-        checkDiagnostics();
+        try {
+            if (SupabaseService.isConfigured()) {
+                await SupabaseService.upsertAppSetting('GEMINI_API_KEY', '', 'Google AI Studio Gemini API Key');
+            }
+            showToast('کلید Gemini API حذف شد.');
+        } catch (e) {
+            showToast('کلید در پنل حذف شد.');
+        }
+        await checkDiagnostics();
     });
 
     // Render Supported 5 Models
@@ -1552,12 +1641,13 @@ function initAiSettingsTab() {
         btnToggleSup.textContent = isPass ? '🔒' : '👁️';
     });
 
-    document.getElementById('btnSaveSupabaseConfig')?.addEventListener('click', () => {
+    document.getElementById('btnSaveSupabaseConfig')?.addEventListener('click', async () => {
         const u = inputUrl.value.trim();
         const k = inputKey.value.trim();
         SupabaseService.saveConfig(u, k);
-        showToast('تنظیمات پایگاه داده ذخیره شد.');
-        checkDiagnostics();
+        showToast('تنظیمات پایگاه داده ذخیره شد. در حال همگام‌سازی با سرور...');
+        await checkDiagnostics();
+        await loadAllData(true);
     });
 
     document.getElementById('btnTestSupabaseConfig')?.addEventListener('click', async () => {
@@ -1633,13 +1723,20 @@ function renderGeminiModelsList() {
     }).join('');
 
     container.querySelectorAll('.model-select-row').forEach(row => {
-        row.addEventListener('click', () => {
+        row.addEventListener('click', async () => {
             const id = row.getAttribute('data-model-id');
             GeminiService.setModel(id);
+            try {
+                if (SupabaseService.isConfigured()) {
+                    await SupabaseService.upsertAppSetting('GEMINI_MODEL', id, 'Active Gemini Model');
+                }
+            } catch (e) {
+                console.warn('Could not save model to database:', e);
+            }
             updateTopBarActiveModel();
             renderGeminiModelsList();
-            checkDiagnostics();
-            showToast(`مدل فعال هوش تاریکی به «${id}» تغییر یافت.`);
+            await checkDiagnostics();
+            showToast(`مدل فعال هوش تاریکی به «${id}» تغییر یافت و در دیتابیس ثبت شد.`);
         });
     });
 

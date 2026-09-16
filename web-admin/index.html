@@ -19,25 +19,51 @@
         <div class="login-card">
             <div class="login-shield-icon">🛡️</div>
             <h1 class="login-title">ورود امن ادمین عمارت وحشت</h1>
-            <div class="login-badge">کنترل‌کده تاریکی</div>
-            <p class="login-desc">برای دسترسی به پنل مدیریت، ایمیل و رمز عبور ادمین Supabase را وارد کنید.</p>
+            <div class="login-badge">کنترل‌کده تاریکی و همگام‌ساز دیتابیس</div>
+            <p class="login-desc">برای دسترسی به پنل مدیریت و همگام‌سازی واقعی، اتصال به پایگاه داده Supabase را برقرار کنید.</p>
 
-            <form class="login-form" id="loginForm" onsubmit="return false;">
+            <!-- Supabase Connection Form -->
+            <form class="login-form" id="dbConnectForm" onsubmit="return false;" style="margin-bottom: 16px;">
+                <div class="form-group">
+                    <label class="form-label" for="loginSupabaseUrl">آدرس پروژه Supabase (URL)</label>
+                    <input type="text" id="loginSupabaseUrl" class="text-input" placeholder="https://xyzcompany.supabase.co" required dir="ltr">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="loginSupabaseKey">کلید دسترسی (Anon Key یا Service Role Key)</label>
+                    <div class="input-with-action">
+                        <input type="password" id="loginSupabaseKey" class="text-input" placeholder="eyJhbGciOiJIUzI1NiIsIn..." required dir="ltr">
+                        <button type="button" class="input-action-btn" id="btnToggleLoginDbKey">👁️</button>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-blood" id="btnDirectDbConnect" style="padding: 12px; margin-top: 6px; width: 100%;">
+                    <span>⚡ اتصال به دیتابیس و ورود مستقیم</span>
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-bottom: 12px;">
+                <button type="button" id="btnToggleAuthForm" style="background: none; border: none; color: var(--muted-ash); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                    یا ورود با ایمیل و رمز عبور کاربری Supabase Auth
+                </button>
+            </div>
+
+            <form class="login-form" id="loginForm" onsubmit="return false;" style="display: none; padding-top: 10px; border-top: 1px dashed var(--blood-border);">
                 <div class="form-group">
                     <label class="form-label" for="loginEmail">ایمیل ادمین</label>
-                    <input type="email" id="loginEmail" class="text-input" placeholder="admin@horrorhouse.com" required dir="ltr">
+                    <input type="email" id="loginEmail" class="text-input" placeholder="admin@horrorhouse.com" dir="ltr">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="loginPassword">رمز عبور ادمین</label>
                     <div class="input-with-action">
-                        <input type="password" id="loginPassword" class="text-input" placeholder="••••••••" required dir="ltr">
+                        <input type="password" id="loginPassword" class="text-input" placeholder="••••••••" dir="ltr">
                         <button type="button" class="input-action-btn" id="btnToggleLoginPass">👁️</button>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-blood" id="btnLoginSubmit" style="padding: 11px; margin-top: 6px; width: 100%;">
-                    <span>ورود به پنل مدیریت</span>
+                <button type="submit" class="btn btn-dark" id="btnLoginSubmit" style="padding: 10px; margin-top: 4px; width: 100%;">
+                    <span>ورود با حساب کاربری Auth</span>
                 </button>
             </form>
 
@@ -60,6 +86,9 @@
             </div>
 
             <div class="top-bar-actions">
+                <button class="btn btn-dark btn-sm" id="btnTopDbStatus" title="وضعیت اتصال پایگاه داده">
+                    <span id="topDbIndicator">⚪</span> <span id="topDbStatusText">دیتابیس</span>
+                </button>
                 <button class="btn btn-dark btn-sm" id="btnTopRefresh" title="بروزرسانی داده‌ها">
                     <span>🔄</span> بروزرسانی
                 </button>
@@ -840,6 +869,7 @@ GRANT ALL ON public.ai_prompts TO anon, authenticated, service_role;</div>
     <div id="toastContainer"></div>
 
     <!-- SCRIPTS -->
+    <script src="js/config.js"></script>
     <script src="js/gemini.js"></script>
     <script src="js/supabase.js"></script>
     <script src="js/app.js"></script>
