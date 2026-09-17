@@ -419,3 +419,34 @@ ALTER TABLE public.story_reports ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow public insert story_reports" ON public.story_reports FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow all manage story_reports" ON public.story_reports FOR ALL USING (true);
 
+-- Crash Logs & Device Telemetry
+CREATE TABLE IF NOT EXISTS public.app_crash_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_model TEXT,
+    android_version TEXT,
+    app_version TEXT,
+    error_message TEXT NOT NULL,
+    stack_trace TEXT,
+    status TEXT NOT NULL DEFAULT 'UNRESOLVED', -- 'UNRESOLVED', 'RESOLVED'
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.app_crash_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public insert app_crash_logs" ON public.app_crash_logs FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all manage app_crash_logs" ON public.app_crash_logs FOR ALL USING (true);
+
+-- Active User Heartbeats & Online Status
+CREATE TABLE IF NOT EXISTS public.user_heartbeats (
+    device_id TEXT PRIMARY KEY,
+    user_id TEXT,
+    is_subscribed BOOLEAN DEFAULT false,
+    subscription_plan TEXT,
+    last_seen_at TIMESTAMPTZ DEFAULT now(),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.user_heartbeats ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public upsert user_heartbeats" ON public.user_heartbeats FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow all manage user_heartbeats" ON public.user_heartbeats FOR ALL USING (true);
+
+

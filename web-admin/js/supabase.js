@@ -150,9 +150,19 @@ const SupabaseService = {
     },
 
     async insertRealStory(story) {
+        const payload = { ...story };
+        // Ensure id is a valid UUID or let database auto-generate
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id || '');
+        if (!isUUID) {
+            if (window.crypto && crypto.randomUUID) {
+                payload.id = crypto.randomUUID();
+            } else {
+                delete payload.id;
+            }
+        }
         return await this.request('rest/v1/real_stories', {
             method: 'POST',
-            body: JSON.stringify(story)
+            body: JSON.stringify(payload)
         });
     },
 
@@ -212,6 +222,9 @@ const SupabaseService = {
     async upsertGrimFortune(item) {
         return await this.request('rest/v1/grim_fortunes?on_conflict=month_index', {
             method: 'POST',
+            headers: {
+                'Prefer': 'resolution=merge-duplicates,return=representation'
+            },
             body: JSON.stringify(item)
         });
     },
@@ -219,6 +232,9 @@ const SupabaseService = {
     async upsertAllGrimFortunes(items) {
         return await this.request('rest/v1/grim_fortunes?on_conflict=month_index', {
             method: 'POST',
+            headers: {
+                'Prefer': 'resolution=merge-duplicates,return=representation'
+            },
             body: JSON.stringify(items)
         });
     },
@@ -231,9 +247,18 @@ const SupabaseService = {
     },
 
     async insertAiStory(story) {
+        const payload = { ...story };
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id || '');
+        if (!isUUID) {
+            if (window.crypto && crypto.randomUUID) {
+                payload.id = crypto.randomUUID();
+            } else {
+                delete payload.id;
+            }
+        }
         return await this.request('rest/v1/ai_stories', {
             method: 'POST',
-            body: JSON.stringify(story)
+            body: JSON.stringify(payload)
         });
     },
 
@@ -254,6 +279,45 @@ const SupabaseService = {
         return await this.request(`rest/v1/ai_stories?id=in.(${ids.join(',')})`, {
             method: 'DELETE'
         });
+    },
+
+    // ----------------------------------------------------
+    // CRASH LOGS & TELEMETRY
+    // ----------------------------------------------------
+    async getCrashLogs() {
+        return await this.request('rest/v1/app_crash_logs?select=*&order=created_at.desc');
+    },
+
+    async insertCrashLog(log) {
+        return await this.request('rest/v1/app_crash_logs', {
+            method: 'POST',
+            body: JSON.stringify(log)
+        });
+    },
+
+    async resolveCrashLog(id) {
+        return await this.request(`rest/v1/app_crash_logs?id=eq.${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: 'RESOLVED' })
+        });
+    },
+
+    async clearResolvedCrashes() {
+        return await this.request('rest/v1/app_crash_logs?status=eq.RESOLVED', {
+            method: 'DELETE'
+        });
+    },
+
+    async getHeartbeats() {
+        return await this.request('rest/v1/user_heartbeats?select=*&order=last_seen_at.desc');
+    },
+
+    async getSubscribers() {
+        try {
+            return await this.request('rest/v1/profiles?subscription_tier=neq.FREE&order=updated_at.desc');
+        } catch (e) {
+            return await this.request('rest/v1/user_heartbeats?is_subscribed=eq.true&order=last_seen_at.desc');
+        }
     },
 
     async bulkUpdateAiStoriesStatus(ids, status) {

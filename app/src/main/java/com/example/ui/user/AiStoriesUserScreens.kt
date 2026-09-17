@@ -14,7 +14,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -384,28 +384,23 @@ fun AiStoryPosterGraphic(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop
 ) {
+    val effectiveUrl = remember(posterUrl, storyId) {
+        if (!posterUrl.isNullOrBlank() && (posterUrl.startsWith("http://") || posterUrl.startsWith("https://"))) {
+            posterUrl
+        } else {
+            com.example.data.HorrorPosterPresets.getPoster(storyId)
+        }
+    }
     val defaultRes = remember(posterUrl, storyId) { getStoryPosterDrawableRes(posterUrl, storyId) }
-    val isRemote = remember(posterUrl) {
-        !posterUrl.isNullOrBlank() && (posterUrl.startsWith("http://") || posterUrl.startsWith("https://"))
-    }
 
-    if (isRemote) {
-        AsyncImage(
-            model = posterUrl,
-            contentDescription = "پوستر داستان هوش تاریکی",
-            modifier = modifier,
-            contentScale = contentScale,
-            error = painterResource(id = defaultRes),
-            placeholder = painterResource(id = defaultRes)
-        )
-    } else {
-        Image(
-            painter = painterResource(id = defaultRes),
-            contentDescription = "پوستر داستان هوش تاریکی",
-            modifier = modifier,
-            contentScale = contentScale
-        )
-    }
+    AsyncImage(
+        model = effectiveUrl,
+        contentDescription = "پوستر داستان هوش تاریکی",
+        modifier = modifier,
+        contentScale = contentScale,
+        error = painterResource(id = defaultRes),
+        placeholder = painterResource(id = defaultRes)
+    )
 }
 
 // ==========================================
@@ -844,22 +839,9 @@ fun AiStoryReaderScreen(
     val allAiStories by viewModel.aiStoriesList.collectAsState()
     val liveStory = allAiStories.find { it.id == story.id } ?: story
 
-    // Themes: 0 = Crypt Dark, 1 = Ancient Parchment, 2 = Pitch Black
-    var themeIndex by remember { mutableIntStateOf(0) }
-
     val activeFontPreset = HorrorFontPresets.getOrNull(selectedFontIndex) ?: HorrorFontPresets[0]
-
-    val bgColor = when (themeIndex) {
-        1 -> Color(0xFF16120C)
-        2 -> Color(0xFF020104)
-        else -> Color(0xFF09040F)
-    }
-
-    val textColor = when (themeIndex) {
-        1 -> Color(0xFFE8DAC2)
-        2 -> Color(0xFFE0DAE8)
-        else -> Color(0xFFEDE4F5)
-    }
+    val bgColor = Color(0xFF09040F)
+    val textColor = Color(0xFFEDE4F5)
 
     // Share Text format: Title + Synopsis + Download link
     val shareSynopsis = if (!story.synopsis.isNullOrBlank()) story.synopsis else story.content.take(180) + "..."
@@ -996,30 +978,9 @@ https://myket.ir/app/com.apps.hororhouse
                             Text("A+", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-
-                    // Theme Switcher
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        val themes = listOf("گوتیگ", "پوستینه", "ظلمت")
-                        themes.forEachIndexed { idx, name ->
-                            val isSel = idx == themeIndex
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isSel) Color(0xFFB8143F) else Color(0xFF160E22))
-                                    .border(1.dp, if (isSel) Color(0xFFDEC595) else Color(0xFF2E1C44), RoundedCornerShape(6.dp))
-                                    .clickable { themeIndex = idx }
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(name, color = if (isSel) Color.White else Color(0xFF8B8496), fontSize = 9.sp)
-                            }
-                        }
-                    }
                 }
 
-                // Font Family Selector Chips (5 distinct presets)
+                // Font Family Selector Chips
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1212,7 +1173,7 @@ https://myket.ir/app/com.apps.hororhouse
 
             // FULL STORY CONTENT
             item {
-                SelectionContainer {
+                DisableSelection {
                     Text(
                         text = story.content,
                         color = textColor,

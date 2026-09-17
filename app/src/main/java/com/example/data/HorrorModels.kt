@@ -57,8 +57,8 @@ data class AiStory(
         get() = view_count
     val coverUrl: String?
         get() = cover_image_url
-    val cover_url: String?
-        get() = cover_image_url ?: "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80"
+    val cover_url: String
+        get() = if (!cover_image_url.isNullOrBlank()) cover_image_url else HorrorPosterPresets.getPoster(id)
     val prompt_used: String?
         get() = tags ?: "هوش تاریکی"
 }
@@ -78,7 +78,10 @@ data class RealStory(
     val view_count: Int = 0,
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null
-)
+) {
+    val cover_url: String
+        get() = if (!cover_image_url.isNullOrBlank()) cover_image_url else HorrorPosterPresets.getPoster(id)
+}
 
 @JsonClass(generateAdapter = true)
 data class UserStorySubmission(
@@ -96,6 +99,9 @@ data class UserStorySubmission(
     @Json(name = "created_at") val createdAt: String? = null,
     @Json(name = "updated_at") val updatedAt: String? = null
 ) {
+    val cover_url: String
+        get() = if (!cover_image_url.isNullOrBlank()) cover_image_url else HorrorPosterPresets.getPoster(id)
+
     fun toRealStory(): RealStory = RealStory(
         id = id,
         title = title,
@@ -189,8 +195,25 @@ object HorrorPosterPresets {
         "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop", // Mysterious gothic portrait
         "https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=800&auto=format&fit=crop", // Creepy abandoned hallway
         "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800&auto=format&fit=crop", // Burning embers dark void
-        "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop"  // Antique skull & gothic alchemy
+        "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop", // Antique skull & gothic alchemy
+        // 10 NEW POSTERS ADDED
+        "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop", // Night jagged mountain peak
+        "https://images.unsplash.com/photo-1505672678430-8a1881774534?q=80&w=800&auto=format&fit=crop", // Deep misty dark forest
+        "https://images.unsplash.com/photo-1518709414768-a88981a4515d?q=80&w=800&auto=format&fit=crop", // Spooky cemetery tombstones
+        "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=800&auto=format&fit=crop", // Red neon sinister hallway
+        "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=800&auto=format&fit=crop", // Single candle dark ritual
+        "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=800&auto=format&fit=crop", // Blood eclipse over dark silhouettes
+        "https://images.unsplash.com/photo-1519052537078-e6302a4968d4?q=80&w=800&auto=format&fit=crop", // Sinister glowing predator eyes in dark
+        "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=800&auto=format&fit=crop", // Dark winding forest path of doom
+        "https://images.unsplash.com/photo-1518709593452-95123d4e8320?q=80&w=800&auto=format&fit=crop", // Ancient forgotten tomb ruins
+        "https://images.unsplash.com/photo-1518709711639-6518a221f787?q=80&w=800&auto=format&fit=crop"  // Dark foggy lake with ghostly boat
     )
+
+    fun getPoster(storyId: String? = null): String {
+        if (storyId.isNullOrBlank()) return POSTERS.random()
+        val index = (storyId.hashCode().toLong() and 0x7FFFFFFF).toInt() % POSTERS.size
+        return POSTERS[index]
+    }
 
     fun getRandomPoster(): String {
         return POSTERS.random()

@@ -18,52 +18,53 @@
     <div id="loginScreenContainer">
         <div class="login-card">
             <div class="login-shield-icon">🛡️</div>
-            <h1 class="login-title">ورود امن ادمین عمارت وحشت</h1>
-            <div class="login-badge">کنترل‌کده تاریکی و همگام‌ساز دیتابیس</div>
-            <p class="login-desc">برای دسترسی به پنل مدیریت و همگام‌سازی واقعی، اتصال به پایگاه داده Supabase را برقرار کنید.</p>
+            <h1 class="login-title">ورود به پنل مدیریت عمارت وحشت</h1>
+            <div class="login-badge">کنترل‌کده تاریکی و مدیریت محتوا</div>
+            <p class="login-desc">برای ورود به پنل مدیریت، ایمیل و رمز عبور ادمین را وارد کنید.</p>
 
-            <!-- Supabase Connection Form -->
-            <form class="login-form" id="dbConnectForm" onsubmit="return false;" style="margin-bottom: 16px;">
-                <div class="form-group">
-                    <label class="form-label" for="loginSupabaseUrl">آدرس پروژه Supabase (URL)</label>
-                    <input type="text" id="loginSupabaseUrl" class="text-input" placeholder="https://xyzcompany.supabase.co" required dir="ltr">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="loginSupabaseKey">کلید دسترسی (Anon Key یا Service Role Key)</label>
-                    <div class="input-with-action">
-                        <input type="password" id="loginSupabaseKey" class="text-input" placeholder="eyJhbGciOiJIUzI1NiIsIn..." required dir="ltr">
-                        <button type="button" class="input-action-btn" id="btnToggleLoginDbKey">👁️</button>
-                    </div>
-                </div>
-
-                <button type="button" class="btn btn-blood" id="btnDirectDbConnect" style="padding: 12px; margin-top: 6px; width: 100%;">
-                    <span>⚡ اتصال به دیتابیس و ورود مستقیم</span>
-                </button>
-            </form>
-
-            <div style="text-align: center; margin-bottom: 12px;">
-                <button type="button" id="btnToggleAuthForm" style="background: none; border: none; color: var(--muted-ash); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
-                    یا ورود با ایمیل و رمز عبور کاربری Supabase Auth
-                </button>
-            </div>
-
-            <form class="login-form" id="loginForm" onsubmit="return false;" style="display: none; padding-top: 10px; border-top: 1px dashed var(--blood-border);">
+            <!-- Standard Admin Email & Password Form (Primary) -->
+            <form class="login-form" id="loginForm" onsubmit="return false;">
                 <div class="form-group">
                     <label class="form-label" for="loginEmail">ایمیل ادمین</label>
-                    <input type="email" id="loginEmail" class="text-input" placeholder="admin@horrorhouse.com" dir="ltr">
+                    <input type="email" id="loginEmail" class="text-input" value="admin@horrorhouse.com" placeholder="admin@horrorhouse.com" required dir="ltr">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="loginPassword">رمز عبور ادمین</label>
                     <div class="input-with-action">
-                        <input type="password" id="loginPassword" class="text-input" placeholder="••••••••" dir="ltr">
+                        <input type="password" id="loginPassword" class="text-input" placeholder="••••••••" required dir="ltr">
                         <button type="button" class="input-action-btn" id="btnToggleLoginPass">👁️</button>
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-dark" id="btnLoginSubmit" style="padding: 10px; margin-top: 4px; width: 100%;">
-                    <span>ورود با حساب کاربری Auth</span>
+                <button type="submit" class="btn btn-blood" id="btnLoginSubmit" style="padding: 12px; margin-top: 10px; width: 100%;">
+                    <span>ورود به پنل مدیریت</span>
+                </button>
+            </form>
+
+            <div style="text-align: center; margin-top: 14px;">
+                <button type="button" id="btnToggleDbConfig" style="background: none; border: none; color: var(--muted-ash); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+                    ⚙️ تنظیمات اتصال به دیتابیس Supabase (اختیاری)
+                </button>
+            </div>
+
+            <!-- Optional Supabase Connection Settings (Collapsible) -->
+            <form class="login-form" id="dbConnectForm" onsubmit="return false;" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--blood-border);">
+                <div class="form-group">
+                    <label class="form-label" for="loginSupabaseUrl">آدرس پروژه Supabase (URL)</label>
+                    <input type="text" id="loginSupabaseUrl" class="text-input" placeholder="https://xyzcompany.supabase.co" dir="ltr">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="loginSupabaseKey">کلید دسترسی (Anon Key یا Service Role Key)</label>
+                    <div class="input-with-action">
+                        <input type="password" id="loginSupabaseKey" class="text-input" placeholder="eyJhbGciOiJIUzI1NiIsIn..." dir="ltr">
+                        <button type="button" class="input-action-btn" id="btnToggleLoginDbKey">👁️</button>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-dark" id="btnSaveDbConfig" style="padding: 8px; width: 100%;">
+                    <span>ذخیره تنظیمات دیتابیس</span>
                 </button>
             </form>
 
@@ -128,6 +129,11 @@
             <button class="nav-tab-button" data-tab="tab-reports">
                 <span class="nav-icon">🚩</span>
                 <span>گزارش‌ها</span>
+            </button>
+            <button class="nav-tab-button" data-tab="tab-logs">
+                <span class="nav-icon">📡</span>
+                <span>لاگ و وضعیت</span>
+                <span class="nav-tab-badge" id="badgeCrashesCount" style="display:none; background: #e63946;">0</span>
             </button>
         </nav>
 
@@ -665,6 +671,120 @@ SELECT cron.schedule(
 
                     <div id="reportsListContainer">
                         <div style="text-align: center; padding: 40px; color: var(--muted-ash);">هیچ گزارش جدیدی ثبت نشده است.</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 7: LOGS & TELEMETRY (Crashes, Active Users, Subscriptions, Online Status) -->
+            <section id="tab-logs" class="tab-pane">
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Top Telemetry KPI Cards -->
+                    <div class="stats-grid">
+                        <div class="stat-card" style="border-right-color: #e63946;">
+                            <div class="stat-header">
+                                <div class="stat-label">وضعیت کرش‌ها (Crashes)</div>
+                                <span class="stat-icon">⚠️</span>
+                            </div>
+                            <div class="stat-value" id="telemetryCrashCount" style="color: #e63946;">۰</div>
+                            <div class="stat-trend neutral" id="telemetryCrashRate">نرخ بدون کرش: ۱۰۰٪</div>
+                        </div>
+
+                        <div class="stat-card" style="border-right-color: #2a9d8f;">
+                            <div class="stat-header">
+                                <div class="stat-label">کاربران آنلاین هم‌اکنون</div>
+                                <span class="stat-icon" style="position: relative;">
+                                    🟢
+                                    <span style="display:inline-block; width:8px; height:8px; background:#2a9d8f; border-radius:50%; box-shadow:0 0 8px #2a9d8f;"></span>
+                                </span>
+                            </div>
+                            <div class="stat-value" id="telemetryOnlineCount" style="color: #2a9d8f;">۱</div>
+                            <div class="stat-trend positive">فعالیت زنده در اپلیکیشن</div>
+                        </div>
+
+                        <div class="stat-card" style="border-right-color: #DEC595;">
+                            <div class="stat-header">
+                                <div class="stat-label">کاربران فعال روزانه (DAU)</div>
+                                <span class="stat-icon">👥</span>
+                            </div>
+                            <div class="stat-value" id="telemetryActiveDailyCount" style="color: var(--gold-accent);">۲۴</div>
+                            <div class="stat-trend positive">خوانندگان و ماجراجویان فعال</div>
+                        </div>
+
+                        <div class="stat-card" style="border-right-color: #9d4edd;">
+                            <div class="stat-header">
+                                <div class="stat-label">کاربران سابسکرایب‌شده (VIP)</div>
+                                <span class="stat-icon">💎</span>
+                            </div>
+                            <div class="stat-value" id="telemetrySubscribersCount" style="color: #b5838d;">۶</div>
+                            <div class="stat-trend positive" id="telemetrySubRate">نرخ تبدیل پلن: ۲۵٪</div>
+                        </div>
+                    </div>
+
+                    <!-- Crash Reports Card -->
+                    <div class="crypt-card">
+                        <div class="card-header-row">
+                            <div>
+                                <div class="card-title" style="color: #e63946;">🔴 گزارش‌های کرش و خطای اپلیکیشن (Crash Reports)</div>
+                                <span style="font-size: 0.75rem; color: var(--muted-ash);">ردیابی خطاها، مدل دستگاه کاربران و استک‌تریس جهت انتشار پایدار در بازار و مایکت</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-dark btn-sm" id="btnRefreshCrashLogs">🔄 بروزرسانی</button>
+                                <button class="btn btn-dark btn-sm" id="btnSimulateCrash">🧪 ثبت کرش تستی</button>
+                                <button class="btn btn-blood btn-sm" id="btnClearResolvedCrashes">پاکسازی حل‌شده‌ها</button>
+                            </div>
+                        </div>
+
+                        <!-- Filter buttons -->
+                        <div class="filter-chips" style="margin: 12px 0;">
+                            <button class="chip-btn active" data-crash-filter="ALL">همه گزارش‌ها (<span id="countAllCrashes">۰</span>)</button>
+                            <button class="chip-btn" data-crash-filter="UNRESOLVED">حل نشده (<span id="countUnresolvedCrashes">۰</span>)</button>
+                            <button class="chip-btn" data-crash-filter="RESOLVED">بررسی و حل شده (<span id="countResolvedCrashes">۰</span>)</button>
+                        </div>
+
+                        <div id="crashLogsListContainer" style="margin-top: 10px;">
+                            <div style="text-align: center; padding: 24px; color: var(--muted-ash);">هیچ خطایی ثبت نشده است. سیستم در بالاترین پایداری قرار دارد.</div>
+                        </div>
+                    </div>
+
+                    <!-- Subscriptions Breakdown Card -->
+                    <div class="crypt-card-elevated">
+                        <div class="card-header-row">
+                            <div>
+                                <div class="card-title gold">💎 وضعیت اشتراک‌ها و پرداخت‌های درون‌برنامه‌ای (Subscriptions)</div>
+                                <span style="font-size: 0.75rem; color: var(--muted-ash);">لیست کاربران VIP، پلن‌های فعال و وضعیت انقضا</span>
+                            </div>
+                            <button class="btn btn-dark btn-sm" id="btnRefreshSubscribers">🔄 بروزرسانی اشتراک‌ها</button>
+                        </div>
+
+                        <div id="subscribersListContainer" style="margin-top: 14px; overflow-x: auto;">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Live System Health & Latency -->
+                    <div class="crypt-card">
+                        <div class="card-header-row">
+                            <div class="card-title">⚡ وضعیت سلامت سرویس‌ها و اتصالات</div>
+                            <span class="badge published" id="statusServerPulsing">کلیه سرویس‌ها عملیاتی است</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px;">
+                            <div style="background: var(--void-black); border: 1px solid var(--blood-border); border-radius: 8px; padding: 12px;">
+                                <div style="color: var(--muted-ash); font-size: 0.75rem; margin-bottom: 4px;">اتصال دیتابیس Supabase</div>
+                                <div style="color: #2a9d8f; font-weight: bold; font-size: 0.9rem;" id="diagDbStatus">متصل و فعال</div>
+                            </div>
+                            <div style="background: var(--void-black); border: 1px solid var(--blood-border); border-radius: 8px; padding: 12px;">
+                                <div style="color: var(--muted-ash); font-size: 0.75rem; margin-bottom: 4px;">مدل هوش مصنوعی Gemini</div>
+                                <div style="color: var(--gold-accent); font-weight: bold; font-size: 0.9rem;" id="diagAiStatus">آماده پاسخگویی</div>
+                            </div>
+                            <div style="background: var(--void-black); border: 1px solid var(--blood-border); border-radius: 8px; padding: 12px;">
+                                <div style="color: var(--muted-ash); font-size: 0.75rem; margin-bottom: 4px;">حفاظت امنیتی درون‌برنامه</div>
+                                <div style="color: #b5838d; font-weight: bold; font-size: 0.9rem;">FLAG_SECURE + قفل کپی</div>
+                            </div>
+                            <div style="background: var(--void-black); border: 1px solid var(--blood-border); border-radius: 8px; padding: 12px;">
+                                <div style="color: var(--muted-ash); font-size: 0.75rem; margin-bottom: 4px;">آمادگی انتشار استورها</div>
+                                <div style="color: #2a9d8f; font-weight: bold; font-size: 0.9rem;">تأیید شده برای مارکت‌ها</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

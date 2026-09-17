@@ -4,11 +4,10 @@
  */
 
 const SUPPORTED_GEMINI_MODELS = [
-    { id: "gemini-3.7-flash", desc: "مدل 3.7 Flash - پیشرفته‌ترین و قدرتمندترین مدل هوش تاریکی" },
-    { id: "gemini-3.6-flash", desc: "مدل 3.6 Flash - بهینه‌شده برای سرعت و تحلیل پیشرفته" },
-    { id: "gemini-3.5-flash", desc: "مدل 3.5 Flash - پرسرعت و متعادل برای تولید روایات و سناریو" },
-    { id: "gemini-3.5-flash-lite", desc: "مدل 3.5 Flash Lite - بسیار سبک، سریع و کاملاً مناسب کلید رایگان" },
-    { id: "gemini-3.1-flash-lite", desc: "مدل 3.1 Flash Lite - فوق‌العاده سریع با حداقل مصرف توکن" }
+    { id: "gemini-2.5-flash", desc: "مدل 2.5 Flash - جدیدترین و قدرتمندترین مدل پیش‌فرض هوش تاریکی" },
+    { id: "gemini-2.0-flash", desc: "مدل 2.0 Flash - بسیار پرسرعت و بهینه‌شده برای تولید محتوا و طالع" },
+    { id: "gemini-1.5-flash", desc: "مدل 1.5 Flash - مدل پایدار، سریع و سازگار با کلیدهای رایگان" },
+    { id: "gemini-1.5-pro", desc: "مدل 1.5 Pro - با بالاترین عمق سناریونویسی و جزئیات ادبی" }
 ];
 
 const DEFAULT_AI_STORY_PROMPT = `وظیفه تو تولید یک داستان ترسناک کاملاً تخیلی، اورجینال، منسجم و سینمایی است که مخاطب را از اولین پاراگراف تا آخرین جمله درگیر نگه دارد.
@@ -51,16 +50,38 @@ const GeminiService = {
     setApiKey(key) {
         localStorage.setItem('HORROR_GEMINI_KEY', (key || '').trim());
     },
+    async resolveApiKey() {
+        let key = this.getApiKey();
+        if (key) return key;
+        // Try fetching from Supabase app_settings table
+        if (window.SupabaseService && window.SupabaseService.isConfigured()) {
+            try {
+                const setting = await window.SupabaseService.getSetting('GEMINI_API_KEY');
+                if (setting) {
+                    this.setApiKey(setting);
+                    return setting;
+                }
+            } catch (e) {
+                console.warn('Could not fetch GEMINI_API_KEY from database:', e);
+            }
+        }
+        return '';
+    },
     getModel() {
-        return localStorage.getItem('HORROR_GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+        let model = localStorage.getItem('HORROR_GEMINI_MODEL') || 'gemini-2.5-flash';
+        if (model.includes('3.') || !model.startsWith('gemini-')) {
+            model = 'gemini-2.5-flash';
+            localStorage.setItem('HORROR_GEMINI_MODEL', model);
+        }
+        return model;
     },
     setModel(model) {
         localStorage.setItem('HORROR_GEMINI_MODEL', model);
     },
 
     async testModel(apiKey, modelName) {
-        const key = (apiKey || this.getApiKey()).trim();
-        if (!key) throw new Error('کلید API وارد نشده است.');
+        const key = (apiKey || await this.resolveApiKey()).trim();
+        if (!key) throw new Error('کلید API وارد نشده است و در دیتابیس نیز یافت نشد.');
         const model = modelName || this.getModel();
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
@@ -83,8 +104,8 @@ const GeminiService = {
     },
 
     async generateStory(genre, customInstruction, blacklistTitles = [], customPrompt = null) {
-        const key = this.getApiKey();
-        if (!key) throw new Error('لطفاً ابتدا کلید Gemini API را در تب «تنظیم AI» وارد کنید.');
+        const key = await this.resolveApiKey();
+        if (!key) throw new Error('کلید Gemini API در تب «تنظیم AI» یا دیتابیس یافت نشد.');
         const model = this.getModel();
 
         const basePrompt = customPrompt || localStorage.getItem('HORROR_AI_STORY_PROMPT') || DEFAULT_AI_STORY_PROMPT;
@@ -135,8 +156,8 @@ const GeminiService = {
     },
 
     async generate12GrimFortunes(customPrompt = null) {
-        const key = this.getApiKey();
-        if (!key) throw new Error('لطفاً ابتدا کلید Gemini API را در تب «تنظیم AI» وارد کنید.');
+        const key = await this.resolveApiKey();
+        if (!key) throw new Error('کلید Gemini API در تب «تنظیم AI» یا دیتابیس یافت نشد.');
         const model = this.getModel();
 
         const promptText = customPrompt || localStorage.getItem('HORROR_GRIM_PROMPT') || DEFAULT_GRIM_FORTUNE_PROMPT;

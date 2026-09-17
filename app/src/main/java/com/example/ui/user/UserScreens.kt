@@ -4,7 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -3167,28 +3167,21 @@ fun StoryItemCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Full-bleed background image or atmospheric procedural canvas
-            if (!story.cover_image_url.isNullOrBlank()) {
-                AsyncImage(
-                    model = story.cover_image_url,
-                    placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                    error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                    contentDescription = story.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                val defaultRes = when (index % 3) {
+            val defaultRes = remember(index) {
+                when (index % 3) {
                     0 -> R.drawable.img_poster_1_1788266550537
                     1 -> R.drawable.img_poster_2_1788266563762
                     else -> R.drawable.img_poster_3_1788266577786
                 }
-                androidx.compose.foundation.Image(
-                    painter = painterResource(id = defaultRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
             }
+            AsyncImage(
+                model = story.cover_url,
+                placeholder = painterResource(id = defaultRes),
+                error = painterResource(id = defaultRes),
+                contentDescription = story.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
             // Dark transparent gradient overlay covering whole card
             Box(
@@ -4150,22 +4143,9 @@ fun StoryReaderScreen(
 
     var showReportDialog by remember { mutableStateOf(false) }
 
-    // Themes: 0 = Crypt Dark, 1 = Ancient Parchment, 2 = Pitch Black
-    var themeIndex by remember { mutableIntStateOf(0) }
-
     val activeFontPreset = HorrorFontPresets.getOrNull(selectedFontIndex) ?: HorrorFontPresets[0]
-
-    val bgColor = when (themeIndex) {
-        1 -> Color(0xFF16120C)
-        2 -> Color(0xFF020104)
-        else -> Color(0xFF09040F)
-    }
-
-    val textColor = when (themeIndex) {
-        1 -> Color(0xFFE8DAC2)
-        2 -> Color(0xFFE0DAE8)
-        else -> Color(0xFFEDE4F5)
-    }
+    val bgColor = Color(0xFF09040F)
+    val textColor = Color(0xFFEDE4F5)
 
     val shareSynopsis = remember(story.content) {
         if (story.content.length > 180) story.content.take(180) + "..." else story.content
@@ -4303,30 +4283,9 @@ https://myket.ir/app/com.apps.hororhouse
                             Text("A+", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-
-                    // Theme Switcher
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        val themes = listOf("گوتیگ", "پوستینه", "ظلمت")
-                        themes.forEachIndexed { idx, name ->
-                            val isSel = idx == themeIndex
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isSel) Color(0xFFB8143F) else Color(0xFF160E22))
-                                    .border(1.dp, if (isSel) Color(0xFFDEC595) else Color(0xFF2E1C44), RoundedCornerShape(6.dp))
-                                    .clickable { themeIndex = idx }
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(name, color = if (isSel) Color.White else Color(0xFF8B8496), fontSize = 9.sp)
-                            }
-                        }
-                    }
                 }
 
-                // Font Family Selector Chips (5 distinct presets)
+                // Font Family Selector Chips
                 LazyRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -4374,28 +4333,21 @@ https://myket.ir/app/com.apps.hororhouse
                     border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.6f))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        if (!story.cover_image_url.isNullOrBlank()) {
-                            AsyncImage(
-                                model = story.cover_image_url,
-                                placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                                error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                                contentDescription = story.title,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            val defaultRes = when (story.id.hashCode() % 3) {
+                        val defaultRes = remember(story.id) {
+                            when ((story.id.hashCode() and 0x7FFFFFFF) % 3) {
                                 0 -> R.drawable.img_poster_1_1788266550537
                                 1 -> R.drawable.img_poster_2_1788266563762
                                 else -> R.drawable.img_poster_3_1788266577786
                             }
-                            Image(
-                                painter = painterResource(id = defaultRes),
-                                contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
                         }
+                        AsyncImage(
+                            model = story.cover_url,
+                            placeholder = painterResource(id = defaultRes),
+                            error = painterResource(id = defaultRes),
+                            contentDescription = story.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
 
                         // Gradient Overlay
                         Box(
@@ -4513,7 +4465,7 @@ https://myket.ir/app/com.apps.hororhouse
 
             // FULL STORY CONTENT
             item {
-                SelectionContainer {
+                DisableSelection {
                     Text(
                         text = story.content,
                         color = textColor,
@@ -5409,28 +5361,21 @@ fun UserStoryItemCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Full-bleed background image or atmospheric procedural canvas
-            if (!submission.cover_image_url.isNullOrBlank()) {
-                AsyncImage(
-                    model = submission.cover_image_url,
-                    placeholder = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                    error = painterResource(id = R.drawable.img_horror_fallback_1788266589613),
-                    contentDescription = submission.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else {
-                val defaultRes = when (index % 3) {
+            val defaultRes = remember(index) {
+                when (index % 3) {
                     0 -> R.drawable.img_poster_1_1788266550537
                     1 -> R.drawable.img_poster_2_1788266563762
                     else -> R.drawable.img_poster_3_1788266577786
                 }
-                androidx.compose.foundation.Image(
-                    painter = painterResource(id = defaultRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
             }
+            AsyncImage(
+                model = submission.cover_url,
+                placeholder = painterResource(id = defaultRes),
+                error = painterResource(id = defaultRes),
+                contentDescription = submission.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
 
             // Dark transparent gradient overlay covering whole card
             Box(

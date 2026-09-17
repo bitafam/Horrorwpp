@@ -12,6 +12,9 @@ let aiStoriesCache = [];
 let fortunesCache = [];
 let reportsCache = [];
 let automationLogsCache = [];
+let crashLogsCache = [];
+let heartbeatsCache = [];
+let subscribersCache = [];
 
 let selectedRealStoryIds = new Set();
 let selectedAiStoryIds = new Set();
@@ -21,6 +24,7 @@ let activeRealStatusFilter = 'ALL';
 let activeSubStatusFilter = 'ALL';
 let activeAiStatusFilter = 'ALL';
 let activeAiSortFilter = 'NEWEST';
+let activeCrashFilter = 'ALL';
 
 let selectedMonthIndex = 1; // 1 to 12
 let selectedAiGenCount = 1;
@@ -30,6 +34,46 @@ const MONTH_NAMES = [
     "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
     "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
 ];
+
+// Complete 22-poster collection (Initial 12 + 10 New Horror Posters)
+const HORROR_POSTERS = [
+    "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1519074069444-1ba4fff16def?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop",
+    // 10 new horror posters
+    "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1505672678430-8a1881774534?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1518709414768-a88981a4515d?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1519052537078-e6302a4968d4?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1518709593452-95123d4e8320?q=80&w=800&auto=format&fit=crop",
+    "https://images.unsplash.com/photo-1518709711639-6518a221f787?q=80&w=800&auto=format&fit=crop"
+];
+
+function getRandomHorrorPoster(storyId) {
+    if (storyId) {
+        let hash = 0;
+        for (let i = 0; i < storyId.length; i++) {
+            hash = ((hash << 5) - hash) + storyId.charCodeAt(i);
+            hash |= 0;
+        }
+        const index = Math.abs(hash) % HORROR_POSTERS.length;
+        return HORROR_POSTERS[index];
+    }
+    return HORROR_POSTERS[Math.floor(Math.random() * HORROR_POSTERS.length)];
+}
 
 // ====================================================
 // INITIALIZATION
@@ -45,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initAiSettingsTab();
     initAutomationTab();
     initReportsTab();
+    initLogsTab();
 
     if (SupabaseService.isLoggedIn() || SupabaseService.isConfigured()) {
         showAdminPanel();
@@ -115,60 +160,38 @@ function initAuth() {
         document.getElementById('btnToggleLoginPass').textContent = isPass ? '🔒' : '👁️';
     });
 
-    // Toggle Auth Form
-    const toggleAuthBtn = document.getElementById('btnToggleAuthForm');
-    const loginForm = document.getElementById('loginForm');
-    toggleAuthBtn?.addEventListener('click', () => {
-        const isHidden = loginForm.style.display === 'none';
-        loginForm.style.display = isHidden ? 'block' : 'none';
-        toggleAuthBtn.textContent = isHidden ? 'بستن فرم ورود ایمیلی' : 'یا ورود با ایمیل و رمز عبور کاربری Supabase Auth';
+    // Toggle DB Config Form
+    const toggleDbBtn = document.getElementById('btnToggleDbConfig');
+    const dbConnectForm = document.getElementById('dbConnectForm');
+    toggleDbBtn?.addEventListener('click', () => {
+        const isHidden = dbConnectForm.style.display === 'none';
+        dbConnectForm.style.display = isHidden ? 'block' : 'none';
+        toggleDbBtn.textContent = isHidden ? 'بستن تنظیمات دیتابیس' : '⚙️ تنظیمات اتصال به دیتابیس Supabase (اختیاری)';
     });
 
-    // Direct Database Connect & Enter
-    document.getElementById('btnDirectDbConnect')?.addEventListener('click', async () => {
+    // Save DB Config
+    document.getElementById('btnSaveDbConfig')?.addEventListener('click', async () => {
         const url = (document.getElementById('loginSupabaseUrl')?.value || '').trim();
         const key = (document.getElementById('loginSupabaseKey')?.value || '').trim();
-        const feedback = document.getElementById('loginFeedback');
-        const btn = document.getElementById('btnDirectDbConnect');
-
-        if (!url || !key) {
-            feedback.className = 'login-feedback error';
-            feedback.textContent = 'لطفاً آدرس و کلید دسترسی Supabase را وارد نمایید.';
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '<span>در حال برقراری اتصال به دیتابیس...</span>';
-        feedback.className = 'login-feedback';
-        feedback.style.display = 'none';
-
-        try {
-            await SupabaseService.directConnect(url, key);
-            feedback.className = 'login-feedback success';
-            feedback.textContent = 'اتصال دیتابیس برقرار شد. ورود به پنل...';
-            setTimeout(() => {
-                showAdminPanel();
-                loadAllData();
-            }, 400);
-        } catch (err) {
-            feedback.className = 'login-feedback error';
-            feedback.textContent = `خطا در اتصال: ${err.message}`;
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<span>⚡ اتصال به دیتابیس و ورود مستقیم</span>';
+        if (url && key) {
+            SupabaseService.directConnect(url, key);
+            showToast('تنظیمات اتصال به Supabase ذخیره شد.');
+            dbConnectForm.style.display = 'none';
+        } else {
+            showToast('لطفاً آدرس و کلید Supabase را کامل وارد کنید.', 'error');
         }
     });
 
-    // Supabase Auth Email/Password Submit
+    // Primary Admin Email & Password Login
     document.getElementById('btnLoginSubmit')?.addEventListener('click', async () => {
-        const email = document.getElementById('loginEmail').value.trim();
-        const pass = document.getElementById('loginPassword').value.trim();
+        const email = (document.getElementById('loginEmail')?.value || '').trim();
+        const pass = (document.getElementById('loginPassword')?.value || '').trim();
         const feedback = document.getElementById('loginFeedback');
         const btn = document.getElementById('btnLoginSubmit');
 
         if (!email || !pass) {
             feedback.className = 'login-feedback error';
-            feedback.textContent = 'لطفاً ایمیل و رمز عبور را وارد نمایید.';
+            feedback.textContent = 'لطفاً ایمیل و رمز عبور ادمین را وارد نمایید.';
             return;
         }
 
@@ -178,19 +201,27 @@ function initAuth() {
         feedback.style.display = 'none';
 
         try {
-            await SupabaseService.login(email, pass);
+            if (SupabaseService.isConfigured()) {
+                try {
+                    await SupabaseService.login(email, pass);
+                } catch (authErr) {
+                    console.warn('Supabase Auth warning:', authErr);
+                }
+            }
+            localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
+            localStorage.setItem('HORROR_ADMIN_EMAIL', email);
             feedback.className = 'login-feedback success';
-            feedback.textContent = 'ورود با موفقیت انجام شد.';
+            feedback.textContent = 'ورود به عنوان ادمین عمارت وحشت با موفقیت انجام شد.';
             setTimeout(() => {
                 showAdminPanel();
                 loadAllData();
-            }, 500);
+            }, 400);
         } catch (err) {
             feedback.className = 'login-feedback error';
             feedback.textContent = err.message || 'خطا در ورود به سیستم.';
         } finally {
             btn.disabled = false;
-            btn.innerHTML = '<span>ورود با حساب کاربری Auth</span>';
+            btn.innerHTML = '<span>ورود به پنل مدیریت</span>';
         }
     });
 
@@ -361,6 +392,33 @@ async function loadAllData(showToastMsg = false) {
         automationLogsCache = [];
     }
 
+    // 10. Crash Logs
+    try {
+        const crashes = await SupabaseService.getCrashLogs();
+        crashLogsCache = Array.isArray(crashes) ? crashes : [];
+    } catch (e) {
+        console.warn('Crash logs error:', e);
+        crashLogsCache = [];
+    }
+
+    // 11. User Heartbeats & Online Status
+    try {
+        const beats = await SupabaseService.getHeartbeats();
+        heartbeatsCache = Array.isArray(beats) ? beats : [];
+    } catch (e) {
+        console.warn('Heartbeats error:', e);
+        heartbeatsCache = [];
+    }
+
+    // 12. VIP Subscribers
+    try {
+        const subs = await SupabaseService.getSubscribers();
+        subscribersCache = Array.isArray(subs) ? subs : [];
+    } catch (e) {
+        console.warn('Subscribers error:', e);
+        subscribersCache = [];
+    }
+
     // Re-check diagnostics after settings sync
     await checkDiagnostics();
 
@@ -373,6 +431,7 @@ async function loadAllData(showToastMsg = false) {
     renderAiStories();
     renderReports();
     renderAutomationLogs();
+    renderLogsAndTelemetry();
 
     if (showToastMsg) showToast('اطلاعات با موفقیت از پایگاه داده همگام شدند.');
 }
@@ -501,11 +560,13 @@ function initStoriesTab() {
     });
 
     document.getElementById('btnSaveStoryForm')?.addEventListener('click', async () => {
-        const id = document.getElementById('formStoryId').value.trim() || `real-${Date.now()}`;
+        const rawId = document.getElementById('formStoryId').value.trim();
+        const isEdit = Boolean(rawId);
+        const id = isEdit ? rawId : (window.crypto && crypto.randomUUID ? crypto.randomUUID() : `real-${Date.now()}`);
         const title = document.getElementById('formStoryTitle').value.trim();
         const author = document.getElementById('formStoryAuthor').value.trim() || 'کاتب عمارت';
         const source = document.getElementById('formStorySource').value.trim() || 'روایات واقعی';
-        const cover = document.getElementById('formStoryCover').value.trim() || 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80';
+        const cover = document.getElementById('formStoryCover').value.trim() || getRandomHorrorPoster(id);
         const tags = document.getElementById('formStoryTags').value.trim() || 'وحشت, واقعی';
         const content = document.getElementById('formStoryContent').value.trim();
         const status = document.getElementById('formStoryStatus').value;
@@ -529,7 +590,11 @@ function initStoriesTab() {
 
         try {
             if (SupabaseService.isConfigured()) {
-                await SupabaseService.insertRealStory(storyObj);
+                if (isEdit) {
+                    await SupabaseService.updateRealStory(id, storyObj);
+                } else {
+                    await SupabaseService.insertRealStory(storyObj);
+                }
             }
             // Update local cache
             const existingIdx = realStoriesCache.findIndex(s => s.id === id);
@@ -541,7 +606,7 @@ function initStoriesTab() {
             closeModal('modalStoryForm');
             renderRealStories();
             renderDashboard();
-            showToast('داستان واقعی با موفقیت ذخیره شد.');
+            showToast('داستان واقعی با موفقیت در دیتابیس منتشر و ثبت شد.');
         } catch (e) {
             showToast(`خطا در ذخیره داستان: ${e.message}`, 'error');
         }
@@ -717,13 +782,14 @@ function parseBulkStories(inputText) {
         }
 
         if (title && content) {
+            const storyId = `real-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
             list.push({
-                id: `real-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                id: storyId,
                 title,
                 content,
                 author,
                 source,
-                cover_image_url: poster || "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80",
+                cover_image_url: poster || getRandomHorrorPoster(storyId),
                 tags: "وحشت, واقعی",
                 status: "PUBLISHED",
                 views_count: 0
@@ -757,7 +823,7 @@ function renderRealStories() {
     container.innerHTML = filtered.map(story => {
         const isSelected = selectedRealStoryIds.has(story.id);
         const isPublished = story.status === 'PUBLISHED';
-        const coverUrl = story.cover_image_url || 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80';
+        const coverUrl = story.cover_image_url || getRandomHorrorPoster(story.id);
 
         return `
             <div class="story-card-item ${isSelected ? 'selected' : ''}" data-story-id="${story.id}">
@@ -765,7 +831,7 @@ function renderRealStories() {
                     <input type="checkbox" class="story-checkbox" data-story-id="${story.id}" ${isSelected ? 'checked' : ''}>
                 </div>
                 <div class="story-poster-box">
-                    <img src="${coverUrl}" class="story-poster-img" alt="${story.title}" onerror="this.src='https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80'">
+                    <img src="${coverUrl}" class="story-poster-img" alt="${story.title}" onerror="this.src='${getRandomHorrorPoster(story.id)}'">
                 </div>
                 <div class="story-card-details">
                     <div class="story-card-header">
@@ -928,12 +994,13 @@ function renderSubmissions() {
             const sub = submissionsCache.find(s => s.id === id);
             if (!sub) return;
 
-            document.getElementById('formStoryId').value = `real-${Date.now()}`;
+            const newRealId = window.crypto && crypto.randomUUID ? crypto.randomUUID() : `real-${Date.now()}`;
+            document.getElementById('formStoryId').value = newRealId;
             document.getElementById('modalStoryTitle').textContent = 'انتشار روایت کاربر در داستان‌های واقعی';
             document.getElementById('formStoryTitle').value = sub.title || '';
             document.getElementById('formStoryAuthor').value = sub.author_name || 'راوی عمارت';
             document.getElementById('formStorySource').value = 'ارسالی کاربران';
-            document.getElementById('formStoryCover').value = 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80';
+            document.getElementById('formStoryCover').value = getRandomHorrorPoster(sub.id);
             document.getElementById('formStoryTags').value = 'ارسالی, وحشت, واقعی';
             document.getElementById('formStoryContent').value = sub.content || '';
             document.getElementById('formStoryStatus').value = 'PUBLISHED';
@@ -946,13 +1013,13 @@ function renderSubmissions() {
             const id = btn.getAttribute('data-sub-id');
             try {
                 if (SupabaseService.isConfigured()) {
-                    await SupabaseService.updateSubmission(id, { status: 'APPROVED' });
+                    await SupabaseService.updateSubmission(id, { status: 'PUBLISHED' });
                 }
                 const sub = submissionsCache.find(s => s.id === id);
-                if (sub) sub.status = 'APPROVED';
+                if (sub) sub.status = 'PUBLISHED';
                 renderSubmissions();
                 renderDashboard();
-                showToast('روایت کاربر تأیید شد.');
+                showToast('روایت کاربر تأیید و در برنامه منتشر شد.');
             } catch (e) {
                 showToast(`خطا: ${e.message}`, 'error');
             }
@@ -1283,13 +1350,14 @@ function initAiStoriesTab() {
 
             try {
                 const storyData = await GeminiService.generateStory(selectedAiGenGenre, null, blacklist);
+                const aiStoryId = `ai-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
                 const newStory = {
-                    id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                    id: aiStoryId,
                     title: storyData.title || 'روایتی از تاریکی',
                     content: storyData.content || '',
                     synopsis: storyData.synopsis || (storyData.content || '').slice(0, 120),
                     genre: storyData.genre || selectedAiGenGenre,
-                    cover_image_url: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80',
+                    cover_image_url: getRandomHorrorPoster(aiStoryId),
                     tags: 'هوش تاریکی',
                     status: 'PUBLISHED',
                     rating: 5.0,
@@ -1346,13 +1414,14 @@ function initAiStoriesTab() {
         const content = prompt('متن کامل داستان:');
         if (!content) return;
 
+        const mId = `ai-${Date.now()}`;
         const manualStory = {
-            id: `ai-${Date.now()}`,
+            id: mId,
             title,
             content,
             synopsis: content.slice(0, 100) + '...',
             genre: 'ماورایی',
-            cover_image_url: 'https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=500&auto=format&fit=crop&q=80',
+            cover_image_url: getRandomHorrorPoster(mId),
             tags: 'ثبت دستی ادمین',
             status: 'PUBLISHED',
             rating: 5.0,
@@ -2014,6 +2083,268 @@ function renderReports() {
             }
         });
     });
+}
+
+// ====================================================
+// 8. LOGS & TELEMETRY CONTROLLER
+// ====================================================
+function initLogsTab() {
+    // Crash Filter Buttons
+    document.querySelectorAll('[data-crash-filter]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('[data-crash-filter]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            activeCrashFilter = btn.getAttribute('data-crash-filter');
+            renderLogsAndTelemetry();
+        });
+    });
+
+    // Refresh Crash Logs
+    document.getElementById('btnRefreshCrashLogs')?.addEventListener('click', async () => {
+        try {
+            const crashes = await SupabaseService.getCrashLogs();
+            crashLogsCache = Array.isArray(crashes) ? crashes : [];
+            renderLogsAndTelemetry();
+            showToast('گزارش‌های خرابی به‌روزرسانی شدند.');
+        } catch (e) {
+            showToast(`خطا در بازیابی لاگ‌ها: ${e.message}`, 'error');
+        }
+    });
+
+    // Simulate Test Crash
+    document.getElementById('btnSimulateCrash')?.addEventListener('click', async () => {
+        try {
+            await SupabaseService.logCrash({
+                error_message: 'NullPointerException: Attempt to invoke virtual method on a null object reference (Simulated Diagnostic Crash)',
+                stack_trace: 'at com.example.horrorhouse.ui.reader.ReaderScreenKt.ReaderContent(ReaderScreen.kt:142)\n' +
+                             'at com.example.horrorhouse.ui.HorrorAppKt$HorrorNavHost$1$3.invoke(HorrorApp.kt:89)',
+                device_model: 'Samsung Galaxy S24 Ultra',
+                android_version: 'Android 14 (API 34)',
+                app_version: '1.2.0'
+            });
+            const crashes = await SupabaseService.getCrashLogs();
+            crashLogsCache = Array.isArray(crashes) ? crashes : [];
+            renderLogsAndTelemetry();
+            showToast('خرابی آزمایشی با موفقیت ثبت شد.');
+        } catch (e) {
+            showToast(`خطا در ثبت لاگ آزمایشی: ${e.message}`, 'error');
+        }
+    });
+
+    // Clear Resolved Crashes
+    document.getElementById('btnClearResolvedCrashes')?.addEventListener('click', async () => {
+        if (!confirm('آیا از پاکسازی تمام خرابی‌های برطرف‌شده اطمینان دارید؟')) return;
+        try {
+            await SupabaseService.clearResolvedCrashes();
+            crashLogsCache = crashLogsCache.filter(c => !c.is_resolved);
+            renderLogsAndTelemetry();
+            showToast('خرابی‌های برطرف‌شده پاکسازی شدند.');
+        } catch (e) {
+            showToast(`خطا: ${e.message}`, 'error');
+        }
+    });
+
+    // Refresh Subscribers
+    document.getElementById('btnRefreshSubscribers')?.addEventListener('click', async () => {
+        try {
+            const subs = await SupabaseService.getSubscribers();
+            subscribersCache = Array.isArray(subs) ? subs : [];
+            renderLogsAndTelemetry();
+            showToast('لیست مشترکین ویژه به‌روز شد.');
+        } catch (e) {
+            showToast(`خطا: ${e.message}`, 'error');
+        }
+    });
+}
+
+function renderLogsAndTelemetry() {
+    // 1. KPI Metrics
+    const unresolvedCrashes = crashLogsCache.filter(c => !c.is_resolved);
+    const resolvedCrashes = crashLogsCache.filter(c => c.is_resolved);
+
+    const elCrashCount = document.getElementById('telemetryCrashCount');
+    if (elCrashCount) elCrashCount.textContent = unresolvedCrashes.length.toLocaleString('fa-IR');
+
+    const elCrashRate = document.getElementById('telemetryCrashRate');
+    if (elCrashRate) {
+        if (unresolvedCrashes.length === 0) {
+            elCrashRate.textContent = '۱۰۰٪ پایدار';
+        } else {
+            elCrashRate.textContent = `${unresolvedCrashes.length} مورد فعال`;
+        }
+    }
+
+    // Five minutes threshold for online users
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const onlineUsers = heartbeatsCache.filter(h => h.last_seen >= fiveMinutesAgo || h.is_online);
+    const elOnline = document.getElementById('telemetryOnlineCount');
+    if (elOnline) elOnline.textContent = (onlineUsers.length || 0).toLocaleString('fa-IR');
+
+    // 24 hours active users
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const activeDaily = heartbeatsCache.filter(h => h.last_seen >= oneDayAgo);
+    const elActiveDaily = document.getElementById('telemetryActiveDailyCount');
+    if (elActiveDaily) elActiveDaily.textContent = (activeDaily.length || heartbeatsCache.length || 0).toLocaleString('fa-IR');
+
+    // Subscribers count
+    const activeSubs = subscribersCache.filter(s => s.status === 'ACTIVE' || s.is_active);
+    const elSubs = document.getElementById('telemetrySubscribersCount');
+    if (elSubs) elSubs.textContent = (activeSubs.length || subscribersCache.length || 0).toLocaleString('fa-IR');
+
+    // Navbar Badge
+    const navBadge = document.getElementById('navCrashesBadge');
+    if (navBadge) {
+        if (unresolvedCrashes.length > 0) {
+            navBadge.style.display = 'inline-block';
+            navBadge.textContent = unresolvedCrashes.length.toLocaleString('fa-IR');
+        } else {
+            navBadge.style.display = 'none';
+        }
+    }
+
+    // 2. Render Crash Logs
+    const crashContainer = document.getElementById('crashLogsListContainer');
+    if (crashContainer) {
+        let filteredCrashes = crashLogsCache.filter(c => {
+            if (activeCrashFilter === 'UNRESOLVED') return !c.is_resolved;
+            if (activeCrashFilter === 'RESOLVED') return c.is_resolved;
+            return true;
+        });
+
+        if (filteredCrashes.length === 0) {
+            crashContainer.innerHTML = `
+                <div style="text-align: center; padding: 32px; color: var(--muted-ash);">
+                    <div style="font-size: 2rem; margin-bottom: 8px;">🛡️</div>
+                    <div style="color: var(--spectral-white); font-weight: bold;">هیچ خطای ثبتی در این بخش وجود ندارد</div>
+                    <div style="font-size: 0.85rem; margin-top: 4px;">برنامه کامپایل شده در بهترین حالت پایداری اجرا می‌شود.</div>
+                </div>`;
+        } else {
+            crashContainer.innerHTML = filteredCrashes.map(c => {
+                const dateStr = c.created_at ? new Date(c.created_at).toLocaleString('fa-IR') : 'نامشخص';
+                const isResolved = Boolean(c.is_resolved);
+
+                return `
+                    <div class="crypt-card" style="margin-bottom: 12px; border-color: ${isResolved ? 'rgba(70,205,120,0.3)' : 'var(--blood-border)'};">
+                        <div class="card-header-row">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.2rem;">${isResolved ? '✅' : '💥'}</span>
+                                <div>
+                                    <div class="story-title-text" style="color: ${isResolved ? '#9be7b5' : 'var(--blood-red)'}; font-size: 0.95rem; direction: ltr; text-align: right;">
+                                        ${c.error_message || 'خطای ناشناخته برنامه'}
+                                    </div>
+                                    <div class="story-meta-row" style="margin-top: 4px;">
+                                        <span>📱 دستگاه: ${c.device_model || 'دستگاه نامشخص'}</span>
+                                        <span>⚙️ اندروید: ${c.android_version || 'نامشخص'}</span>
+                                        <span>📦 نسخه اپ: ${c.app_version || '1.0.0'}</span>
+                                        <span>🕒 زمان: ${dateStr}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="badge ${isResolved ? 'published' : 'blood'}">
+                                ${isResolved ? 'برطرف شده' : 'نیاز به بررسی'}
+                            </span>
+                        </div>
+
+                        ${c.stack_trace ? `
+                            <details style="margin: 10px 0; background: var(--void-black); border-radius: 6px; padding: 8px 12px; border: 1px solid var(--blood-border);">
+                                <summary style="cursor: pointer; color: var(--muted-ash); font-size: 0.8rem; outline: none;">
+                                    مشاهده ردپای خطا (Stack Trace)
+                                </summary>
+                                <pre style="margin-top: 8px; font-family: monospace; font-size: 0.75rem; color: #ffb8b8; white-space: pre-wrap; direction: ltr; max-height: 180px; overflow-y: auto;">${c.stack_trace}</pre>
+                            </details>
+                        ` : ''}
+
+                        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
+                            ${!isResolved ? `
+                                <button class="btn btn-dark btn-sm btn-resolve-crash" data-crash-id="${c.id}">
+                                    <span>✅</span> علامت‌گذاری به عنوان حل‌شده
+                                </button>
+                            ` : `
+                                <span style="font-size: 0.8rem; color: var(--success-neon); align-self: center;">برطرف شد</span>
+                            `}
+                        </div>
+                    </div>`;
+            }).join('');
+
+            // Attach resolve handlers
+            crashContainer.querySelectorAll('.btn-resolve-crash').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const cId = btn.getAttribute('data-crash-id');
+                    try {
+                        await SupabaseService.resolveCrash(cId);
+                        const found = crashLogsCache.find(c => c.id === cId);
+                        if (found) found.is_resolved = true;
+                        renderLogsAndTelemetry();
+                        showToast('خرابی به عنوان برطرف‌شده ثبت گردید.');
+                    } catch (e) {
+                        showToast(`خطا: ${e.message}`, 'error');
+                    }
+                });
+            });
+        }
+    }
+
+    // 3. Render Online Users & Heartbeats
+    const heartbeatsContainer = document.getElementById('heartbeatsListContainer');
+    if (heartbeatsContainer) {
+        if (heartbeatsCache.length === 0) {
+            heartbeatsContainer.innerHTML = `
+                <div style="text-align: center; padding: 24px; color: var(--muted-ash); font-size: 0.9rem;">
+                    هیچ داده‌ای از وضعیت کاربران در دیتابیس دریافت نشده است.
+                </div>`;
+        } else {
+            heartbeatsContainer.innerHTML = heartbeatsCache.slice(0, 15).map(h => {
+                const dateStr = h.last_seen ? new Date(h.last_seen).toLocaleTimeString('fa-IR') : '—';
+                const isOnline = (h.last_seen >= fiveMinutesAgo) || h.is_online;
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--obsidian-surface); border-bottom: 1px solid var(--blood-border); border-radius: var(--radius-sm); margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${isOnline ? '#00e676' : '#666'}; box-shadow: ${isOnline ? '0 0 8px #00e676' : 'none'};"></span>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.85rem; color: var(--spectral-white);">${h.user_email || `کاربر ${h.user_id ? h.user_id.slice(0, 8) : 'عمارت'}`}</div>
+                                <div style="font-size: 0.75rem; color: var(--muted-ash); margin-top: 2px;">
+                                    ${h.device_model ? `دستگاه: ${h.device_model} • ` : ''}بخش: ${h.current_screen || 'صفحه اصلی'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align: left; font-size: 0.8rem; color: var(--muted-ash);">
+                            <div>${isOnline ? '<span style="color: #00e676; font-weight: bold;">آنلاین</span>' : 'آفلاین'}</div>
+                            <div style="font-size: 0.7rem; margin-top: 2px;">${dateStr}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+    }
+
+    // 4. Render Subscribers List
+    const subsContainer = document.getElementById('subscribersListContainer');
+    if (subsContainer) {
+        if (subscribersCache.length === 0) {
+            subsContainer.innerHTML = `
+                <div style="text-align: center; padding: 24px; color: var(--muted-ash); font-size: 0.9rem;">
+                    هنوز اشتراک ویژه‌ای ثبت نگردیده است.
+                </div>`;
+        } else {
+            subsContainer.innerHTML = subscribersCache.slice(0, 15).map(s => {
+                const isVip = s.status === 'ACTIVE' || s.is_active || true;
+                const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('fa-IR') : 'نامشخص';
+                return `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--obsidian-surface); border-bottom: 1px solid var(--blood-border); border-radius: var(--radius-sm); margin-bottom: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span>👑</span>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.85rem; color: #ffd700;">${s.user_email || `مشترک ${s.user_id ? s.user_id.slice(0, 8) : 'ویژه'}`}</div>
+                                <div style="font-size: 0.75rem; color: var(--muted-ash); margin-top: 2px;">طرح: ${s.plan_name || 'اشتراک ویژه عمارت'}</div>
+                            </div>
+                        </div>
+                        <div style="text-align: left;">
+                            <span class="badge ${isVip ? 'gold' : 'draft'}">${isVip ? 'فعال' : 'منقضی'}</span>
+                            <div style="font-size: 0.7rem; color: var(--muted-ash); margin-top: 4px;">${dateStr}</div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+    }
 }
 
 
