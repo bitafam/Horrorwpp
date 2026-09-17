@@ -37,34 +37,31 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-blood" id="btnLoginSubmit" style="padding: 12px; margin-top: 10px; width: 100%;">
-                    <span>ورود به پنل مدیریت</span>
-                </button>
-            </form>
-
-            <div style="text-align: center; margin-top: 14px;">
-                <button type="button" id="btnToggleDbConfig" style="background: none; border: none; color: var(--muted-ash); font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
-                    ⚙️ تنظیمات اتصال به دیتابیس Supabase (اختیاری)
-                </button>
-            </div>
-
-            <!-- Optional Supabase Connection Settings (Collapsible) -->
-            <form class="login-form" id="dbConnectForm" onsubmit="return false;" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--blood-border);">
-                <div class="form-group">
-                    <label class="form-label" for="loginSupabaseUrl">آدرس پروژه Supabase (URL)</label>
-                    <input type="text" id="loginSupabaseUrl" class="text-input" placeholder="https://xyzcompany.supabase.co" dir="ltr">
+                <div id="loginDbStatusBox" style="margin-top: 10px; margin-bottom: 8px; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 0.82rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--blood-border); background: var(--obsidian-surface);">
+                    <span id="loginDbStatusText">⚪ در حال بررسی دیتابیس...</span>
+                    <button type="button" id="btnToggleDbConfig" style="background: none; border: none; color: var(--mystic-gold); cursor: pointer; text-decoration: underline; font-size: 0.8rem;">
+                        ⚙️ تغییر تنظیمات دیتابیس
+                    </button>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="loginSupabaseKey">کلید دسترسی (Anon Key یا Service Role Key)</label>
-                    <div class="input-with-action">
-                        <input type="password" id="loginSupabaseKey" class="text-input" placeholder="eyJhbGciOiJIUzI1NiIsIn..." dir="ltr">
-                        <button type="button" class="input-action-btn" id="btnToggleLoginDbKey">👁️</button>
+                <!-- Supabase Connection Settings -->
+                <div class="login-form" id="dbConnectForm" style="display: none; margin-top: 10px; padding: 12px; background: rgba(30,10,15,0.4); border: 1px dashed var(--blood-border); border-radius: var(--radius-sm);">
+                    <div class="form-group">
+                        <label class="form-label" for="loginSupabaseUrl">آدرس پروژه Supabase (URL)</label>
+                        <input type="text" id="loginSupabaseUrl" class="text-input" placeholder="https://xyzcompany.supabase.co" dir="ltr">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="loginSupabaseKey">کلید دسترسی (Anon Key یا Service Role Key)</label>
+                        <div class="input-with-action">
+                            <input type="password" id="loginSupabaseKey" class="text-input" placeholder="eyJhbGciOiJIUzI1NiIsIn..." dir="ltr">
+                            <button type="button" class="input-action-btn" id="btnToggleLoginDbKey">👁️</button>
+                        </div>
                     </div>
                 </div>
 
-                <button type="button" class="btn btn-dark" id="btnSaveDbConfig" style="padding: 8px; width: 100%;">
-                    <span>ذخیره تنظیمات دیتابیس</span>
+                <button type="submit" class="btn btn-blood" id="btnLoginSubmit" style="padding: 12px; margin-top: 12px; width: 100%;">
+                    <span>ورود به پنل مدیریت</span>
                 </button>
             </form>
 
@@ -142,6 +139,7 @@
 
             <!-- TAB 0: DASHBOARD (AdminDashboardTab) -->
             <section id="tab-dashboard" class="tab-pane active">
+                <div id="dashboardDbAlert"></div>
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon-box">📖</div>
@@ -267,7 +265,7 @@
                             <div style="display: flex; gap: 6px;">
                                 <button class="chip-btn active" data-sub-status="ALL">همه</button>
                                 <button class="chip-btn" data-sub-status="PENDING">در انتظار بررسی</button>
-                                <button class="chip-btn" data-sub-status="APPROVED">تأیید شده</button>
+                                <button class="chip-btn" data-sub-status="PUBLISHED">تأیید و منتشر شده</button>
                                 <button class="chip-btn" data-sub-status="REJECTED">رد شده</button>
                             </div>
                             <input type="text" id="searchSubmissions" class="text-input" style="max-width: 320px;" placeholder="جستجو در روایات ارسالی...">
@@ -805,6 +803,7 @@ SELECT cron.schedule(
             </div>
             <div class="dialog-content">
                 <input type="hidden" id="formStoryId">
+                <input type="hidden" id="formStoryOriginSubId">
                 <div class="form-group">
                     <label class="form-label">عنوان داستان</label>
                     <input type="text" id="formStoryTitle" class="text-input" placeholder="عنوان دلهره‌آور داستان..." required>
@@ -981,6 +980,52 @@ GRANT ALL ON public.ai_prompts TO anon, authenticated, service_role;</div>
             <div class="dialog-actions">
                 <button class="btn btn-blood" id="btnCopySqlScript">کپی اسکریپت SQL</button>
                 <button class="btn btn-dark" data-close="modalSqlScript">بستن</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DATABASE CONNECTION STATUS & CONFIGURATION -->
+    <div class="modal-backdrop" id="modalDatabaseConnection">
+        <div class="dialog-content" style="max-width: 540px;">
+            <div class="dialog-header">
+                <div class="dialog-title" style="color: var(--mystic-gold);">🗄️ اتصال و وضعیت پایگاه داده Supabase</div>
+                <button class="btn btn-dark btn-sm" data-close="modalDatabaseConnection">✕</button>
+            </div>
+            <div class="dialog-body" style="padding: 16px 20px;">
+                <div id="modalDbStatusAlert" style="margin-bottom: 16px; padding: 12px 14px; border-radius: var(--radius-sm); border: 1px solid var(--blood-border); background: var(--obsidian-surface); font-size: 0.85rem;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span id="modalDbStatusIcon" style="font-size: 1.2rem;">⚪</span>
+                        <strong id="modalDbStatusTitle">در حال بررسی اتصال...</strong>
+                    </div>
+                    <div id="modalDbStatusDesc" style="color: var(--muted-ash); font-size: 0.78rem; margin-top: 4px;">
+                        وضعیت اتصال به سرور و جداول Supabase
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" for="modalInputDbUrl">آدرس پروژه Supabase (URL)</label>
+                    <input type="text" id="modalInputDbUrl" class="text-input" placeholder="https://your-project.supabase.co" dir="ltr">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label class="form-label" for="modalInputDbKey">کلید دسترسی (Anon Key یا Service Role Key)</label>
+                    <div class="input-with-action">
+                        <input type="password" id="modalInputDbKey" class="text-input" placeholder="eyJhbGciOiJIUzI1NiIsIn..." dir="ltr">
+                        <button type="button" class="input-action-btn" id="btnToggleModalDbKey">👁️</button>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-dark" id="btnModalTestDb">
+                        <span>🔄</span> تست اتصال
+                    </button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-blood" id="btnModalSaveDb">
+                            <span>💾</span> ذخیره و اتصال مجدد
+                        </button>
+                        <button type="button" class="btn btn-dark" data-close="modalDatabaseConnection">بستن</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

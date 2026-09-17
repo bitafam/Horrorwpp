@@ -4,13 +4,15 @@
  */
 
 const SupabaseService = {
+    lastConnected: null,
+
     getUrl() {
-        const stored = localStorage.getItem('HORROR_SUPABASE_URL');
+        const stored = localStorage.getItem('HORROR_SUPABASE_URL') || sessionStorage.getItem('HORROR_SUPABASE_URL');
         const configVal = window.APP_CONFIG && window.APP_CONFIG.SUPABASE_URL;
         return (stored || configVal || '').trim().replace(/\/+$/, '');
     },
     getAnonKey() {
-        const stored = localStorage.getItem('HORROR_SUPABASE_KEY');
+        const stored = localStorage.getItem('HORROR_SUPABASE_KEY') || sessionStorage.getItem('HORROR_SUPABASE_KEY');
         const configVal = window.APP_CONFIG && window.APP_CONFIG.SUPABASE_ANON_KEY;
         return (stored || configVal || '').trim();
     },
@@ -24,8 +26,14 @@ const SupabaseService = {
     saveConfig(url, anonKey) {
         const cleanUrl = (url || '').trim().replace(/\/+$/, '');
         const cleanKey = (anonKey || '').trim();
-        localStorage.setItem('HORROR_SUPABASE_URL', cleanUrl);
-        localStorage.setItem('HORROR_SUPABASE_KEY', cleanKey);
+        if (cleanUrl) {
+            localStorage.setItem('HORROR_SUPABASE_URL', cleanUrl);
+            sessionStorage.setItem('HORROR_SUPABASE_URL', cleanUrl);
+        }
+        if (cleanKey) {
+            localStorage.setItem('HORROR_SUPABASE_KEY', cleanKey);
+            sessionStorage.setItem('HORROR_SUPABASE_KEY', cleanKey);
+        }
         if (window.APP_CONFIG) {
             window.APP_CONFIG.SUPABASE_URL = cleanUrl;
             window.APP_CONFIG.SUPABASE_ANON_KEY = cleanKey;
@@ -51,23 +59,53 @@ const SupabaseService = {
 
     async request(endpoint, options = {}) {
         if (!this.isConfigured()) {
-            throw new Error('پایگاه داده Supabase متصل نیست. لطفاً آدرس و کلید را تنظیم کنید.');
+            throw new Error('پایگاه داده Supabase متصل نیست. لطفاً آدرس و کلید پروژه را وارد کنید.');
         }
 
         const url = `${this.getUrl()}/${endpoint}`;
-        const response = await fetch(url, {
-            ...options,
-            headers: {
+        let headers = {
+            ...this.getHeaders(),
+            ...(options.headers || {})
+        };
+
+        let response;
+        try {
+            response = await fetch(url, {
+                ...options,
+                headers
+            });
+        } catch (netErr) {
+            this.lastConnected = false;
+            throw new Error(`خطای شبکه در اتصال به سرور Supabase: ${netErr.message}`);
+        }
+
+        // Auto-heal expired/invalid token:
+        // If 401 or 403 occurs with an expired HORROR_ADMIN_TOKEN, remove token and retry with anonKey
+        if ((response.status === 401 || response.status === 403) && localStorage.getItem('HORROR_ADMIN_TOKEN')) {
+            console.warn('JWT token invalid or expired. Purging token and retrying with anon key...');
+            localStorage.removeItem('HORROR_ADMIN_TOKEN');
+            headers = {
                 ...this.getHeaders(),
                 ...(options.headers || {})
+            };
+            try {
+                response = await fetch(url, {
+                    ...options,
+                    headers
+                });
+            } catch (retryErr) {
+                this.lastConnected = false;
+                throw new Error(`خطای مجدد پس از بازیابی کلید: ${retryErr.message}`);
             }
-        });
+        }
 
         if (!response.ok) {
             const err = await response.text();
+            this.lastConnected = false;
             throw new Error(`خطای Supabase (${response.status}): ${err}`);
         }
 
+        this.lastConnected = true;
         if (response.status === 204) return null;
         return await response.json();
     },
@@ -108,6 +146,7 @@ const SupabaseService = {
                 localStorage.setItem('HORROR_ADMIN_TOKEN', data.access_token);
                 localStorage.setItem('HORROR_ADMIN_EMAIL', data.user?.email || email);
                 localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
+                this.lastConnected = true;
                 return data;
             }
         } catch (e) {
@@ -118,6 +157,7 @@ const SupabaseService = {
         await this.testConnection();
         localStorage.setItem('HORROR_ADMIN_EMAIL', email || 'admin@horrorhouse.com');
         localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
+        this.lastConnected = true;
         return { email, direct: true };
     },
 
@@ -131,14 +171,32 @@ const SupabaseService = {
     },
 
     async testConnection() {
-        if (!this.isConfigured()) throw new Error('آدرس و کلید معتبری برای Supabase ثبت نشده است.');
-        // First try app_settings, fallback to real_stories
+        if (!this.isConfigured()) {
+            this.lastConnected = false;
+            throw new Error('آدرس و کلید معتبری برای Supabase ثبت نشده است.');
+        }
+        // First try app_settings table
         try {
-            const res = await this.request('rest/v1/app_settings?select=key&limit=1');
+            await this.request('rest/v1/app_settings?select=key&limit=1');
+            this.lastConnected = true;
             return 'اتصال با پایگاه داده برقرار است و تنظیمات با موفقیت خوانده شد.';
         } catch (e) {
-            const res2 = await this.request('rest/v1/real_stories?select=id&limit=1');
-            return 'اتصال با پایگاه داده با موفقیت برقرار شد.';
+            // Then try real_stories table
+            try {
+                await this.request('rest/v1/real_stories?select=id&limit=1');
+                this.lastConnected = true;
+                return 'اتصال با پایگاه داده با موفقیت برقرار شد.';
+            } catch (e2) {
+                // Then try root OpenAPI spec
+                try {
+                    await this.request('rest/v1/?limit=1');
+                    this.lastConnected = true;
+                    return 'اتصال با سرور Supabase با موفقیت برقرار است.';
+                } catch (e3) {
+                    this.lastConnected = false;
+                    throw new Error(`عدم موفقیت در اتصال به Supabase: ${e2.message || e.message}`);
+                }
+            }
         }
     },
 

@@ -136,12 +136,31 @@ function initModals() {
 // ====================================================
 // 1. AUTH & SCREEN SWITCHING
 // ====================================================
+function updateLoginDbStatus() {
+    const statusText = document.getElementById('loginDbStatusText');
+    const dbConnectForm = document.getElementById('dbConnectForm');
+    const toggleDbBtn = document.getElementById('btnToggleDbConfig');
+    if (!statusText) return;
+
+    if (SupabaseService.isConfigured()) {
+        statusText.innerHTML = '<span style="color: var(--success-neon);">🟢 دیتابیس Supabase تنظیم شده است</span>';
+        if (dbConnectForm) dbConnectForm.style.display = 'none';
+        if (toggleDbBtn) toggleDbBtn.textContent = '⚙️ تغییر آدرس/کلید دیتابیس';
+    } else {
+        statusText.innerHTML = '<span style="color: #ff6b6b;">🔴 دیتابیس تنظیم نشده است</span>';
+        if (dbConnectForm) dbConnectForm.style.display = 'block';
+        if (toggleDbBtn) toggleDbBtn.textContent = 'بستن تنظیمات دیتابیس';
+    }
+}
+
 function initAuth() {
     // Fill existing Supabase URL/Key if saved
     const inputLoginUrl = document.getElementById('loginSupabaseUrl');
     const inputLoginKey = document.getElementById('loginSupabaseKey');
     if (inputLoginUrl) inputLoginUrl.value = SupabaseService.getUrl();
     if (inputLoginKey) inputLoginKey.value = SupabaseService.getAnonKey();
+
+    updateLoginDbStatus();
 
     // Toggle DB key visibility
     document.getElementById('btnToggleLoginDbKey')?.addEventListener('click', () => {
@@ -166,20 +185,7 @@ function initAuth() {
     toggleDbBtn?.addEventListener('click', () => {
         const isHidden = dbConnectForm.style.display === 'none';
         dbConnectForm.style.display = isHidden ? 'block' : 'none';
-        toggleDbBtn.textContent = isHidden ? 'بستن تنظیمات دیتابیس' : '⚙️ تنظیمات اتصال به دیتابیس Supabase (اختیاری)';
-    });
-
-    // Save DB Config
-    document.getElementById('btnSaveDbConfig')?.addEventListener('click', async () => {
-        const url = (document.getElementById('loginSupabaseUrl')?.value || '').trim();
-        const key = (document.getElementById('loginSupabaseKey')?.value || '').trim();
-        if (url && key) {
-            SupabaseService.directConnect(url, key);
-            showToast('تنظیمات اتصال به Supabase ذخیره شد.');
-            dbConnectForm.style.display = 'none';
-        } else {
-            showToast('لطفاً آدرس و کلید Supabase را کامل وارد کنید.', 'error');
-        }
+        toggleDbBtn.textContent = isHidden ? 'بستن تنظیمات دیتابیس' : '⚙️ تغییر آدرس/کلید دیتابیس';
     });
 
     // Primary Admin Email & Password Login
@@ -189,25 +195,33 @@ function initAuth() {
         const feedback = document.getElementById('loginFeedback');
         const btn = document.getElementById('btnLoginSubmit');
 
+        // Check if DB URL & Key inputs exist and are populated
+        const enteredUrl = (inputLoginUrl?.value || '').trim();
+        const enteredKey = (inputLoginKey?.value || '').trim();
+        if (enteredUrl && enteredKey) {
+            SupabaseService.saveConfig(enteredUrl, enteredKey);
+        }
+
         if (!email || !pass) {
             feedback.className = 'login-feedback error';
             feedback.textContent = 'لطفاً ایمیل و رمز عبور ادمین را وارد نمایید.';
             return;
         }
 
+        if (!SupabaseService.isConfigured()) {
+            feedback.className = 'login-feedback error';
+            feedback.textContent = 'لطفاً آدرس و کلید Supabase را وارد کنید تا پنل به دیتابیس متصل شود.';
+            if (dbConnectForm) dbConnectForm.style.display = 'block';
+            return;
+        }
+
         btn.disabled = true;
-        btn.innerHTML = '<span>در حال بررسی اعتبار...</span>';
+        btn.innerHTML = '<span>در حال بررسی اعتبار و اتصال به دیتابیس...</span>';
         feedback.className = 'login-feedback';
         feedback.style.display = 'none';
 
         try {
-            if (SupabaseService.isConfigured()) {
-                try {
-                    await SupabaseService.login(email, pass);
-                } catch (authErr) {
-                    console.warn('Supabase Auth warning:', authErr);
-                }
-            }
+            await SupabaseService.login(email, pass);
             localStorage.setItem('HORROR_IS_LOGGED_IN', 'true');
             localStorage.setItem('HORROR_ADMIN_EMAIL', email);
             feedback.className = 'login-feedback success';
@@ -215,10 +229,10 @@ function initAuth() {
             setTimeout(() => {
                 showAdminPanel();
                 loadAllData();
-            }, 400);
+            }, 300);
         } catch (err) {
             feedback.className = 'login-feedback error';
-            feedback.textContent = err.message || 'خطا در ورود به سیستم.';
+            feedback.textContent = err.message || 'خطا در ورود یا اتصال به دیتابیس.';
         } finally {
             btn.disabled = false;
             btn.innerHTML = '<span>ورود به پنل مدیریت</span>';
@@ -230,6 +244,7 @@ function initAuth() {
         if (confirm('آیا از خروج از پنل مدیریت اطمینان دارید؟')) {
             SupabaseService.logout();
             showLoginScreen();
+            updateLoginDbStatus();
             showToast('با موفقیت از پنل مدیریت خارج شدید.');
         }
     });
@@ -239,16 +254,106 @@ function initAuth() {
         loadAllData(true);
     });
 
-    // Top Bar DB Status button -> switch to Settings Tab
+    // Top Bar DB Status button -> Open Database Connection Modal
     document.getElementById('btnTopDbStatus')?.addEventListener('click', () => {
-        const settingsTabBtn = document.querySelector('[data-tab="tab-settings"]');
-        if (settingsTabBtn) settingsTabBtn.click();
+        openDbConnectionModal();
     });
+
+    // Init DB Connection Modal listeners
+    initDbConnectionModal();
+}
+
+function initDbConnectionModal() {
+    const modalKeyInput = document.getElementById('modalInputDbKey');
+    document.getElementById('btnToggleModalDbKey')?.addEventListener('click', () => {
+        if (!modalKeyInput) return;
+        const isPass = modalKeyInput.type === 'password';
+        modalKeyInput.type = isPass ? 'text' : 'password';
+        document.getElementById('btnToggleModalDbKey').textContent = isPass ? '🔒' : '👁️';
+    });
+
+    document.getElementById('btnModalTestDb')?.addEventListener('click', async () => {
+        const url = (document.getElementById('modalInputDbUrl')?.value || '').trim();
+        const key = (document.getElementById('modalInputDbKey')?.value || '').trim();
+        if (url && key) {
+            SupabaseService.saveConfig(url, key);
+        }
+        await refreshDbModalStatus();
+        updateTopBarDbStatus();
+    });
+
+    document.getElementById('btnModalSaveDb')?.addEventListener('click', async () => {
+        const url = (document.getElementById('modalInputDbUrl')?.value || '').trim();
+        const key = (document.getElementById('modalInputDbKey')?.value || '').trim();
+        if (!url || !key) {
+            showToast('لطفاً آدرس و کلید Supabase را کامل وارد کنید.', 'error');
+            return;
+        }
+        SupabaseService.saveConfig(url, key);
+        showToast('تنظیمات پایگاه داده ذخیره شد. در حال برقراری ارتباط...');
+        await refreshDbModalStatus();
+        updateTopBarDbStatus();
+        closeModal('modalDatabaseConnection');
+        await checkDiagnostics();
+        await loadAllData(true);
+    });
+}
+
+function openDbConnectionModal() {
+    const urlInput = document.getElementById('modalInputDbUrl');
+    const keyInput = document.getElementById('modalInputDbKey');
+    if (urlInput) urlInput.value = SupabaseService.getUrl();
+    if (keyInput) keyInput.value = SupabaseService.getAnonKey();
+
+    refreshDbModalStatus();
+    openModal('modalDatabaseConnection');
+}
+
+async function refreshDbModalStatus() {
+    const icon = document.getElementById('modalDbStatusIcon');
+    const title = document.getElementById('modalDbStatusTitle');
+    const desc = document.getElementById('modalDbStatusDesc');
+    const alertBox = document.getElementById('modalDbStatusAlert');
+
+    if (!SupabaseService.isConfigured()) {
+        if (icon) icon.textContent = '🔴';
+        if (title) title.textContent = 'پایگاه داده Supabase تنظیم نشده است';
+        if (desc) desc.textContent = 'لطفاً آدرس پروژه (URL) و کلید دسترسی (Anon Key) را در کادرهای زیر وارد کنید.';
+        if (alertBox) {
+            alertBox.style.borderColor = 'var(--blood-glow)';
+            alertBox.style.background = 'rgba(180, 20, 20, 0.15)';
+        }
+        return;
+    }
+
+    if (icon) icon.textContent = '⏳';
+    if (title) title.textContent = 'در حال بررسی اتصال به دیتابیس...';
+    if (desc) desc.textContent = 'لطفاً چند لحظه صبر کنید...';
+
+    try {
+        const msg = await SupabaseService.testConnection();
+        if (icon) icon.textContent = '🟢';
+        if (title) title.textContent = 'اتصال با پایگاه داده برقرار است';
+        if (desc) desc.textContent = msg;
+        if (alertBox) {
+            alertBox.style.borderColor = 'rgba(0, 230, 118, 0.4)';
+            alertBox.style.background = 'rgba(0, 230, 118, 0.1)';
+        }
+    } catch (e) {
+        if (icon) icon.textContent = '🔴';
+        if (title) title.textContent = 'خطا در اتصال به پایگاه داده';
+        if (desc) desc.textContent = e.message;
+        if (alertBox) {
+            alertBox.style.borderColor = 'var(--blood-glow)';
+            alertBox.style.background = 'rgba(180, 20, 20, 0.15)';
+        }
+    }
 }
 
 function showLoginScreen() {
     document.getElementById('loginScreenContainer').style.display = 'flex';
     document.getElementById('adminPanelContainer').style.display = 'none';
+    updateLoginDbStatus();
 }
 
 function showAdminPanel() {
@@ -268,7 +373,7 @@ function updateTopBarDbStatus() {
     const txt = document.getElementById('topDbStatusText');
     if (!ind || !txt) return;
 
-    if (SupabaseService.isConfigured()) {
+    if (SupabaseService.isConfigured() && SupabaseService.lastConnected !== false) {
         ind.textContent = '🟢';
         txt.textContent = 'دیتابیس متصل';
     } else {
@@ -507,7 +612,35 @@ function renderDashboard() {
         badgeSub.style.display = 'none';
     }
 
-
+    // Render DB Alert if disconnected
+    const alertContainer = document.getElementById('dashboardDbAlert');
+    if (alertContainer) {
+        if (!SupabaseService.isConfigured() || SupabaseService.lastConnected === false) {
+            alertContainer.innerHTML = `
+                <div class="crypt-card" style="border: 1px solid var(--blood-glow); background: rgba(180, 20, 20, 0.15); margin-bottom: 16px; padding: 14px 18px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.6rem;">⚠️</span>
+                            <div>
+                                <strong style="color: #ff6b6b; font-size: 0.95rem;">ارتباط با پایگاه داده Supabase برقرار نیست</strong>
+                                <div style="color: var(--muted-ash); font-size: 0.8rem; margin-top: 2px;">
+                                    دسترسی به اطلاعات زنده داستان‌ها، طالع‌ها و کاربران قطع شده است. برای برقراری مجدد ارتباط کلیک کنید.
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-blood btn-sm" id="btnDashboardConnectDb">
+                            <span>🔌</span> بررسی و اتصال مجدد
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('btnDashboardConnectDb')?.addEventListener('click', () => {
+                openDbConnectionModal();
+            });
+        } else {
+            alertContainer.innerHTML = '';
+        }
+    }
 }
 
 // ====================================================
@@ -548,6 +681,7 @@ function initStoriesTab() {
     // Single Add/Edit Modal
     document.getElementById('btnOpenNewStory')?.addEventListener('click', () => {
         document.getElementById('formStoryId').value = '';
+        document.getElementById('formStoryOriginSubId').value = '';
         document.getElementById('modalStoryTitle').textContent = 'ثبت داستان واقعی جدید با پوستر';
         document.getElementById('formStoryTitle').value = '';
         document.getElementById('formStoryAuthor').value = 'کاتب عمارت';
@@ -603,6 +737,22 @@ function initStoriesTab() {
             } else {
                 realStoriesCache.unshift(storyObj);
             }
+
+            // If this story originated from a user submission, update the submission status to PUBLISHED
+            const originSubId = document.getElementById('formStoryOriginSubId')?.value.trim();
+            if (originSubId) {
+                try {
+                    if (SupabaseService.isConfigured()) {
+                        await SupabaseService.updateSubmission(originSubId, { status: 'PUBLISHED' });
+                    }
+                    const sub = submissionsCache.find(s => s.id === originSubId);
+                    if (sub) sub.status = 'PUBLISHED';
+                    renderSubmissions();
+                } catch (subErr) {
+                    console.warn('Could not update origin submission status:', subErr);
+                }
+            }
+
             closeModal('modalStoryForm');
             renderRealStories();
             renderDashboard();
@@ -940,7 +1090,12 @@ function renderSubmissions() {
     const query = (document.getElementById('searchSubmissions')?.value || '').toLowerCase().trim();
 
     let filtered = submissionsCache.filter(s => {
-        const matchesStatus = activeSubStatusFilter === 'ALL' || s.status === activeSubStatusFilter;
+        const isPublished = s.status === 'PUBLISHED' || s.status === 'APPROVED';
+        let matchesStatus = activeSubStatusFilter === 'ALL';
+        if (activeSubStatusFilter === 'PENDING') matchesStatus = s.status === 'PENDING';
+        else if (activeSubStatusFilter === 'PUBLISHED' || activeSubStatusFilter === 'APPROVED') matchesStatus = isPublished;
+        else if (activeSubStatusFilter === 'REJECTED') matchesStatus = s.status === 'REJECTED';
+
         const matchesQuery = !query || 
             (s.title && s.title.toLowerCase().includes(query)) ||
             (s.author_name && s.author_name.toLowerCase().includes(query)) ||
@@ -957,8 +1112,9 @@ function renderSubmissions() {
     }
 
     container.innerHTML = filtered.map(sub => {
-        const statusBadgeClass = sub.status === 'APPROVED' ? 'published' : (sub.status === 'REJECTED' ? 'blood' : 'draft');
-        const statusText = sub.status === 'APPROVED' ? 'تأیید شده' : (sub.status === 'REJECTED' ? 'رد شده' : 'در انتظار بررسی');
+        const isPublished = sub.status === 'PUBLISHED' || sub.status === 'APPROVED';
+        const statusBadgeClass = isPublished ? 'published' : (sub.status === 'REJECTED' ? 'blood' : 'draft');
+        const statusText = isPublished ? 'تأیید و منتشر شده' : (sub.status === 'REJECTED' ? 'رد شده' : 'در انتظار بررسی');
 
         return `
             <div class="crypt-card" style="margin-bottom: 12px;">
@@ -996,6 +1152,7 @@ function renderSubmissions() {
 
             const newRealId = window.crypto && crypto.randomUUID ? crypto.randomUUID() : `real-${Date.now()}`;
             document.getElementById('formStoryId').value = newRealId;
+            document.getElementById('formStoryOriginSubId').value = sub.id;
             document.getElementById('modalStoryTitle').textContent = 'انتشار روایت کاربر در داستان‌های واقعی';
             document.getElementById('formStoryTitle').value = sub.title || '';
             document.getElementById('formStoryAuthor').value = sub.author_name || 'راوی عمارت';
