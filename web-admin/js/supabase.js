@@ -353,11 +353,19 @@ const SupabaseService = {
         });
     },
 
+    async logCrash(log) {
+        return await this.insertCrashLog(log);
+    },
+
     async resolveCrashLog(id) {
         return await this.request(`rest/v1/app_crash_logs?id=eq.${id}`, {
             method: 'PATCH',
             body: JSON.stringify({ status: 'RESOLVED' })
         });
+    },
+
+    async resolveCrash(id) {
+        return await this.resolveCrashLog(id);
     },
 
     async clearResolvedCrashes() {

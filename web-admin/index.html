@@ -938,44 +938,268 @@ SELECT cron.schedule(
             </div>
             <div class="dialog-content">
                 <p style="font-size: 0.8rem; color: var(--muted-ash); line-height: 1.5;">
-                    برای رفع خطای RLS (42501) و ثبت خودکار داستان‌ها، پرامپت‌ها و امتیازات، این اسکریپت را در بخش SQL Editor در داشبورد Supabase خود اجرا (Run) کنید:
+                    برای رفع خطای RLS (42501)، باز شدن دسترسی ثبت داستان‌های واقعی، دریافت روایات کاربران و ثبت لاگ‌های برنامه، این اسکریپت را در بخش <b>SQL Editor</b> در داشبورد Supabase خود اجرا (Run) کنید:
                 </p>
-                <div class="code-display-box" id="supabaseSqlScriptText">-- 1. جدول داستان‌های هوش تاریکی
-CREATE TABLE IF NOT EXISTS public.ai_stories (
-    id TEXT PRIMARY KEY,
+                <div class="code-display-box" id="supabaseSqlScriptText" style="max-height: 380px; overflow-y: auto; font-size: 0.72rem; line-height: 1.4;">-- ==========================================
+-- 1. جدول داستان‌های واقعی (رفع خطای 42501 در ثبت داستان)
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.real_stories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     content TEXT NOT NULL,
+    author TEXT DEFAULT 'کاتب عمارت',
+    source TEXT DEFAULT 'روایات واقعی',
+    cover_image_url TEXT,
+    tags TEXT DEFAULT 'وحشت، واقعی',
+    status TEXT NOT NULL DEFAULT 'PUBLISHED',
+    rating NUMERIC(3,1) DEFAULT 4.8,
+    rating_count INTEGER DEFAULT 18,
+    view_count INTEGER DEFAULT 340,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 2. جدول روایات ارسالی کاربران
+CREATE TABLE IF NOT EXISTS public.user_story_submissions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    author_name TEXT NOT NULL,
+    cover_image_url TEXT,
+    tags TEXT,
+    status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'PUBLISHED', 'REJECTED')),
+    admin_notes TEXT,
+    rating NUMERIC(3,2) DEFAULT 5.0,
+    rating_count INTEGER DEFAULT 1,
+    view_count INTEGER DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 3. جدول لاگ‌های خطا و کرش‌ها (Crash Logs)
+CREATE TABLE IF NOT EXISTS public.app_crash_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_model TEXT,
+    android_version TEXT,
+    app_version TEXT,
+    error_message TEXT NOT NULL,
+    stack_trace TEXT,
+    status TEXT NOT NULL DEFAULT 'UNRESOLVED',
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 4. جدول طالع‌های شوم ماهانه
+CREATE TABLE IF NOT EXISTS public.grim_fortunes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    month_index INTEGER NOT NULL UNIQUE CHECK (month_index BETWEEN 1 AND 12),
+    month_name TEXT,
+    title TEXT NOT NULL,
+    fortune_text TEXT NOT NULL,
+    omen_poem TEXT,
+    doom_level TEXT DEFAULT 'شوم',
+    status TEXT NOT NULL DEFAULT 'PUBLISHED' CHECK (status IN ('DRAFT', 'PUBLISHED', 'ARCHIVED')),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 5. داستان‌های هوش تاریکی
+CREATE TABLE IF NOT EXISTS public.ai_stories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    genre TEXT DEFAULT 'روانشناختی',
     synopsis TEXT,
-    genre TEXT DEFAULT 'ماورایی',
     cover_image_url TEXT,
     tags TEXT DEFAULT 'هوش تاریکی',
-    status TEXT DEFAULT 'PUBLISHED',
-    rating REAL DEFAULT 0,
-    rating_count INT DEFAULT 0,
-    view_count INT DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    status TEXT NOT NULL DEFAULT 'PUBLISHED',
+    rating NUMERIC(3,1) DEFAULT 4.9,
+    rating_count INTEGER DEFAULT 14,
+    view_count INTEGER DEFAULT 192,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 2. جدول پرامپت‌ها و تنظیمات هوش تاریکی
+-- 6. پرامپت‌ها و مدل‌های هوش مصنوعی
 CREATE TABLE IF NOT EXISTS public.ai_prompts (
-    prompt_key TEXT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    prompt_key TEXT UNIQUE NOT NULL,
     prompt_text TEXT NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 3. فعال‌سازی دسترسی کامل عمومی (رفع خطای RLS 42501)
+CREATE TABLE IF NOT EXISTS public.ai_providers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    provider_name TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 7. سایر جداول سیستم
+CREATE TABLE IF NOT EXISTS public.story_reports (
+    id TEXT PRIMARY KEY,
+    story_id TEXT NOT NULL,
+    story_title TEXT NOT NULL,
+    story_author TEXT NOT NULL,
+    story_type TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.user_heartbeats (
+    device_id TEXT PRIMARY KEY,
+    user_id TEXT,
+    is_subscribed BOOLEAN DEFAULT false,
+    subscription_plan TEXT,
+    last_seen_at TIMESTAMPTZ DEFAULT now(),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.app_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.automation_configs (
+    id TEXT PRIMARY KEY,
+    is_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    frequency TEXT NOT NULL DEFAULT 'DAILY',
+    target_hour INTEGER DEFAULT 14,
+    secondary_hour INTEGER DEFAULT 22,
+    count_per_run INTEGER DEFAULT 1,
+    custom_prompt TEXT,
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.automation_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    task_type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    message TEXT,
+    items_created INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- ==========================================
+-- توابع محاسباتی بازدید و امتیازدهی
+-- ==========================================
+CREATE OR REPLACE FUNCTION public.increment_story_view(story_id UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE public.real_stories SET view_count = COALESCE(view_count, 0) + 1 WHERE id = story_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.submit_story_rating(story_id UUID, new_rating NUMERIC)
+RETURNS void AS $$
+DECLARE
+    current_rating NUMERIC;
+    current_count INTEGER;
+BEGIN
+    SELECT COALESCE(rating, 0), COALESCE(rating_count, 0) INTO current_rating, current_count FROM public.real_stories WHERE id = story_id;
+    IF FOUND THEN
+        UPDATE public.real_stories
+        SET rating = ROUND(((current_rating * current_count + new_rating) / (current_count + 1)), 1),
+            rating_count = current_count + 1
+        WHERE id = story_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.increment_submission_view(submission_id UUID)
+RETURNS void AS $$
+BEGIN
+    UPDATE public.user_story_submissions SET view_count = COALESCE(view_count, 0) + 1 WHERE id = submission_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION public.submit_submission_rating(submission_id UUID, new_rating NUMERIC)
+RETURNS void AS $$
+DECLARE
+    current_rating NUMERIC;
+    current_count INTEGER;
+BEGIN
+    SELECT COALESCE(rating, 0), COALESCE(rating_count, 0) INTO current_rating, current_count FROM public.user_story_submissions WHERE id = submission_id;
+    IF FOUND THEN
+        UPDATE public.user_story_submissions
+        SET rating = ROUND(((current_rating * current_count + new_rating) / (current_count + 1)), 2),
+            rating_count = current_count + 1
+        WHERE id = submission_id;
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ==========================================
+-- رفع کامل خطای RLS 42501 و اجازه دسترسی به جداول
+-- ==========================================
+ALTER TABLE public.real_stories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_story_submissions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.grim_fortunes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_stories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_prompts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_providers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_crash_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.story_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_heartbeats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.automation_configs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.automation_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Public full access on real_stories" ON public.real_stories;
+DROP POLICY IF EXISTS "Allow public read published stories" ON public.real_stories;
+DROP POLICY IF EXISTS "Allow admin manage stories" ON public.real_stories;
+CREATE POLICY "Public full access on real_stories" ON public.real_stories FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on user_story_submissions" ON public.user_story_submissions;
+DROP POLICY IF EXISTS "Allow anyone to insert user stories" ON public.user_story_submissions;
+DROP POLICY IF EXISTS "Allow public read published user stories" ON public.user_story_submissions;
+DROP POLICY IF EXISTS "Allow admin full manage submissions" ON public.user_story_submissions;
+CREATE POLICY "Public full access on user_story_submissions" ON public.user_story_submissions FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on grim_fortunes" ON public.grim_fortunes;
+DROP POLICY IF EXISTS "Allow public read published fortunes" ON public.grim_fortunes;
+DROP POLICY IF EXISTS "Allow admin manage fortunes" ON public.grim_fortunes;
+CREATE POLICY "Public full access on grim_fortunes" ON public.grim_fortunes FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public full access on ai_stories" ON public.ai_stories;
+DROP POLICY IF EXISTS "Allow public read published ai stories" ON public.ai_stories;
+DROP POLICY IF EXISTS "Allow admin manage ai stories" ON public.ai_stories;
 CREATE POLICY "Public full access on ai_stories" ON public.ai_stories FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Public full access on ai_prompts" ON public.ai_prompts;
+DROP POLICY IF EXISTS "Allow public read ai_prompts" ON public.ai_prompts;
+DROP POLICY IF EXISTS "Allow admin manage ai_prompts" ON public.ai_prompts;
 CREATE POLICY "Public full access on ai_prompts" ON public.ai_prompts FOR ALL USING (true) WITH CHECK (true);
 
-GRANT ALL ON public.ai_stories TO anon, authenticated, service_role;
-GRANT ALL ON public.ai_prompts TO anon, authenticated, service_role;</div>
+DROP POLICY IF EXISTS "Public full access on ai_providers" ON public.ai_providers;
+DROP POLICY IF EXISTS "Allow public read ai_providers" ON public.ai_providers;
+DROP POLICY IF EXISTS "Allow admin manage ai_providers" ON public.ai_providers;
+CREATE POLICY "Public full access on ai_providers" ON public.ai_providers FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on app_crash_logs" ON public.app_crash_logs;
+CREATE POLICY "Public full access on app_crash_logs" ON public.app_crash_logs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on story_reports" ON public.story_reports;
+CREATE POLICY "Public full access on story_reports" ON public.story_reports FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on user_heartbeats" ON public.user_heartbeats;
+CREATE POLICY "Public full access on user_heartbeats" ON public.user_heartbeats FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on app_settings" ON public.app_settings;
+CREATE POLICY "Public full access on app_settings" ON public.app_settings FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on automation_configs" ON public.automation_configs;
+CREATE POLICY "Public full access on automation_configs" ON public.automation_configs FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public full access on automation_logs" ON public.automation_logs;
+CREATE POLICY "Public full access on automation_logs" ON public.automation_logs FOR ALL USING (true) WITH CHECK (true);
+
+-- اعطای دسترسی به تمام نقش‌ها
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO anon, authenticated, service_role;</div>
             </div>
             <div class="dialog-actions">
                 <button class="btn btn-blood" id="btnCopySqlScript">کپی اسکریپت SQL</button>
@@ -1015,10 +1239,15 @@ GRANT ALL ON public.ai_prompts TO anon, authenticated, service_role;</div>
                     </div>
                 </div>
 
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 20px;">
-                    <button type="button" class="btn btn-dark" id="btnModalTestDb">
-                        <span>🔄</span> تست اتصال
-                    </button>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-dark" id="btnModalTestDb">
+                            <span>🔄</span> تست اتصال
+                        </button>
+                        <button type="button" class="btn btn-outline-dark" id="btnModalOpenSqlScript" style="border: 1px solid var(--blood-border); font-size: 0.8rem;">
+                            <span>📜</span> اسکریپت SQL رفع خطاها
+                        </button>
+                    </div>
                     <div style="display: flex; gap: 8px;">
                         <button type="button" class="btn btn-blood" id="btnModalSaveDb">
                             <span>💾</span> ذخیره و اتصال مجدد

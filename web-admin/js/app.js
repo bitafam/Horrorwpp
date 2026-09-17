@@ -272,6 +272,11 @@ function initDbConnectionModal() {
         document.getElementById('btnToggleModalDbKey').textContent = isPass ? '🔒' : '👁️';
     });
 
+    document.getElementById('btnModalOpenSqlScript')?.addEventListener('click', () => {
+        closeModal('modalDatabaseConnection');
+        openModal('modalSqlScript');
+    });
+
     document.getElementById('btnModalTestDb')?.addEventListener('click', async () => {
         const url = (document.getElementById('modalInputDbUrl')?.value || '').trim();
         const key = (document.getElementById('modalInputDbKey')?.value || '').trim();
@@ -2315,9 +2320,11 @@ function initLogsTab() {
 }
 
 function renderLogsAndTelemetry() {
+    const isCrashResolved = (c) => c.status === 'RESOLVED' || Boolean(c.is_resolved);
+
     // 1. KPI Metrics
-    const unresolvedCrashes = crashLogsCache.filter(c => !c.is_resolved);
-    const resolvedCrashes = crashLogsCache.filter(c => c.is_resolved);
+    const unresolvedCrashes = crashLogsCache.filter(c => !isCrashResolved(c));
+    const resolvedCrashes = crashLogsCache.filter(c => isCrashResolved(c));
 
     const elCrashCount = document.getElementById('telemetryCrashCount');
     if (elCrashCount) elCrashCount.textContent = unresolvedCrashes.length.toLocaleString('fa-IR');
@@ -2363,8 +2370,8 @@ function renderLogsAndTelemetry() {
     const crashContainer = document.getElementById('crashLogsListContainer');
     if (crashContainer) {
         let filteredCrashes = crashLogsCache.filter(c => {
-            if (activeCrashFilter === 'UNRESOLVED') return !c.is_resolved;
-            if (activeCrashFilter === 'RESOLVED') return c.is_resolved;
+            if (activeCrashFilter === 'UNRESOLVED') return !isCrashResolved(c);
+            if (activeCrashFilter === 'RESOLVED') return isCrashResolved(c);
             return true;
         });
 
@@ -2378,7 +2385,7 @@ function renderLogsAndTelemetry() {
         } else {
             crashContainer.innerHTML = filteredCrashes.map(c => {
                 const dateStr = c.created_at ? new Date(c.created_at).toLocaleString('fa-IR') : 'نامشخص';
-                const isResolved = Boolean(c.is_resolved);
+                const isResolved = isCrashResolved(c);
 
                 return `
                     <div class="crypt-card" style="margin-bottom: 12px; border-color: ${isResolved ? 'rgba(70,205,120,0.3)' : 'var(--blood-border)'};">
@@ -2430,7 +2437,10 @@ function renderLogsAndTelemetry() {
                     try {
                         await SupabaseService.resolveCrash(cId);
                         const found = crashLogsCache.find(c => c.id === cId);
-                        if (found) found.is_resolved = true;
+                        if (found) {
+                            found.status = 'RESOLVED';
+                            found.is_resolved = true;
+                        }
                         renderLogsAndTelemetry();
                         showToast('خرابی به عنوان برطرف‌شده ثبت گردید.');
                     } catch (e) {
