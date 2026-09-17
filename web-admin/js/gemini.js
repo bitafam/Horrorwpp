@@ -4,10 +4,11 @@
  */
 
 const SUPPORTED_GEMINI_MODELS = [
-    { id: "gemini-2.5-flash", desc: "مدل 2.5 Flash - جدیدترین و قدرتمندترین مدل پیش‌فرض هوش تاریکی" },
-    { id: "gemini-2.0-flash", desc: "مدل 2.0 Flash - بسیار پرسرعت و بهینه‌شده برای تولید محتوا و طالع" },
-    { id: "gemini-1.5-flash", desc: "مدل 1.5 Flash - مدل پایدار، سریع و سازگار با کلیدهای رایگان" },
-    { id: "gemini-1.5-pro", desc: "مدل 1.5 Pro - با بالاترین عمق سناریونویسی و جزئیات ادبی" }
+    { id: "gemini-3.7-flash", desc: "مدل 3.7 Flash - پیشرفته‌ترین و قدرتمندترین مدل هوش تاریکی" },
+    { id: "gemini-3.6-flash", desc: "مدل 3.6 Flash - بهینه‌شده برای سرعت و تحلیل پیشرفته" },
+    { id: "gemini-3.5-flash", desc: "مدل 3.5 Flash - پرسرعت و متعادل برای تولید روایات و سناریو" },
+    { id: "gemini-3.5-flash-lite", desc: "مدل 3.5 Flash Lite - بسیار سبک، سریع و کاملاً مناسب کلید رایگان" },
+    { id: "gemini-3.1-flash-lite", desc: "مدل 3.1 Flash Lite - فوق‌العاده سریع با حداقل مصرف توکن" }
 ];
 
 const DEFAULT_AI_STORY_PROMPT = `وظیفه تو تولید یک داستان ترسناک کاملاً تخیلی، اورجینال، منسجم و سینمایی است که مخاطب را از اولین پاراگراف تا آخرین جمله درگیر نگه دارد.
@@ -68,11 +69,7 @@ const GeminiService = {
         return '';
     },
     getModel() {
-        let model = localStorage.getItem('HORROR_GEMINI_MODEL') || 'gemini-2.5-flash';
-        if (model.includes('3.') || !model.startsWith('gemini-')) {
-            model = 'gemini-2.5-flash';
-            localStorage.setItem('HORROR_GEMINI_MODEL', model);
-        }
+        let model = localStorage.getItem('HORROR_GEMINI_MODEL') || 'gemini-3.5-flash-lite';
         return model;
     },
     setModel(model) {
