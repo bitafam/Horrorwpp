@@ -2340,18 +2340,24 @@ function renderLogsAndTelemetry() {
 
     // Five minutes threshold for online users
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const onlineUsers = heartbeatsCache.filter(h => h.last_seen >= fiveMinutesAgo || h.is_online);
+    const onlineUsers = heartbeatsCache.filter(h => {
+        const lastSeen = h.last_seen_at || h.last_seen || h.updated_at || h.created_at;
+        return (lastSeen && lastSeen >= fiveMinutesAgo) || Boolean(h.is_online);
+    });
     const elOnline = document.getElementById('telemetryOnlineCount');
     if (elOnline) elOnline.textContent = (onlineUsers.length || 0).toLocaleString('fa-IR');
 
     // 24 hours active users
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const activeDaily = heartbeatsCache.filter(h => h.last_seen >= oneDayAgo);
+    const activeDaily = heartbeatsCache.filter(h => {
+        const lastSeen = h.last_seen_at || h.last_seen || h.updated_at || h.created_at;
+        return (lastSeen && lastSeen >= oneDayAgo);
+    });
     const elActiveDaily = document.getElementById('telemetryActiveDailyCount');
     if (elActiveDaily) elActiveDaily.textContent = (activeDaily.length || heartbeatsCache.length || 0).toLocaleString('fa-IR');
 
     // Subscribers count
-    const activeSubs = subscribersCache.filter(s => s.status === 'ACTIVE' || s.is_active);
+    const activeSubs = subscribersCache.filter(s => s.status === 'ACTIVE' || s.is_active || s.is_subscribed === true);
     const elSubs = document.getElementById('telemetrySubscribersCount');
     if (elSubs) elSubs.textContent = (activeSubs.length || subscribersCache.length || 0).toLocaleString('fa-IR');
 
@@ -2460,17 +2466,22 @@ function renderLogsAndTelemetry() {
                     هیچ داده‌ای از وضعیت کاربران در دیتابیس دریافت نشده است.
                 </div>`;
         } else {
-            heartbeatsContainer.innerHTML = heartbeatsCache.slice(0, 15).map(h => {
-                const dateStr = h.last_seen ? new Date(h.last_seen).toLocaleTimeString('fa-IR') : '—';
-                const isOnline = (h.last_seen >= fiveMinutesAgo) || h.is_online;
+            heartbeatsContainer.innerHTML = heartbeatsCache.slice(0, 25).map(h => {
+                const lastSeenRaw = h.last_seen_at || h.last_seen || h.updated_at || h.created_at;
+                const dateStr = lastSeenRaw ? new Date(lastSeenRaw).toLocaleTimeString('fa-IR') : '—';
+                const isOnline = (lastSeenRaw && lastSeenRaw >= fiveMinutesAgo) || Boolean(h.is_online);
+                const isVip = Boolean(h.is_subscribed);
                 return `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--obsidian-surface); border-bottom: 1px solid var(--blood-border); border-radius: var(--radius-sm); margin-bottom: 6px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: ${isOnline ? '#00e676' : '#666'}; box-shadow: ${isOnline ? '0 0 8px #00e676' : 'none'};"></span>
                             <div>
-                                <div style="font-weight: 600; font-size: 0.85rem; color: var(--spectral-white);">${h.user_email || `کاربر ${h.user_id ? h.user_id.slice(0, 8) : 'عمارت'}`}</div>
+                                <div style="font-weight: 600; font-size: 0.85rem; color: var(--spectral-white);">
+                                    ${h.user_email || `کاربر ${h.device_id ? h.device_id.slice(0, 8) : (h.user_id ? h.user_id.slice(0, 8) : 'عمارت')}`}
+                                    ${isVip ? '<span style="color: #ffd700; margin-right: 4px; font-size: 0.75rem;">👑 ویژه</span>' : ''}
+                                </div>
                                 <div style="font-size: 0.75rem; color: var(--muted-ash); margin-top: 2px;">
-                                    ${h.device_model ? `دستگاه: ${h.device_model} • ` : ''}بخش: ${h.current_screen || 'صفحه اصلی'}
+                                    ${h.device_model ? `دستگاه: ${h.device_model} • ` : ''}طرح: ${h.subscription_plan || (isVip ? 'دائمی' : 'عادی')}
                                 </div>
                             </div>
                         </div>
@@ -2492,16 +2503,17 @@ function renderLogsAndTelemetry() {
                     هنوز اشتراک ویژه‌ای ثبت نگردیده است.
                 </div>`;
         } else {
-            subsContainer.innerHTML = subscribersCache.slice(0, 15).map(s => {
-                const isVip = s.status === 'ACTIVE' || s.is_active || true;
-                const dateStr = s.created_at ? new Date(s.created_at).toLocaleDateString('fa-IR') : 'نامشخص';
+            subsContainer.innerHTML = subscribersCache.slice(0, 25).map(s => {
+                const isVip = s.status === 'ACTIVE' || s.is_active || s.is_subscribed || true;
+                const createdDate = s.created_at || s.last_seen_at || s.last_seen;
+                const dateStr = createdDate ? new Date(createdDate).toLocaleDateString('fa-IR') : 'نامشخص';
                 return `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--obsidian-surface); border-bottom: 1px solid var(--blood-border); border-radius: var(--radius-sm); margin-bottom: 6px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span>👑</span>
                             <div>
-                                <div style="font-weight: 600; font-size: 0.85rem; color: #ffd700;">${s.user_email || `مشترک ${s.user_id ? s.user_id.slice(0, 8) : 'ویژه'}`}</div>
-                                <div style="font-size: 0.75rem; color: var(--muted-ash); margin-top: 2px;">طرح: ${s.plan_name || 'اشتراک ویژه عمارت'}</div>
+                                <div style="font-weight: 600; font-size: 0.85rem; color: #ffd700;">${s.user_email || `مشترک ${s.device_id ? s.device_id.slice(0, 8) : (s.user_id ? s.user_id.slice(0, 8) : 'ویژه')}`}</div>
+                                <div style="font-size: 0.75rem; color: var(--muted-ash); margin-top: 2px;">طرح: ${s.subscription_plan || s.plan_name || 'عضویت دائمی عمارت'}</div>
                             </div>
                         </div>
                         <div style="text-align: left;">

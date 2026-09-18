@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -1061,8 +1063,11 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             NetworkUtils.observeNetworkState(application).collect { isConnected ->
                 _isNetworkOnline.value = isConnected
-                if (isConnected && (_realStoriesList.value.isEmpty() || _grimFortunesList.value.isEmpty())) {
-                    loadUserData()
+                if (isConnected) {
+                    sendHeartbeat(application)
+                    if (_realStoriesList.value.isEmpty() || _grimFortunesList.value.isEmpty()) {
+                        loadUserData()
+                    }
                 }
             }
         }
@@ -1076,6 +1081,75 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         _isSupabaseConnected.value = SupabaseClientProvider.isConfigured
 
         loadUserData()
+
+        // Send initial heartbeat and periodic background heartbeat every 3 minutes
+        sendHeartbeat(application)
+        viewModelScope.launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(180_000L) // 3 minutes
+                sendHeartbeat(application)
+            }
+        }
+    }
+
+    fun sendHeartbeat(context: android.content.Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (SupabaseClientProvider.isConfigured && NetworkUtils.isOnline(context)) {
+                    val androidId = try {
+                        android.provider.Settings.Secure.getString(
+                            context.contentResolver,
+                            android.provider.Settings.Secure.ANDROID_ID
+                        ) ?: "unknown_device"
+                    } catch (e: Exception) {
+                        "unknown_device"
+                    }
+                    val isSub = _isPremiumUser.value
+                    val isoNow = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                        timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    }.format(java.util.Date())
+
+                    val deviceModel = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                    api.sendHeartbeat(
+                        UserHeartbeatDto(
+                            device_id = androidId,
+                            device_model = deviceModel,
+                            is_subscribed = isSub,
+                            subscription_plan = if (isSub) "عضویت ویژه عمارت" else "کاربر عادی",
+                            last_seen_at = isoNow
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                // Silently ignore telemetry failure
+            }
+        }
+    }
+
+    fun reportCrash(context: android.content.Context, error: Throwable, extraMessage: String? = null) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                if (SupabaseClientProvider.isConfigured && NetworkUtils.isOnline(context)) {
+                    val deviceModel = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
+                    val androidVer = "Android ${android.os.Build.VERSION.RELEASE} (SDK ${android.os.Build.VERSION.SDK_INT})"
+                    val stackTrace = error.stackTraceToString()
+                    val errorMsg = (extraMessage?.let { "$it: " } ?: "") + (error.localizedMessage ?: error.message ?: error.javaClass.simpleName)
+
+                    api.reportCrash(
+                        AppCrashLogDto(
+                            device_model = deviceModel,
+                            android_version = androidVer,
+                            app_version = "1.0.0",
+                            error_message = errorMsg.take(500),
+                            stack_trace = stackTrace.take(4000),
+                            status = "UNRESOLVED"
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                // Silently ignore crash reporting failure
+            }
+        }
     }
 
     fun setAppMode(mode: AppMode) {

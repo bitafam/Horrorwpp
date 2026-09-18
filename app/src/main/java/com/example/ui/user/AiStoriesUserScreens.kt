@@ -125,7 +125,7 @@ fun AiStoriesUserSection(
             title = "داستان‌های هوش تاریکی",
             subtitle = "روایت‌های سیاه و هولناک هوش تاریکی",
             icon = Icons.Default.Psychology,
-            badgeText = "${publishedStories.size} قصه",
+            badgeText = null,
             onBack = onBack
         )
 

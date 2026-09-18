@@ -36,6 +36,18 @@ class MainActivity : ComponentActivity() {
         // Initialize Adivery Ad Network
         AdiveryAdManager.initialize(this)
 
+        // Setup global uncaught crash reporting to Supabase app_crash_logs
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                viewModel.reportCrash(applicationContext, throwable, "Uncaught Exception in ${thread.name}")
+                Thread.sleep(800)
+            } catch (e: Exception) {
+                // Ignore
+            }
+            defaultHandler?.uncaughtException(thread, throwable)
+        }
+
         // Initialize Myket Billing Manager
         billingManager = MyketBillingManager(this)
         billingManager.startConnection(

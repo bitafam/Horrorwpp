@@ -34,19 +34,10 @@ object HorrorSoundManager {
     }
 
     /**
-     * Eerie low-pitch bone click / crypt tap for general UI navigation.
+     * Disabled button click sound effect to keep UI quiet as requested.
      */
     fun playClickSound() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playHorrorCreak(
-                durationMs = 95,
-                startFreq = 180.0,
-                endFreq = 65.0,
-                amplitude = 0.35f,
-                addCryptThud = true
-            )
-        }
+        // Disabled per user request
     }
 
     /**

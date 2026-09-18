@@ -53,6 +53,27 @@ data class AiGenerationResponse(
     val parsedData: List<Map<String, Any>>? = null
 )
 
+@JsonClass(generateAdapter = true)
+data class UserHeartbeatDto(
+    val device_id: String,
+    val user_id: String? = null,
+    val user_email: String? = null,
+    val device_model: String? = null,
+    val is_subscribed: Boolean = false,
+    val subscription_plan: String? = null,
+    val last_seen_at: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AppCrashLogDto(
+    val device_model: String?,
+    val android_version: String?,
+    val app_version: String?,
+    val error_message: String,
+    val stack_trace: String?,
+    val status: String = "UNRESOLVED"
+)
+
 @kotlin.jvm.JvmSuppressWildcards
 interface SupabaseApi {
     @GET("rest/v1/grim_fortunes")
@@ -323,6 +344,18 @@ interface SupabaseApi {
     suspend fun triggerAutoAiStories(
         @Body body: Map<String, Boolean> = mapOf("manual" to true),
         @Header("Authorization") authHeader: String? = null
+    ): Response<ResponseBody>
+
+    // TELEMETRY & CRASH LOGS
+    @POST("rest/v1/user_heartbeats?on_conflict=device_id")
+    @Headers("Prefer: resolution=merge-duplicates")
+    suspend fun sendHeartbeat(
+        @Body heartbeat: UserHeartbeatDto
+    ): Response<ResponseBody>
+
+    @POST("rest/v1/app_crash_logs")
+    suspend fun reportCrash(
+        @Body crash: AppCrashLogDto
     ): Response<ResponseBody>
 }
 

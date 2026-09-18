@@ -2520,7 +2520,7 @@ fun BeautifulStoriesDashboard(
             title = "کتابخانه روایات تسخیرشده",
             subtitle = "آرشیو داستان‌های واقعی و اعترافات",
             icon = Icons.Default.MenuBook,
-            badgeText = "${filteredStories.size + filteredUserSubmissions.size} داستان",
+            badgeText = null,
             onBack = onBack
         )
 
@@ -4315,6 +4315,10 @@ https://myket.ir/app/com.apps.hororhouse
             }
         }
 
+        val synopsisText = remember(story.content) {
+            if (story.content.length > 180) story.content.take(180) + "..." else null
+        }
+
         // READING CONTENT
         LazyColumn(
             modifier = Modifier
@@ -4333,19 +4337,9 @@ https://myket.ir/app/com.apps.hororhouse
                     border = BorderStroke(1.dp, Color(0xFFB8143F).copy(alpha = 0.6f))
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                        val defaultRes = remember(story.id) {
-                            when ((story.id.hashCode() and 0x7FFFFFFF) % 3) {
-                                0 -> R.drawable.img_poster_1_1788266550537
-                                1 -> R.drawable.img_poster_2_1788266563762
-                                else -> R.drawable.img_poster_3_1788266577786
-                            }
-                        }
-                        AsyncImage(
-                            model = story.cover_url,
-                            placeholder = painterResource(id = defaultRes),
-                            error = painterResource(id = defaultRes),
-                            contentDescription = story.title,
-                            contentScale = ContentScale.Crop,
+                        AiStoryPosterGraphic(
+                            posterUrl = story.cover_url,
+                            storyId = story.id,
                             modifier = Modifier.fillMaxSize()
                         )
 
@@ -4378,7 +4372,7 @@ https://myket.ir/app/com.apps.hororhouse
                 }
             }
 
-            // INFO & ATTRIBUTION CARD
+            // STORY META & ATTRIBUTION HEADER CARD
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -4401,24 +4395,23 @@ https://myket.ir/app/com.apps.hororhouse
                                 text = "🔮 سبک: ${story.tags ?: if (isUserSub) "روایت کاربر" else "وحشت واقعی"}",
                                 color = Color(0xFFDEC595),
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Bold
                             )
 
-                            // Rating summary badge
                             Surface(
                                 color = Color(0xFF260D18),
                                 shape = RoundedCornerShape(6.dp),
-                                border = BorderStroke(1.dp, Color(0xFFFF1E56).copy(alpha = 0.6f))
+                                border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f))
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFD700), modifier = Modifier.size(13.dp))
+                                    Icon(Icons.Default.Visibility, contentDescription = null, tint = Color(0xFF8B8496), modifier = Modifier.size(12.dp))
                                     Text(
-                                        text = String.format(java.util.Locale.US, "%.1f (%d رأی)", liveStory.rating, liveStory.rating_count),
-                                        color = Color(0xFFDEC595),
+                                        text = "${liveStory.view_count} بازدید",
+                                        color = Color(0xFFE0DAE8),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -4431,19 +4424,12 @@ https://myket.ir/app/com.apps.hororhouse
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                Text(
-                                    text = "✍️ راوی: ${story.author ?: "کاتبان عمارت وحشت"}",
-                                    color = Color(0xFFDEC595).copy(alpha = 0.9f),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = "منبع: ${story.source ?: "طومارهای عتیق عمارت"}",
-                                    color = Color(0xFF8B8496),
-                                    fontSize = 10.sp
-                                )
-                            }
+                            Text(
+                                text = "✍️ مؤلف: ${story.author ?: "کاتبان عمارت وحشت"}",
+                                color = Color(0xFFDEC595).copy(alpha = 0.8f),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
 
                             TextButton(
                                 onClick = { showReportDialog = true },
@@ -4459,6 +4445,37 @@ https://myket.ir/app/com.apps.hororhouse
                                 Text("گزارش محتوا", color = Color(0xFFFF6B6B), fontSize = 10.sp)
                             }
                         }
+                    }
+                }
+            }
+
+            // SYNOPSIS (BLOCKQUOTE)
+            if (!synopsisText.isNullOrBlank()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF160920).copy(alpha = 0.7f))
+                            .border(
+                                width = 1.dp,
+                                brush = Brush.horizontalGradient(
+                                    listOf(Color(0xFFDEC595).copy(alpha = 0.8f), Color.Transparent)
+                                ),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .padding(14.dp)
+                    ) {
+                        Text(
+                            text = "« $synopsisText »",
+                            color = Color(0xFFDEC595),
+                            fontSize = (fontSize - 1).sp,
+                            fontFamily = activeFontPreset.fontFamily,
+                            fontWeight = activeFontPreset.fontWeight,
+                            fontStyle = FontStyle.Italic,
+                            letterSpacing = activeFontPreset.letterSpacing,
+                            lineHeight = (fontSize * 1.5f).sp
+                        )
                     }
                 }
             }
@@ -4480,7 +4497,7 @@ https://myket.ir/app/com.apps.hororhouse
                 }
             }
 
-            // RATING AND FEEDBACK BOX
+            // RATING AND FEEDBACK BOX (OVERHAULED 5-STAR SYSTEM)
             item {
                 Card(
                     modifier = Modifier
@@ -4495,33 +4512,23 @@ https://myket.ir/app/com.apps.hororhouse
                             .fillMaxWidth()
                             .padding(18.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = if (ratingSubmitted) "رأی شما با موفقیت ثبت شد!" else "به این داستان امتیاز دهید:",
+                            text = if (ratingSubmitted) "⭐ امتیاز ثبت‌شده شما برای این داستان" else "به این داستان چه امتیازی می‌دهید؟",
                             color = Color(0xFFDEC595),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
                             textAlign = TextAlign.Center
                         )
 
-                        Text(
-                            text = "راهنما: ۱ ستاره (ضعیف) ←──────→ ۵ ستاره (شاهکار)",
-                            color = Color(0xFF8B8496),
-                            fontSize = 10.sp,
-                            textAlign = TextAlign.Center
-                        )
-
+                        // 5 Stars Row (Empty by default, Filled on rating)
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             (1..5).forEach { star ->
-                                val isFilled = if (ratingSubmitted || userRatingGiven > 0) {
-                                    star <= userRatingGiven
-                                } else {
-                                    false
-                                }
+                                val isSelected = star <= userRatingGiven
                                 IconButton(
                                     onClick = {
                                         if (!ratingSubmitted) {
@@ -4535,7 +4542,6 @@ https://myket.ir/app/com.apps.hororhouse
                                                 userRatingGiven = star
                                                 ratingSubmitted = true
                                                 HorrorSoundManager.playStarRatingSound(star)
-                                                
                                                 if (isUserSub) {
                                                     viewModel.rateUserSubmission(story.id, star.toFloat())
                                                 } else {
@@ -4545,30 +4551,62 @@ https://myket.ir/app/com.apps.hororhouse
                                         }
                                     },
                                     enabled = !ratingSubmitted,
-                                    modifier = Modifier.size(38.dp)
+                                    modifier = Modifier.size(40.dp)
                                 ) {
                                     Icon(
-                                        imageVector = if (isFilled) Icons.Default.Star else Icons.Default.StarBorder,
+                                        imageVector = if (isSelected) Icons.Default.Star else Icons.Default.StarBorder,
                                         contentDescription = "ستاره $star",
-                                        tint = if (isFilled) Color(0xFFFFD700) else Color(0xFF6E5D80),
-                                        modifier = Modifier.size(28.dp)
+                                        tint = if (isSelected) Color(0xFFFFD700) else Color(0xFF6B587E),
+                                        modifier = Modifier.size(30.dp)
                                     )
                                 }
                             }
                         }
 
-                        if (ratingSubmitted) {
+                        // Rating Guide Hint
+                        Text(
+                            text = "راهنما: ۱ ستاره (ضعیف) ←──→ ۵ ستاره (شاهکار)",
+                            color = Color(0xFF8B8496),
+                            fontSize = 10.sp,
+                            textAlign = TextAlign.Center
+                        )
+
+                        HorizontalDivider(color = Color(0xFF2A153E), thickness = 0.8.dp)
+
+                        // Clear Distinction: User's Vote vs Community Average
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // User Rating Status
+                            if (ratingSubmitted) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(14.dp))
+                                    Text(
+                                        text = "رأی شما: $userRatingGiven ستاره",
+                                        color = Color(0xFF4CAF50),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            } else {
+                                Text(
+                                    text = "هنوز رأی نداده‌اید",
+                                    color = Color(0xFF8B8496),
+                                    fontSize = 11.sp
+                                )
+                            }
+
+                            // Community Average
                             Text(
-                                text = "✨ امتیاز شما: $userRatingGiven ستاره از ۵ | میانگین کاربران: ${String.format(java.util.Locale.US, "%.1f", liveStory.rating)} ★",
-                                color = Color(0xFF4CAF50),
+                                text = "📊 میانگین کاربران: ${String.format(java.util.Locale.US, "%.1f", liveStory.rating)} از ۵ (${liveStory.rating_count} رأی)",
+                                color = Color(0xFFDEC595),
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Text(
-                                text = String.format(java.util.Locale.US, "میانگین فعلی جامعه: %.1f از ۵ (%d رأی ثبت شده)", liveStory.rating, liveStory.rating_count),
-                                color = Color(0xFF8B8496),
-                                fontSize = 11.sp
+                                fontWeight = FontWeight.Medium
                             )
                         }
 
@@ -4588,7 +4626,6 @@ https://myket.ir/app/com.apps.hororhouse
                                     .background(Color(0xFF229ED9).copy(alpha = 0.15f))
                                     .border(0.5.dp, Color(0xFF229ED9), RoundedCornerShape(8.dp))
                                     .clickable {
-                                        HorrorSoundManager.playClickSound()
                                         try {
                                             val intent = Intent(Intent.ACTION_VIEW).apply {
                                                 data = android.net.Uri.parse("https://t.me/share/url?url=${android.net.Uri.encode("https://myket.ir/app/com.apps.hororhouse")}&text=${android.net.Uri.encode(shareMessage)}")
@@ -4620,7 +4657,6 @@ https://myket.ir/app/com.apps.hororhouse
                                     .background(Color(0xFF25D366).copy(alpha = 0.15f))
                                     .border(0.5.dp, Color(0xFF25D366), RoundedCornerShape(8.dp))
                                     .clickable {
-                                        HorrorSoundManager.playClickSound()
                                         try {
                                             val intent = Intent(Intent.ACTION_VIEW).apply {
                                                 data = android.net.Uri.parse("https://api.whatsapp.com/send?text=${android.net.Uri.encode(shareMessage)}")
@@ -4652,7 +4688,6 @@ https://myket.ir/app/com.apps.hororhouse
                                     .background(Color(0xFFDEC595).copy(alpha = 0.15f))
                                     .border(0.5.dp, Color(0xFFDEC595), RoundedCornerShape(8.dp))
                                     .clickable {
-                                        HorrorSoundManager.playClickSound()
                                         try {
                                             val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                                             val clip = android.content.ClipData.newPlainText("روایت عمارت وحشت", shareMessage)
