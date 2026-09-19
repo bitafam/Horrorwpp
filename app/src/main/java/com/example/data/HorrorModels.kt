@@ -183,30 +183,41 @@ data class StoryReport(
 )
 
 object HorrorPosterPresets {
+    // 26 purely horrifying, dark gothic, paranormal and supernatural posters
     val POSTERS = listOf(
-        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=800&auto=format&fit=crop", // Dark haunted mansion
-        "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop", // Foggy eerie forest
-        "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop", // Dark stormy clouds and castle
-        "https://images.unsplash.com/photo-1519074069444-1ba4fff16def?q=80&w=800&auto=format&fit=crop", // Silhouette in shadows
-        "https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=800&auto=format&fit=crop", // Neon gothic dark alley
-        "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?q=80&w=800&auto=format&fit=crop", // Misty road
-        "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=800&auto=format&fit=crop", // Blood moon darkness
-        "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=800&auto=format&fit=crop", // Dark abstract nightmare
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop", // Mysterious gothic portrait
-        "https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=800&auto=format&fit=crop", // Creepy abandoned hallway
-        "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800&auto=format&fit=crop", // Burning embers dark void
-        "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop", // Antique skull & gothic alchemy
-        // 10 NEW POSTERS ADDED
-        "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop", // Night jagged mountain peak
-        "https://images.unsplash.com/photo-1505672678430-8a1881774534?q=80&w=800&auto=format&fit=crop", // Deep misty dark forest
-        "https://images.unsplash.com/photo-1518709414768-a88981a4515d?q=80&w=800&auto=format&fit=crop", // Spooky cemetery tombstones
-        "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=800&auto=format&fit=crop", // Red neon sinister hallway
-        "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=800&auto=format&fit=crop", // Single candle dark ritual
-        "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=800&auto=format&fit=crop", // Blood eclipse over dark silhouettes
-        "https://images.unsplash.com/photo-1519052537078-e6302a4968d4?q=80&w=800&auto=format&fit=crop", // Sinister glowing predator eyes in dark
+        // Generated High-Def Pure Horror Posters
+        "poster_dark_demon",
+        "poster_ghost_corridor",
+        "poster_blood_ritual",
+        "poster_screaming_wraith",
+        "poster_cemetery_curse",
+        "universal_horror",
+        "nightmare_crypt",
+        "haunted_chamber",
+        "img_ai_story_poster_1",
+        "img_ai_story_poster_2",
+        "img_poster_1",
+        "img_poster_2",
+        "img_poster_3",
+        // Atmospheric Curated Dark Horror Unsplash Collections
+        "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=800&auto=format&fit=crop", // Dark haunted gothic mansion
+        "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop", // Foggy eerie haunted forest
+        "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop", // Dark stormy clouds and sinister castle
+        "https://images.unsplash.com/photo-1519074069444-1ba4fff16def?q=80&w=800&auto=format&fit=crop", // Shadowy demonic silhouette in darkness
+        "https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=800&auto=format&fit=crop", // Sinister gothic dark alley
+        "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?q=80&w=800&auto=format&fit=crop", // Misty abandoned road of ghosts
+        "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=800&auto=format&fit=crop", // Blood moon eclipse over dark abyss
+        "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=800&auto=format&fit=crop", // Dark abstract nightmare smoke
+        "https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=800&auto=format&fit=crop", // Creepy abandoned bloody asylum hallway
+        "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800&auto=format&fit=crop", // Burning ember skull in black void
+        "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop", // Antique human skull and gothic alchemy
+        "https://images.unsplash.com/photo-1518709414768-a88981a4515d?q=80&w=800&auto=format&fit=crop", // Spooky forgotten cemetery tombstones
+        "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=800&auto=format&fit=crop", // Crimson blood red nightmare hallway
+        "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=800&auto=format&fit=crop", // Sinister occult candle black magic ritual
+        "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=800&auto=format&fit=crop", // Dark red eclipse with creepy silhouette
         "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=800&auto=format&fit=crop", // Dark winding forest path of doom
-        "https://images.unsplash.com/photo-1518709593452-95123d4e8320?q=80&w=800&auto=format&fit=crop", // Ancient forgotten tomb ruins
-        "https://images.unsplash.com/photo-1518709711639-6518a221f787?q=80&w=800&auto=format&fit=crop"  // Dark foggy lake with ghostly boat
+        "https://images.unsplash.com/photo-1518709593452-95123d4e8320?q=80&w=800&auto=format&fit=crop", // Ancient forgotten subterranean crypt ruins
+        "https://images.unsplash.com/photo-1518709711639-6518a221f787?q=80&w=800&auto=format&fit=crop"  // Ghostly abandoned ferry in black fog
     )
 
     fun getPoster(storyId: String? = null): String {

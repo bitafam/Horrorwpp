@@ -17,6 +17,7 @@ import com.example.ads.AdiveryAdManager
 import com.example.billing.MyketBillingManager
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.user.AgeAndHealthGateScreen
+import com.example.ui.user.HorrorOnboardingScreen
 import com.example.ui.user.UserMainScreen
 import com.example.viewmodel.HorrorViewModel
 
@@ -95,11 +96,18 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun HorrorAppRoot(viewModel: HorrorViewModel, billingManager: MyketBillingManager) {
     val hasConfirmedAgeAndHealth by viewModel.hasConfirmedAgeAndHealth.collectAsState()
+    val hasSeenOnboarding by viewModel.hasSeenOnboarding.collectAsState()
 
     if (!hasConfirmedAgeAndHealth) {
         AgeAndHealthGateScreen(
             onConfirm = {
                 viewModel.confirmAgeAndHealth()
+            }
+        )
+    } else if (!hasSeenOnboarding) {
+        HorrorOnboardingScreen(
+            onFinish = {
+                viewModel.completeOnboarding()
             }
         )
     } else {

@@ -46,6 +46,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         const val PREF_SUPABASE_URL = "pref_supabase_url"
         const val PREF_SUPABASE_ANON_KEY = "pref_supabase_anon_key"
         const val PREF_AGE_HEALTH_CONSENT = "pref_age_health_consent_confirmed"
+        const val PREF_HAS_SEEN_ONBOARDING = "pref_has_seen_onboarding_slideshow"
 
         val SUPPORTED_GEMINI_MODELS = listOf(
             "gemini-3.7-flash",
@@ -762,6 +763,15 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun confirmAgeAndHealth() {
         prefs.edit().putBoolean(PREF_AGE_HEALTH_CONSENT, true).apply()
         _hasConfirmedAgeAndHealth.value = true
+    }
+
+    // Onboarding Slideshow State (Shown once on fresh install)
+    private val _hasSeenOnboarding = MutableStateFlow(prefs.getBoolean(PREF_HAS_SEEN_ONBOARDING, false))
+    val hasSeenOnboarding: StateFlow<Boolean> = _hasSeenOnboarding.asStateFlow()
+
+    fun completeOnboarding() {
+        prefs.edit().putBoolean(PREF_HAS_SEEN_ONBOARDING, true).apply()
+        _hasSeenOnboarding.value = true
     }
 
     // Gemini API & Admin Preferences State

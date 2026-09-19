@@ -1244,7 +1244,7 @@ fun GothicGamingHomeScreen(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     Image(
-                        painter = painterResource(id = R.drawable.img_poster_1_1788266550537),
+                        painter = painterResource(id = R.drawable.img_poster_dark_demon_1789804434865),
                         contentDescription = "پوستر کتابخانه روایات",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -1357,7 +1357,7 @@ fun GothicGamingHomeScreen(
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Image(
-                            painter = painterResource(id = R.drawable.img_ai_story_poster_1_1788531305066),
+                            painter = painterResource(id = R.drawable.img_poster_ghost_corridor_1789804447925),
                             contentDescription = "پوستر داستان‌های هوش تاریکی",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -1432,7 +1432,7 @@ fun GothicGamingHomeScreen(
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Image(
-                            painter = painterResource(id = R.drawable.img_poster_3_1788266577786),
+                            painter = painterResource(id = R.drawable.img_poster_blood_ritual_1789804466122),
                             contentDescription = "پوستر طالع شوم",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -1588,7 +1588,7 @@ fun GothicGamingHomeScreen(
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Image(
-                            painter = painterResource(id = R.drawable.img_poster_2_1788266563762),
+                            painter = painterResource(id = R.drawable.img_poster_screaming_wraith_1789804477953),
                             contentDescription = "پوستر تنظیمات",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -3176,12 +3176,24 @@ fun StoryItemCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Full-bleed background image or atmospheric procedural canvas
-            val defaultRes = remember(index) {
-                when (index % 3) {
-                    0 -> R.drawable.img_poster_1_1788266550537
-                    1 -> R.drawable.img_poster_2_1788266563762
-                    else -> R.drawable.img_poster_3_1788266577786
-                }
+            val defaultRes = remember(index, story.id) {
+                val horrorDrawables = listOf(
+                    R.drawable.img_poster_dark_demon_1789804434865,
+                    R.drawable.img_poster_ghost_corridor_1789804447925,
+                    R.drawable.img_poster_blood_ritual_1789804466122,
+                    R.drawable.img_poster_screaming_wraith_1789804477953,
+                    R.drawable.img_poster_cemetery_curse_1789804492834,
+                    R.drawable.img_universal_horror_banner_1789721194695,
+                    R.drawable.img_nightmare_crypt_banner_1789721206204,
+                    R.drawable.img_haunted_chamber_banner_1789721276056,
+                    R.drawable.img_ai_story_poster_1_1788531305066,
+                    R.drawable.img_ai_story_poster_2_1788531326949,
+                    R.drawable.img_poster_1_1788266550537,
+                    R.drawable.img_poster_2_1788266563762,
+                    R.drawable.img_poster_3_1788266577786
+                )
+                val hash = kotlin.math.abs(story.id.hashCode() + index)
+                horrorDrawables[hash % horrorDrawables.size]
             }
             AsyncImage(
                 model = story.cover_url,
@@ -3808,6 +3820,35 @@ https://myket.ir/app/com.apps.hororhouse
                                     Icon(Icons.Default.Refresh, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text("تغییر ماه تولد و دریافت طالع جدید", color = Color(0xFFDEC595), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                Spacer(modifier = Modifier.height(14.dp))
+
+                                // Disclaimer: Fun & Entertainment Only
+                                Surface(
+                                    color = Color(0xFF261208),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, Color(0xFFFF9800).copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Info,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFF9800),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "طالع شوم صرفاً جنبه سرگرمی، شوخی و فان دارد و هیچ‌گونه جنبه واقعی یا پیشگویی حقیقی ندارد.",
+                                            color = Color(0xFFFFCC80),
+                                            fontSize = 10.5.sp,
+                                            lineHeight = 15.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -5405,12 +5446,24 @@ fun UserStoryItemCard(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             // Full-bleed background image or atmospheric procedural canvas
-            val defaultRes = remember(index) {
-                when (index % 3) {
-                    0 -> R.drawable.img_poster_1_1788266550537
-                    1 -> R.drawable.img_poster_2_1788266563762
-                    else -> R.drawable.img_poster_3_1788266577786
-                }
+            val defaultRes = remember(index, submission.id) {
+                val horrorDrawables = listOf(
+                    R.drawable.img_poster_dark_demon_1789804434865,
+                    R.drawable.img_poster_ghost_corridor_1789804447925,
+                    R.drawable.img_poster_blood_ritual_1789804466122,
+                    R.drawable.img_poster_screaming_wraith_1789804477953,
+                    R.drawable.img_poster_cemetery_curse_1789804492834,
+                    R.drawable.img_universal_horror_banner_1789721194695,
+                    R.drawable.img_nightmare_crypt_banner_1789721206204,
+                    R.drawable.img_haunted_chamber_banner_1789721276056,
+                    R.drawable.img_ai_story_poster_1_1788531305066,
+                    R.drawable.img_ai_story_poster_2_1788531326949,
+                    R.drawable.img_poster_1_1788266550537,
+                    R.drawable.img_poster_2_1788266563762,
+                    R.drawable.img_poster_3_1788266577786
+                )
+                val hash = kotlin.math.abs(submission.id.hashCode() + index)
+                horrorDrawables[hash % horrorDrawables.size]
             }
             AsyncImage(
                 model = submission.cover_url,

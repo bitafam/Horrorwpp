@@ -350,6 +350,11 @@ fun AiStoriesUserSection(
 
 fun getStoryPosterDrawableRes(posterUrl: String?, storyId: String): Int {
     val fallbackList = listOf(
+        R.drawable.img_poster_dark_demon_1789804434865,
+        R.drawable.img_poster_ghost_corridor_1789804447925,
+        R.drawable.img_poster_blood_ritual_1789804466122,
+        R.drawable.img_poster_screaming_wraith_1789804477953,
+        R.drawable.img_poster_cemetery_curse_1789804492834,
         R.drawable.img_universal_horror_banner_1789721194695,
         R.drawable.img_nightmare_crypt_banner_1789721206204,
         R.drawable.img_haunted_chamber_banner_1789721276056,
@@ -362,6 +367,11 @@ fun getStoryPosterDrawableRes(posterUrl: String?, storyId: String): Int {
 
     if (!posterUrl.isNullOrBlank()) {
         when {
+            posterUrl.contains("dark_demon") -> return R.drawable.img_poster_dark_demon_1789804434865
+            posterUrl.contains("ghost_corridor") -> return R.drawable.img_poster_ghost_corridor_1789804447925
+            posterUrl.contains("blood_ritual") -> return R.drawable.img_poster_blood_ritual_1789804466122
+            posterUrl.contains("screaming_wraith") -> return R.drawable.img_poster_screaming_wraith_1789804477953
+            posterUrl.contains("cemetery_curse") -> return R.drawable.img_poster_cemetery_curse_1789804492834
             posterUrl.contains("universal_horror") -> return R.drawable.img_universal_horror_banner_1789721194695
             posterUrl.contains("nightmare_crypt") -> return R.drawable.img_nightmare_crypt_banner_1789721206204
             posterUrl.contains("haunted_chamber") -> return R.drawable.img_haunted_chamber_banner_1789721276056
