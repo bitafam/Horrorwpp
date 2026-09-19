@@ -1513,7 +1513,7 @@ fun GothicGamingHomeScreen(
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Image(
-                            painter = painterResource(id = R.drawable.img_sorcery_temple_1788114860980),
+                            painter = painterResource(id = R.drawable.img_nightmare_crypt_banner_1789721206204),
                             contentDescription = "پوستر ارسال روایت",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop
@@ -2540,25 +2540,34 @@ fun BeautifulStoriesDashboard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(190.dp)
+                    .height(200.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .gothicBorder(borderColor = Color(0xFFDEC595), cornerRadiusDp = 14f)
                     .clickable { onLogoClick() }
             ) {
-                ModernSpookyBannerCanvas(modifier = Modifier.fillMaxSize())
+                // Cinematic Universal Horror Banner (Haunted Gothic Manor under Blood Moon)
+                Image(
+                    painter = painterResource(id = R.drawable.img_universal_horror_banner_1789721194695),
+                    contentDescription = "بنر عمارت وحشت",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
                 
-                // Vignette gradient overlay
+                // Rich Vignette gradient overlay for depth & readability
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0x66000000), Color(0xDD05020A))
+                                colors = listOf(
+                                    Color(0x33030106),
+                                    Color(0x66000000),
+                                    Color(0xEE05020A),
+                                    Color(0xFF030106)
+                                )
                             )
                         )
                 )
-
-
 
                 // Dynamic Farsi Typography titles centered at bottom of banner
                 Column(
@@ -3425,17 +3434,17 @@ https://myket.ir/app/com.apps.hororhouse
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            // FULL-WIDTH HERO BANNER: GOTHIC SORCERY TEMPLE & DARK SORCERER WITH TOP TRANSPARENT HOVER GRADIENT
+            // FULL-WIDTH HERO BANNER: GOTHIC CRYPT & ANCIENT MYSTIC RELIC
             item {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(290.dp)
                 ) {
-                    // Full-width Sorcery Temple background image
+                    // Full-width Haunted Chamber Altar / Crypt background image
                     Image(
-                        painter = painterResource(id = R.drawable.img_sorcery_temple_1788114860980),
-                        contentDescription = "معبد جادوگری در تم گوتیک",
+                        painter = painterResource(id = R.drawable.img_haunted_chamber_banner_1789721276056),
+                        contentDescription = "محراب اسرارآمیز عمارت وحشت",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
@@ -3457,7 +3466,7 @@ https://myket.ir/app/com.apps.hororhouse
                             )
                     )
 
-                    // Floating Sorcerer Badge / Avatar & Titles
+                    // Floating Mystic Relic Medallion & Titles
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -3488,7 +3497,7 @@ https://myket.ir/app/com.apps.hororhouse
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "معبد جادوگری",
+                                        text = "محراب طالع شوم",
                                         color = Color(0xFFDEC595),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
@@ -3511,7 +3520,7 @@ https://myket.ir/app/com.apps.hororhouse
                             }
                         }
 
-                        // Center: Sorcerer Mystic Medallion / Grimoire portrait
+                        // Center: Ancient Occult Relic Medallion portrait
                         Box(
                             modifier = Modifier
                                 .size(96.dp)
@@ -3521,8 +3530,8 @@ https://myket.ir/app/com.apps.hororhouse
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.img_dark_sorcerer_banner_1788114846553),
-                                contentDescription = "جادوگر تاریک عمارت وحشت",
+                                painter = painterResource(id = R.drawable.img_gothic_occult_relic_1789721236578),
+                                contentDescription = "مدالیون کهن عمارت وحشت",
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop
                             )
@@ -3531,7 +3540,7 @@ https://myket.ir/app/com.apps.hororhouse
                         // Bottom Title & Subtitle inside banner
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = "طالع شوم معبد جادوگری",
+                                text = "طالع شوم فلک تاریک",
                                 style = MaterialTheme.typography.displayLarge.copy(
                                     fontFamily = FontFamily.Serif,
                                     fontWeight = FontWeight.ExtraBold,
@@ -3543,7 +3552,7 @@ https://myket.ir/app/com.apps.hororhouse
                             )
                             Spacer(modifier = Modifier.height(3.dp))
                             Text(
-                                text = "ـ نـدای طـلـسـم و پـیـشـگـویـی شـوم جـادوگـر عـمـارت وحـشـت ـ",
+                                text = "ـ نـدای شـوم کـتـیـبـه‌هـا و طـالـع تاریک مـاهـانـه ـ",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = Color(0xFFE5D5BC),
                                     fontSize = 11.sp,

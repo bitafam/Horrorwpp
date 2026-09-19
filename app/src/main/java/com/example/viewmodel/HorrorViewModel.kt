@@ -2658,14 +2658,14 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
         viewModelScope.launch(Dispatchers.IO) {
             val horrorPosters = listOf(
+                "universal_horror",
+                "nightmare_crypt",
+                "haunted_chamber",
                 "img_ai_story_poster_1",
                 "img_ai_story_poster_2",
                 "img_poster_1",
                 "img_poster_2",
                 "img_poster_3",
-                "img_dark_hafez_banner",
-                "img_dark_sorcerer_banner",
-                "img_sorcery_temple",
                 "https://images.unsplash.com/photo-1509248961158-e54f6934749c?w=600&auto=format&fit=crop&q=80",
                 "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80",
                 "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80",

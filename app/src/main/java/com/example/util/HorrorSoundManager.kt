@@ -15,7 +15,7 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 object HorrorSoundManager {
-    private val _isSoundEnabled = MutableStateFlow(true)
+    private val _isSoundEnabled = MutableStateFlow(false)
     val isSoundEnabled = _isSoundEnabled.asStateFlow()
 
     private val _isAmbientPlaying = MutableStateFlow(false)
@@ -25,7 +25,7 @@ object HorrorSoundManager {
     private val scope = CoroutineScope(Dispatchers.Default)
 
     fun toggleSound(enabled: Boolean) {
-        _isSoundEnabled.value = enabled
+        _isSoundEnabled.value = false
         stopAmbientDrone()
     }
 
@@ -34,151 +34,50 @@ object HorrorSoundManager {
     }
 
     /**
-     * Disabled button click sound effect to keep UI quiet as requested.
+     * All sound effects are permanently disabled per user instructions.
      */
     fun playClickSound() {
-        // Disabled per user request
+        // Disabled completely
     }
 
-    /**
-     * Heavy Gothic crypt thud + dissonant frequency sweep for scenario decisions.
-     */
     fun playScenarioChoiceSound() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playHorrorCreak(
-                durationMs = 320,
-                startFreq = 260.0,
-                endFreq = 50.0,
-                amplitude = 0.6f,
-                addDissonantOvertone = true,
-                addCryptThud = true
-            )
-        }
+        // Disabled completely
     }
 
-    /**
-     * Sinister dimensional shift for screen changes and stage transitions.
-     */
     fun playScenarioTransitionSound() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playHorrorCreak(durationMs = 220, startFreq = 140.0, endFreq = 220.0, amplitude = 0.4f, addDissonantOvertone = true)
-            delay(100)
-            playHorrorCreak(durationMs = 360, startFreq = 220.0, endFreq = 42.0, amplitude = 0.55f, addCryptThud = true)
-        }
+        // Disabled completely
     }
 
-    /**
-     * Supernatural cursed chime: minor chords with dissonant overtones (E minor / Tritone).
-     */
     fun playSpookyChime() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playTone(frequency = 329.63, durationMs = 180, amplitude = 0.35f) // E4
-            delay(90)
-            playTone(frequency = 392.00, durationMs = 220, amplitude = 0.35f) // G4
-            delay(110)
-            playTone(frequency = 466.16, durationMs = 400, amplitude = 0.4f)  // A#4 (Tritone dread)
-        }
+        // Disabled completely
     }
 
-    /**
-     * Realistic slow panic heartbeat sound effect (lub-dub).
-     */
     fun playHeartbeat() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playTone(frequency = 52.0, durationMs = 110, amplitude = 0.7f)
-            delay(140)
-            playTone(frequency = 44.0, durationMs = 160, amplitude = 0.55f)
-        }
+        // Disabled completely
     }
 
-    /**
-     * Terrifying ghostly scream / doom plunge when walking into a death trap.
-     */
     fun playDeathSound() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            // Shrieking high dissonant tritone descending rapidly
-            playHorrorCreak(durationMs = 500, startFreq = 660.0, endFreq = 85.0, amplitude = 0.75f, addDissonantOvertone = true)
-            delay(260)
-            // Heavy crypt earthquake doom impact
-            playHorrorCreak(durationMs = 850, startFreq = 80.0, endFreq = 30.0, amplitude = 0.85f, addCryptThud = true)
-        }
+        // Disabled completely
     }
 
-    /**
-     * Short ominous screech warning.
-     */
     fun playScreamShort() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playHorrorCreak(durationMs = 300, startFreq = 580.0, endFreq = 120.0, amplitude = 0.65f, addDissonantOvertone = true)
-        }
+        // Disabled completely
     }
 
-    /**
-     * Eerie relief / ancient temple blessing sound.
-     */
     fun playVictorySound() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playTone(frequency = 220.0, durationMs = 150, amplitude = 0.35f)
-            delay(120)
-            playTone(frequency = 277.18, durationMs = 170, amplitude = 0.38f)
-            delay(130)
-            playTone(frequency = 329.63, durationMs = 220, amplitude = 0.4f)
-            delay(150)
-            playTone(frequency = 440.00, durationMs = 500, amplitude = 0.45f)
-        }
+        // Disabled completely
     }
 
-    /**
-     * Creaking haunted door opening / closing sound.
-     */
     fun playCreakingDoorSound() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playHorrorCreak(
-                durationMs = 650,
-                startFreq = 380.0,
-                endFreq = 160.0,
-                amplitude = 0.45f,
-                addDissonantOvertone = true
-            )
-        }
+        // Disabled completely
     }
 
-    /**
-     * Ancient parchment flip / rustle sound with low crypt whisper.
-     */
     fun playPageTurnSound() {
-        if (!_isSoundEnabled.value) return
-        scope.launch {
-            playHorrorCreak(
-                durationMs = 180,
-                startFreq = 320.0,
-                endFreq = 90.0,
-                amplitude = 0.38f,
-                addDissonantOvertone = false,
-                addCryptThud = false
-            )
-        }
+        // Disabled completely
     }
 
-    /**
-     * Haunted star blessing sound with eerie harmonic overtones.
-     */
     fun playStarRatingSound(star: Int = 5) {
-        if (!_isSoundEnabled.value) return
-        val baseFreq = 220.0 + (star * 45.0)
-        scope.launch {
-            playTone(frequency = baseFreq, durationMs = 160, amplitude = 0.35f)
-            delay(80)
-            playTone(frequency = baseFreq * 1.4142, durationMs = 260, amplitude = 0.38f) // Dissonant mystical chime
-        }
+        // Disabled completely
     }
 
     /**

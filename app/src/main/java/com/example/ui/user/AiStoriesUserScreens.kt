@@ -350,26 +350,26 @@ fun AiStoriesUserSection(
 
 fun getStoryPosterDrawableRes(posterUrl: String?, storyId: String): Int {
     val fallbackList = listOf(
+        R.drawable.img_universal_horror_banner_1789721194695,
+        R.drawable.img_nightmare_crypt_banner_1789721206204,
+        R.drawable.img_haunted_chamber_banner_1789721276056,
         R.drawable.img_ai_story_poster_1_1788531305066,
         R.drawable.img_ai_story_poster_2_1788531326949,
         R.drawable.img_poster_1_1788266550537,
         R.drawable.img_poster_2_1788266563762,
-        R.drawable.img_poster_3_1788266577786,
-        R.drawable.img_dark_hafez_banner_1788111363222,
-        R.drawable.img_dark_sorcerer_banner_1788114846553,
-        R.drawable.img_sorcery_temple_1788114860980
+        R.drawable.img_poster_3_1788266577786
     )
 
     if (!posterUrl.isNullOrBlank()) {
         when {
+            posterUrl.contains("universal_horror") -> return R.drawable.img_universal_horror_banner_1789721194695
+            posterUrl.contains("nightmare_crypt") -> return R.drawable.img_nightmare_crypt_banner_1789721206204
+            posterUrl.contains("haunted_chamber") -> return R.drawable.img_haunted_chamber_banner_1789721276056
             posterUrl.contains("img_ai_story_poster_1") -> return R.drawable.img_ai_story_poster_1_1788531305066
             posterUrl.contains("img_ai_story_poster_2") -> return R.drawable.img_ai_story_poster_2_1788531326949
             posterUrl.contains("img_poster_1") -> return R.drawable.img_poster_1_1788266550537
             posterUrl.contains("img_poster_2") -> return R.drawable.img_poster_2_1788266563762
             posterUrl.contains("img_poster_3") -> return R.drawable.img_poster_3_1788266577786
-            posterUrl.contains("dark_hafez") -> return R.drawable.img_dark_hafez_banner_1788111363222
-            posterUrl.contains("dark_sorcerer") -> return R.drawable.img_dark_sorcerer_banner_1788114846553
-            posterUrl.contains("sorcery_temple") -> return R.drawable.img_sorcery_temple_1788114860980
         }
     }
 
