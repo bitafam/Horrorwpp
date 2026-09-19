@@ -703,6 +703,35 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     fun setPremiumUser(isPremium: Boolean) {
         _isPremiumUser.value = isPremium
         prefs.edit().putBoolean(PREF_IS_PREMIUM, isPremium).apply()
+        sendHeartbeat(getApplication())
+        if (isPremium) {
+            viewModelScope.launch(Dispatchers.IO) {
+                try {
+                    val app = getApplication<Application>()
+                    val androidId = try {
+                        android.provider.Settings.Secure.getString(
+                            app.contentResolver,
+                            android.provider.Settings.Secure.ANDROID_ID
+                        ) ?: "unknown_device"
+                    } catch (e: Exception) {
+                        "unknown_device"
+                    }
+                    val isoNow = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                        timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    }.format(java.util.Date())
+                    val profileMap = mapOf(
+                        "device_id" to androidId,
+                        "subscription_tier" to "PREMIUM",
+                        "subscription_plan" to "عضویت دائمی عمارت (مایکت)",
+                        "is_active" to true,
+                        "updated_at" to isoNow
+                    )
+                    api.updateUserSubmission(androidId, profileMap) // best-effort update
+                } catch (e: Exception) {
+                    // Ignore best-effort profile update
+                }
+            }
+        }
     }
 
     fun updateSubscriptionPrice(newPrice: Long, onResult: ((Boolean, String) -> Unit)? = null) {

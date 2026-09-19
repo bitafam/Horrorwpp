@@ -2504,8 +2504,8 @@ function renderLogsAndTelemetry() {
                 </div>`;
         } else {
             subsContainer.innerHTML = subscribersCache.slice(0, 25).map(s => {
-                const isVip = s.status === 'ACTIVE' || s.is_active || s.is_subscribed || true;
-                const createdDate = s.created_at || s.last_seen_at || s.last_seen;
+                const isVip = s.status === 'ACTIVE' || Boolean(s.is_active) || s.is_subscribed === true;
+                const createdDate = s.created_at || s.last_seen_at || s.last_seen || s.updated_at;
                 const dateStr = createdDate ? new Date(createdDate).toLocaleDateString('fa-IR') : 'نامشخص';
                 return `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--obsidian-surface); border-bottom: 1px solid var(--blood-border); border-radius: var(--radius-sm); margin-bottom: 6px;">

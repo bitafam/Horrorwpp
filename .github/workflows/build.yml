@@ -72,16 +72,60 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK
-        run: ./gradlew assembleDebug --build-cache --parallel --no-daemon
+      - name: Build and Sign APK (v1, v2, v3 Schemes)
+        run: |
+          ./gradlew assembleRelease --build-cache --parallel --no-daemon || ./gradlew assembleDebug --build-cache --parallel --no-daemon
+          
+          # Locate built APK
+          BUILT_APK=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
+          echo "Found built APK: $BUILT_APK"
+          
+          # Determine keystore to use
+          KEYSTORE="debug.keystore"
+          KS_PASS="android"
+          KEY_PASS="android"
+          KEY_ALIAS="androiddebugkey"
+          
+          if [ -f "my-upload-key.jks" ] && [ -n "${{ secrets.STORE_PASSWORD }}" ]; then
+            KEYSTORE="my-upload-key.jks"
+            KS_PASS="${{ secrets.STORE_PASSWORD }}"
+            KEY_PASS="${{ secrets.KEY_PASSWORD }}"
+            KEY_ALIAS="upload"
+          fi
+          
+          # Ensure unsigned / clean APK
+          cp "$BUILT_APK" app-to-align.apk
+          
+          # Find Android build-tools
+          BUILD_TOOLS_DIR=$(find /usr/local/lib/android/sdk/build-tools /opt/android/sdk/build-tools $ANDROID_HOME/build-tools -name apksigner 2>/dev/null | head -n 1 | xargs dirname)
+          echo "Using build tools from: $BUILD_TOOLS_DIR"
+          
+          # Align APK
+          $BUILD_TOOLS_DIR/zipalign -v -p -f 4 app-to-align.apk app-aligned.apk
+          
+          # Sign APK with v1, v2, and v3 schemes explicitly
+          $BUILD_TOOLS_DIR/apksigner sign \
+            --ks "$KEYSTORE" \
+            --ks-pass "pass:$KS_PASS" \
+            --key-pass "pass:$KEY_PASS" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --min-sdk-version 21 \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out HorrorApp.apk \
+            app-aligned.apk
+            
+          # Verify signatures (including v1 with min-sdk 21 check)
+          echo "=== APK Signature Verification ==="
+          $BUILD_TOOLS_DIR/apksigner verify --verbose --min-sdk-version 21 HorrorApp.apk
+          
+          cp HorrorApp.apk HorrorApp-v${{ github.run_number }}.apk
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-
-      - name: Prepare APK for Release
-        run: |
-          cp app/build/outputs/apk/debug/app-debug.apk HorrorApp-v${{ github.run_number }}.apk
-          cp app/build/outputs/apk/debug/app-debug.apk HorrorApp.apk
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Create GitHub Release
         if: success()
