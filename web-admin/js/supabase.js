@@ -389,6 +389,8 @@ const SupabaseService = {
 
         // Strict deduplication: Exactly ONE record per unique device_id
         const map = new Map();
+        const duplicateIdsToDelete = [];
+
         for (const h of heartbeats) {
             if (h.is_subscribed !== true && h.is_subscribed !== 'true') continue;
             const deviceId = (h.device_id || h.user_id || 'unknown').trim();
@@ -399,24 +401,70 @@ const SupabaseService = {
                 const existing = map.get(deviceId);
                 const exTime = new Date(existing.last_seen_at || existing.updated_at || existing.created_at || 0).getTime();
                 if (curTime > exTime) {
+                    if (existing.id) duplicateIdsToDelete.push(existing.id);
                     map.set(deviceId, {
                         ...existing,
                         ...h,
-                        subscription_plan: h.subscription_plan || 'عضویت ویژه عمارت (مایکت)',
+                        subscription_plan: h.subscription_plan || 'عضویت ویژه عمارت',
                         status: 'ACTIVE',
                         is_subscribed: true
                     });
+                } else {
+                    if (h.id) duplicateIdsToDelete.push(h.id);
                 }
             } else {
                 map.set(deviceId, {
                     ...h,
-                    subscription_plan: h.subscription_plan || 'عضویت ویژه عمارت (مایکت)',
+                    subscription_plan: h.subscription_plan || 'عضویت ویژه عمارت',
                     status: 'ACTIVE',
                     is_subscribed: true
                 });
             }
         }
+
+        // Clean up duplicate old heartbeat records from Supabase silently in the background
+        if (duplicateIdsToDelete.length > 0) {
+            try {
+                this.request(`rest/v1/user_heartbeats?id=in.(${duplicateIdsToDelete.join(',')})`, {
+                    method: 'DELETE'
+                }).catch(() => {});
+            } catch (err) {}
+        }
+
         return Array.from(map.values());
+    },
+
+    async deleteSubscriberHeartbeat(id) {
+        if (!id) return;
+        return await this.request(`rest/v1/user_heartbeats?id=eq.${id}`, {
+            method: 'DELETE'
+        });
+    },
+
+    async cleanupDuplicateHeartbeats() {
+        try {
+            const heartbeats = await this.getHeartbeats();
+            if (!Array.isArray(heartbeats) || heartbeats.length === 0) return 0;
+            const seen = new Map();
+            const toDelete = [];
+            for (const h of heartbeats) {
+                const devId = (h.device_id || 'unknown').trim();
+                if (seen.has(devId)) {
+                    if (h.id) toDelete.push(h.id);
+                } else {
+                    seen.set(devId, h.id);
+                }
+            }
+            if (toDelete.length > 0) {
+                await this.request(`rest/v1/user_heartbeats?id=in.(${toDelete.join(',')})`, {
+                    method: 'DELETE'
+                });
+            }
+            return toDelete.length;
+        } catch (e) {
+            console.error('Error cleaning duplicate heartbeats:', e);
+            return 0;
+        }
     },
 
     async bulkUpdateAiStoriesStatus(ids, status) {

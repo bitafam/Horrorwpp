@@ -2513,22 +2513,53 @@ function renderLogsAndTelemetry() {
                 const isVip = s.status === 'ACTIVE' || Boolean(s.is_active) || s.is_subscribed === true;
                 const createdDate = s.created_at || s.last_seen_at || s.last_seen || s.updated_at;
                 const dateStr = createdDate ? new Date(createdDate).toLocaleDateString('fa-IR') : 'نامشخص';
+                const subId = s.id || s.device_id || '';
                 return `
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--obsidian-surface); border-bottom: 1px solid var(--blood-border); border-radius: var(--radius-sm); margin-bottom: 6px;">
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span>👑</span>
                             <div>
                                 <div style="font-weight: 600; font-size: 0.85rem; color: #ffd700;">${s.user_email || `مشترک ${s.device_id ? s.device_id.slice(0, 8) : (s.user_id ? s.user_id.slice(0, 8) : 'ویژه')}`}</div>
-                                <div style="font-size: 0.75rem; color: var(--muted-ash); margin-top: 2px;">طرح: ${s.subscription_plan || s.plan_name || 'عضویت دائمی عمارت'}</div>
+                                <div style="font-size: 0.75rem; color: var(--muted-ash); margin-top: 2px;">
+                                    ${s.device_model ? `دستگاه: ${s.device_model} • ` : ''}طرح: ${s.subscription_plan || s.plan_name || 'عضویت دائمی عمارت'}
+                                </div>
                             </div>
                         </div>
-                        <div style="text-align: left;">
-                            <span class="badge ${isVip ? 'gold' : 'draft'}">${isVip ? 'فعال' : 'منقضی'}</span>
-                            <div style="font-size: 0.7rem; color: var(--muted-ash); margin-top: 4px;">${dateStr}</div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="text-align: left;">
+                                <span class="badge ${isVip ? 'gold' : 'draft'}">${isVip ? 'فعال' : 'منقضی'}</span>
+                                <div style="font-size: 0.7rem; color: var(--muted-ash); margin-top: 4px;">${dateStr}</div>
+                            </div>
+                            ${subId ? `
+                            <button onclick="handleDeleteSubscriber('${subId}')" title="حذف رکورد" style="background: none; border: none; color: var(--blood-crimson); cursor: pointer; font-size: 1rem; padding: 4px 6px;">
+                                🗑️
+                            </button>` : ''}
                         </div>
                     </div>`;
             }).join('');
         }
+    }
+}
+
+async function handleDeleteSubscriber(id) {
+    if (!confirm('آیا از حذف این رکورد اشتراک اطمینان دارید؟')) return;
+    try {
+        await SupabaseService.deleteSubscriberHeartbeat(id);
+        showToast('رکورد اشتراک با موفقیت حذف گردید.');
+        await syncDataFromSupabase(false);
+    } catch (e) {
+        console.error('Delete subscriber error:', e);
+        showToast('خطا در حذف رکورد اشتراک');
+    }
+}
+
+async function handleCleanupDuplicateSubscribers() {
+    try {
+        const removed = await SupabaseService.cleanupDuplicateHeartbeats();
+        showToast(`پاکسازی انجام شد (${removed} رکورد تکراری حذف گردید).`);
+        await syncDataFromSupabase(false);
+    } catch (e) {
+        showToast('خطا در پاکسازی تکراری‌ها');
     }
 }
 

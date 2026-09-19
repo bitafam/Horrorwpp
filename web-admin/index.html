@@ -751,7 +751,10 @@ SELECT cron.schedule(
                                 <div class="card-title gold">💎 وضعیت اشتراک‌ها و پرداخت‌های درون‌برنامه‌ای (Subscriptions)</div>
                                 <span style="font-size: 0.75rem; color: var(--muted-ash);">لیست کاربران VIP، پلن‌های فعال و وضعیت انقضا</span>
                             </div>
-                            <button class="btn btn-dark btn-sm" id="btnRefreshSubscribers">🔄 بروزرسانی اشتراک‌ها</button>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-dark btn-sm" onclick="handleCleanupDuplicateSubscribers()" title="حذف رکوردهای تکراری دستگاه‌ها">🧹 پاکسازی تکراری‌ها</button>
+                                <button class="btn btn-dark btn-sm" id="btnRefreshSubscribers">🔄 بروزرسانی اشتراک‌ها</button>
+                            </div>
                         </div>
 
                         <div id="subscribersListContainer" style="margin-top: 14px; overflow-x: auto;">

@@ -347,6 +347,13 @@ interface SupabaseApi {
     ): Response<ResponseBody>
 
     // TELEMETRY & CRASH LOGS
+    @PATCH("rest/v1/user_heartbeats")
+    @Headers("Prefer: return=representation")
+    suspend fun updateHeartbeat(
+        @Query("device_id") deviceIdFilter: String,
+        @Body heartbeat: UserHeartbeatDto
+    ): Response<ResponseBody>
+
     @POST("rest/v1/user_heartbeats?on_conflict=device_id")
     @Headers("Prefer: resolution=merge-duplicates")
     suspend fun sendHeartbeat(

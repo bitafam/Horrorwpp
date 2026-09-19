@@ -181,6 +181,39 @@ END;
 $$;
 
 -- ====================================================================
+-- 5. USER HEARTBEATS & SUBSCRIBERS TABLE (یکتایی شناسه دستگاه و اشتراک)
+-- ====================================================================
+CREATE TABLE IF NOT EXISTS public.user_heartbeats (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    device_id TEXT NOT NULL,
+    device_model TEXT,
+    is_subscribed BOOLEAN DEFAULT FALSE,
+    subscription_plan TEXT,
+    last_seen_at TIMESTAMPTZ DEFAULT now(),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- پاکسازی رکوردهای تکراری قبلی و نگه داشتن آخرین رکورد هر دستگاه
+DELETE FROM public.user_heartbeats a
+USING public.user_heartbeats b
+WHERE a.id < b.id
+  AND a.device_id = b.device_id;
+
+-- اضافه کردن محدودیت یکتایی (UNIQUE) روی شناسه دستگاه در سطح دیتابیس
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'user_heartbeats_device_id_unique'
+    ) THEN
+        ALTER TABLE public.user_heartbeats ADD CONSTRAINT user_heartbeats_device_id_unique UNIQUE (device_id);
+    END IF;
+END $$;
+
+ALTER TABLE public.user_heartbeats ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow all manage user_heartbeats" ON public.user_heartbeats;
+CREATE POLICY "Allow all manage user_heartbeats" ON public.user_heartbeats FOR ALL USING (true) WITH CHECK (true);
+
+-- ====================================================================
 -- نحوه فعال‌سازی pg_cron در Supabase (کاملاً مستقل از گوشی):
 -- ====================================================================
 -- در بخش SQL Editor داشبورد Supabase کدهای زیر را اجرا کنید:

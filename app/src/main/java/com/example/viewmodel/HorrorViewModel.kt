@@ -704,34 +704,29 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         _isPremiumUser.value = isPremium
         prefs.edit().putBoolean(PREF_IS_PREMIUM, isPremium).apply()
         sendHeartbeat(getApplication())
-        if (isPremium) {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    val app = getApplication<Application>()
-                    val androidId = try {
-                        android.provider.Settings.Secure.getString(
-                            app.contentResolver,
-                            android.provider.Settings.Secure.ANDROID_ID
-                        ) ?: "unknown_device"
-                    } catch (e: Exception) {
-                        "unknown_device"
-                    }
-                    val isoNow = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
-                        timeZone = java.util.TimeZone.getTimeZone("UTC")
-                    }.format(java.util.Date())
-                    val profileMap = mapOf(
-                        "device_id" to androidId,
-                        "subscription_tier" to "PREMIUM",
-                        "subscription_plan" to "عضویت دائمی عمارت (مایکت)",
-                        "is_active" to true,
-                        "updated_at" to isoNow
-                    )
-                    api.updateUserSubmission(androidId, profileMap) // best-effort update
-                } catch (e: Exception) {
-                    // Ignore best-effort profile update
-                }
-            }
+    }
+
+    fun getPersistentDeviceId(context: android.content.Context): String {
+        val devicePrefs = context.getSharedPreferences("horror_device_prefs", android.content.Context.MODE_PRIVATE)
+        val savedId = devicePrefs.getString("unique_device_id", null)
+        if (!savedId.isNullOrBlank()) {
+            return savedId
         }
+        val androidId = try {
+            android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                android.provider.Settings.Secure.ANDROID_ID
+            )
+        } catch (e: Exception) {
+            null
+        }
+        val finalId = if (!androidId.isNullOrBlank() && androidId != "9774d56d682e549c" && androidId != "unknown_device") {
+            androidId
+        } else {
+            "dev_" + java.util.UUID.randomUUID().toString().replace("-", "").take(16)
+        }
+        devicePrefs.edit().putString("unique_device_id", finalId).apply()
+        return finalId
     }
 
     fun updateSubscriptionPrice(newPrice: Long, onResult: ((Boolean, String) -> Unit)? = null) {
@@ -1135,29 +1130,33 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 if (SupabaseClientProvider.isConfigured && NetworkUtils.isOnline(context)) {
-                    val androidId = try {
-                        android.provider.Settings.Secure.getString(
-                            context.contentResolver,
-                            android.provider.Settings.Secure.ANDROID_ID
-                        ) ?: "unknown_device"
-                    } catch (e: Exception) {
-                        "unknown_device"
-                    }
+                    val deviceId = getPersistentDeviceId(context)
                     val isSub = _isPremiumUser.value
                     val isoNow = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
                         timeZone = java.util.TimeZone.getTimeZone("UTC")
                     }.format(java.util.Date())
 
                     val deviceModel = "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"
-                    api.sendHeartbeat(
-                        UserHeartbeatDto(
-                            device_id = androidId,
-                            device_model = deviceModel,
-                            is_subscribed = isSub,
-                            subscription_plan = if (isSub) "عضویت ویژه عمارت" else "کاربر عادی",
-                            last_seen_at = isoNow
-                        )
+                    val dto = UserHeartbeatDto(
+                        device_id = deviceId,
+                        device_model = deviceModel,
+                        is_subscribed = isSub,
+                        subscription_plan = if (isSub) "عضویت ویژه عمارت" else "کاربر عادی",
+                        last_seen_at = isoNow
                     )
+
+                    // First attempt to update the existing row for this device_id
+                    val updateRes = try {
+                        api.updateHeartbeat(deviceIdFilter = "eq.$deviceId", heartbeat = dto)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    val bodyStr = updateRes?.body()?.string() ?: ""
+
+                    // If no row was updated (empty representation array), insert new row
+                    if (updateRes == null || !updateRes.isSuccessful || bodyStr.trim() == "[]") {
+                        api.sendHeartbeat(dto)
+                    }
                 }
             } catch (e: Exception) {
                 // Silently ignore telemetry failure
