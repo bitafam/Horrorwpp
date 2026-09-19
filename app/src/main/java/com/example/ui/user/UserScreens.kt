@@ -23,12 +23,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
@@ -1015,10 +1017,321 @@ fun GamingAiSummonerBannerCanvas(modifier: Modifier = Modifier) {
 }
 
 // ==========================================
-// GAMING FANTASY TOP BAR COMPONENT & VIP BADGE
+// GAMING FANTASY TOP BAR COMPONENT, VIP BADGE, GOTHIC LOADING & OFFLINE BLOCKER
 // ==========================================
 
 val LocalIsVipUser = androidx.compose.runtime.compositionLocalOf { false }
+
+@Composable
+fun GothicSummoningLoading(
+    modifier: Modifier = Modifier,
+    statusText: String = "در حال احضار روایات عمارت وحشت..."
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "summoning_loading")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ritual_rotation"
+    )
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.93f,
+        targetValue = 1.07f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1600, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "logo_pulse"
+    )
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "glow_alpha"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color(0xFF040207)),
+        contentAlignment = Alignment.Center
+    ) {
+        MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            // Ritual Orbit Canvas behind Logo
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.size(140.dp)
+            ) {
+                // Summoning Arc Canvas
+                androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+                    val radius = size.minDimension / 2f - 8f
+                    val c = Offset(size.width / 2f, size.height / 2f)
+
+                    // Ambient glow circle
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(
+                                Color(0xFFB8143F).copy(alpha = glowAlpha * 0.4f),
+                                Color(0xFFFFD700).copy(alpha = glowAlpha * 0.15f),
+                                Color.Transparent
+                            )
+                        ),
+                        radius = radius + 16f,
+                        center = c
+                    )
+
+                    // Outer segmented ring rotating
+                    rotate(rotation) {
+                        drawArc(
+                            color = Color(0xFFFFD700).copy(alpha = 0.85f),
+                            startAngle = 0f,
+                            sweepAngle = 70f,
+                            useCenter = false,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                        drawArc(
+                            color = Color(0xFFB8143F),
+                            startAngle = 90f,
+                            sweepAngle = 70f,
+                            useCenter = false,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                        drawArc(
+                            color = Color(0xFFFFD700).copy(alpha = 0.85f),
+                            startAngle = 180f,
+                            sweepAngle = 70f,
+                            useCenter = false,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                        drawArc(
+                            color = Color(0xFFB8143F),
+                            startAngle = 270f,
+                            sweepAngle = 70f,
+                            useCenter = false,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
+
+                    // Inner counter-rotating ring
+                    rotate(-rotation * 1.5f) {
+                        drawArc(
+                            color = Color(0xFFDEC595).copy(alpha = 0.5f),
+                            startAngle = 45f,
+                            sweepAngle = 90f,
+                            useCenter = false,
+                            style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
+                        )
+                        drawArc(
+                            color = Color(0xFFDEC595).copy(alpha = 0.5f),
+                            startAngle = 225f,
+                            sweepAngle = 90f,
+                            useCenter = false,
+                            style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f)))
+                        )
+                    }
+                }
+
+                // Logo Emblem in Center with breathing animation
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFF14081E),
+                    border = BorderStroke(2.dp, Color(0xFFFFD700).copy(alpha = 0.85f)),
+                    modifier = Modifier
+                        .size(76.dp)
+                        .scale(pulseScale)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Image(
+                            painter = painterResource(id = R.drawable.img_poster_dark_demon_1789804434865),
+                            contentDescription = "لوگوی عمارت وحشت",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Gothic Title
+            Text(
+                text = "عـمـــارت وحـشـــت",
+                color = Color(0xFFDEC595),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = FontFamily.Serif
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Subtitle with pulsing text
+            Text(
+                text = statusText,
+                color = Color(0xFFB8143F),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun GothicOfflineBlockerScreen(
+    onRetry: () -> Unit,
+    onOpenSubscription: () -> Unit
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "offline_pulse")
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "offline_glow"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF07020A)),
+        contentAlignment = Alignment.Center
+    ) {
+        MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
+
+        Card(
+            modifier = Modifier
+                .padding(20.dp)
+                .widthIn(max = 480.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF13091C)),
+            border = BorderStroke(1.5.dp, Color(0xFFB8143F).copy(alpha = 0.85f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(22.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Glowing Offline Icon
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFF240612),
+                    border = BorderStroke(2.dp, Color(0xFFB8143F).copy(alpha = glowAlpha)),
+                    modifier = Modifier.size(76.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.WifiOff,
+                            contentDescription = "اتصال اینترنت قطع است",
+                            tint = Color(0xFFFF4D4D),
+                            modifier = Modifier.size(36.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "ارتباط با جهان مادی قطع است",
+                    color = Color(0xFFDEC595),
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontFamily = FontFamily.Serif,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "برای گشودن طلسم‌های عمارت وحشت و دسترسی به روایات در نسخه رایگان، اتصال به شبکه اینترنت الزامی است.",
+                    color = Color(0xFFEDE8F5),
+                    fontSize = 13.sp,
+                    lineHeight = 21.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // VIP Benefit Banner
+                Surface(
+                    color = Color(0xFF281800),
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.7f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "👑", fontSize = 18.sp)
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "کاربران VIP می‌توانند به صورت کاملاً آفلاین و بدون نیاز به اینترنت به تمامی روایات کش‌شده دسترسی داشته باشند.",
+                            color = Color(0xFFFFD700),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            lineHeight = 17.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // Retry Button
+                Button(
+                    onClick = {
+                        HorrorSoundManager.playClickSound()
+                        onRetry()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB8143F)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("بررسی مجدد اتصال اینترنت", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // VIP Upgrade Button
+                OutlinedButton(
+                    onClick = {
+                        HorrorSoundManager.playClickSound()
+                        onOpenSubscription()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    border = BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.85f)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("✨ عضویت طلایی (دسترسی نامحدود آفلاین)", color = Color(0xFFFFD700), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun VipHeaderBadge(
@@ -1213,14 +1526,16 @@ fun GothicGamingHomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF040207))
+            .background(Color(0xFF040207)),
+        contentAlignment = Alignment.TopCenter
     ) {
         // High-end ambient background cracks canvas
         MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .widthIn(max = 760.dp)
+                .fillMaxWidth()
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -2103,12 +2418,12 @@ fun UserMainScreen(
     }
 
     fun handleReadRegularStory(story: RealStory) {
-        if (!NetworkUtils.isOnline(context)) {
-            showNoInternetDialog = true
-            return
-        }
         if (isPremium) {
             activeReadingStory = story
+            return
+        }
+        if (!NetworkUtils.isOnline(context)) {
+            showNoInternetDialog = true
             return
         }
         val shouldShowAd = viewModel.onReadRegularOrAiStory()
@@ -2126,12 +2441,12 @@ fun UserMainScreen(
     }
 
     fun handleReadUserStory(story: RealStory) {
-        if (!NetworkUtils.isOnline(context)) {
-            showNoInternetDialog = true
-            return
-        }
         if (isPremium) {
             activeReadingStory = story
+            return
+        }
+        if (!NetworkUtils.isOnline(context)) {
+            showNoInternetDialog = true
             return
         }
         if (activity != null) {
@@ -2150,6 +2465,10 @@ fun UserMainScreen(
     fun handleReadAiStory(story: AiStory) {
         if (isPremium) {
             activeReadingAiStory = story
+            return
+        }
+        if (!NetworkUtils.isOnline(context)) {
+            showNoInternetDialog = true
             return
         }
         val shouldShowAd = viewModel.onReadRegularOrAiStory()
@@ -2181,9 +2500,17 @@ fun UserMainScreen(
                     .fillMaxWidth()
             ) {
                 if (loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center),
-                        color = Color(0xFFB8143F)
+                    GothicSummoningLoading(
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else if (!NetworkUtils.isOnline(context) && !isPremium && activeReadingStory == null && activeReadingAiStory == null && currentDestination != UserDestination.SUBSCRIPTION) {
+                    GothicOfflineBlockerScreen(
+                        onRetry = {
+                            viewModel.loadUserData()
+                        },
+                        onOpenSubscription = {
+                            navigateTo(UserDestination.SUBSCRIPTION)
+                        }
                     )
                 } else {
                     if (activeReadingStory != null) {
@@ -2574,11 +2901,13 @@ fun BeautifulStoriesDashboard(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .weight(1f)
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -3483,13 +3812,16 @@ https://myket.ir/app/com.apps.hororhouse
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .weight(1f)
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
             // High-end Gothic ambient crack canvas background
             MirrorCracksCanvas(modifier = Modifier.fillMaxSize())
 
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -4421,13 +4753,20 @@ https://myket.ir/app/com.apps.hororhouse
         }
 
         // READING CONTENT
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 18.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // ATMOSPHERIC POSTER HERO BANNER
             item {
                 Card(
@@ -4823,6 +5162,7 @@ https://myket.ir/app/com.apps.hororhouse
         }
     }
 }
+}
 
 @Composable
 fun BeautifulSubmitStoryScreen(
@@ -4851,14 +5191,20 @@ fun BeautifulSubmitStoryScreen(
             onBack = onBack
         )
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF030106))
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
         Text(
             text = "کتیبه ارسال رازها",
             style = MaterialTheme.typography.displayLarge.copy(
@@ -5042,6 +5388,7 @@ fun BeautifulSubmitStoryScreen(
         }
     }
 }
+}
 
     if (showSuccessDialog) {
         AlertDialog(
@@ -5110,15 +5457,21 @@ fun GorgeousSettingsScreen(
             onBack = onBack
         )
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFF030106))
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 760.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             Text(
                 text = "تنظیمات قلم و ظاهر داستان",
                 style = MaterialTheme.typography.displayLarge.copy(
@@ -5347,6 +5700,7 @@ fun GorgeousSettingsScreen(
             }
         }
     }
+}
 }
 
 @Composable

@@ -129,13 +129,20 @@ fun AiStoriesUserSection(
             onBack = onBack
         )
 
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 14.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp),
+                contentPadding = PaddingValues(top = 12.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
             // SEARCH & CONTROLS HEADER
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -342,6 +349,7 @@ fun AiStoriesUserSection(
             }
         }
     }
+}
 }
 
 // ==========================================
@@ -1032,13 +1040,20 @@ https://myket.ir/app/com.apps.hororhouse
         }
 
         // READING CONTENT
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 18.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .weight(1f),
+            contentAlignment = Alignment.TopCenter
         ) {
+            LazyColumn(
+                modifier = Modifier
+                    .widthIn(max = 720.dp)
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp),
+                contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // ATMOSPHERIC POSTER HERO BANNER
             item {
                 Card(
@@ -1326,4 +1341,5 @@ https://myket.ir/app/com.apps.hororhouse
             }
         }
     }
+}
 }

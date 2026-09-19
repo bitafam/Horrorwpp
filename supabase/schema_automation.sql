@@ -193,17 +193,19 @@ CREATE TABLE IF NOT EXISTS public.user_heartbeats (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
--- پاکسازی رکوردهای تکراری قبلی و نگه داشتن آخرین رکورد هر دستگاه
+-- پاکسازی رکوردهای تکراری قبلی با استفاده از شناسه ردیف ctid در پستگرس
 DELETE FROM public.user_heartbeats a
 USING public.user_heartbeats b
-WHERE a.id < b.id
+WHERE a.ctid < b.ctid
   AND a.device_id = b.device_id;
 
 -- اضافه کردن محدودیت یکتایی (UNIQUE) روی شناسه دستگاه در سطح دیتابیس
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'user_heartbeats_device_id_unique'
+        SELECT 1 FROM pg_constraint 
+        WHERE conrelid = 'public.user_heartbeats'::regclass 
+          AND (contype = 'u' OR contype = 'p')
     ) THEN
         ALTER TABLE public.user_heartbeats ADD CONSTRAINT user_heartbeats_device_id_unique UNIQUE (device_id);
     END IF;

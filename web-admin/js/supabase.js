@@ -446,21 +446,21 @@ const SupabaseService = {
             const heartbeats = await this.getHeartbeats();
             if (!Array.isArray(heartbeats) || heartbeats.length === 0) return 0;
             const seen = new Map();
-            const toDelete = [];
+            const toDeleteIds = [];
             for (const h of heartbeats) {
                 const devId = (h.device_id || 'unknown').trim();
                 if (seen.has(devId)) {
-                    if (h.id) toDelete.push(h.id);
+                    if (h.id) toDeleteIds.push(h.id);
                 } else {
-                    seen.set(devId, h.id);
+                    seen.set(devId, h.id || devId);
                 }
             }
-            if (toDelete.length > 0) {
-                await this.request(`rest/v1/user_heartbeats?id=in.(${toDelete.join(',')})`, {
+            if (toDeleteIds.length > 0) {
+                await this.request(`rest/v1/user_heartbeats?id=in.(${toDeleteIds.join(',')})`, {
                     method: 'DELETE'
                 });
             }
-            return toDelete.length;
+            return toDeleteIds.length;
         } catch (e) {
             console.error('Error cleaning duplicate heartbeats:', e);
             return 0;
