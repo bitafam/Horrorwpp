@@ -35,31 +35,21 @@ const MONTH_NAMES = [
     "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"
 ];
 
-// Complete 22-poster collection (Initial 12 + 10 New Horror Posters)
+// Pure Gothic and Horror local drawable identifiers
 const HORROR_POSTERS = [
-    "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1519074069444-1ba4fff16def?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop",
-    // 10 new horror posters
-    "https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1505672678430-8a1881774534?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1518709414768-a88981a4515d?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1509114397022-ed747cca3f65?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1516339901601-2e1b62dc0c45?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1519052537078-e6302a4968d4?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1518709593452-95123d4e8320?q=80&w=800&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1518709711639-6518a221f787?q=80&w=800&auto=format&fit=crop"
+    "poster_dark_demon",
+    "poster_ghost_corridor",
+    "poster_blood_ritual",
+    "poster_screaming_wraith",
+    "poster_cemetery_curse",
+    "universal_horror",
+    "nightmare_crypt",
+    "haunted_chamber",
+    "img_ai_story_poster_1",
+    "img_ai_story_poster_2",
+    "img_poster_1",
+    "img_poster_2",
+    "img_poster_3"
 ];
 
 function getRandomHorrorPoster(storyId) {
@@ -2338,9 +2328,25 @@ function renderLogsAndTelemetry() {
         }
     }
 
+    // Deduplicate heartbeats strictly by device_id
+    const uniqueDevicesMap = new Map();
+    for (const h of heartbeatsCache) {
+        const dId = (h.device_id || h.user_id || '').trim();
+        if (!dId) continue;
+        const curTime = new Date(h.last_seen_at || h.last_seen || h.updated_at || h.created_at || 0).getTime();
+        if (uniqueDevicesMap.has(dId)) {
+            const ex = uniqueDevicesMap.get(dId);
+            const exTime = new Date(ex.last_seen_at || ex.last_seen || ex.updated_at || ex.created_at || 0).getTime();
+            if (curTime > exTime) uniqueDevicesMap.set(dId, h);
+        } else {
+            uniqueDevicesMap.set(dId, h);
+        }
+    }
+    const dedupedHeartbeats = Array.from(uniqueDevicesMap.values());
+
     // Five minutes threshold for online users
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-    const onlineUsers = heartbeatsCache.filter(h => {
+    const onlineUsers = dedupedHeartbeats.filter(h => {
         const lastSeen = h.last_seen_at || h.last_seen || h.updated_at || h.created_at;
         return (lastSeen && lastSeen >= fiveMinutesAgo) || Boolean(h.is_online);
     });
@@ -2349,17 +2355,17 @@ function renderLogsAndTelemetry() {
 
     // 24 hours active users
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const activeDaily = heartbeatsCache.filter(h => {
+    const activeDaily = dedupedHeartbeats.filter(h => {
         const lastSeen = h.last_seen_at || h.last_seen || h.updated_at || h.created_at;
         return (lastSeen && lastSeen >= oneDayAgo);
     });
     const elActiveDaily = document.getElementById('telemetryActiveDailyCount');
-    if (elActiveDaily) elActiveDaily.textContent = (activeDaily.length || heartbeatsCache.length || 0).toLocaleString('fa-IR');
+    if (elActiveDaily) elActiveDaily.textContent = (activeDaily.length || dedupedHeartbeats.length || 0).toLocaleString('fa-IR');
 
-    // Subscribers count
+    // Subscribers count (strict 1 per device)
     const activeSubs = subscribersCache.filter(s => s.status === 'ACTIVE' || s.is_active || s.is_subscribed === true);
     const elSubs = document.getElementById('telemetrySubscribersCount');
-    if (elSubs) elSubs.textContent = (activeSubs.length || subscribersCache.length || 0).toLocaleString('fa-IR');
+    if (elSubs) elSubs.textContent = activeSubs.length.toLocaleString('fa-IR');
 
     // Navbar Badge
     const navBadge = document.getElementById('navCrashesBadge');

@@ -379,15 +379,7 @@ const SupabaseService = {
     },
 
     async getSubscribers() {
-        let profiles = [];
         let heartbeats = [];
-        try {
-            const res = await this.request('rest/v1/profiles?subscription_tier=neq.FREE&order=updated_at.desc');
-            if (Array.isArray(res)) profiles = res;
-        } catch (e) {
-            console.warn('Could not query profiles table for subscribers:', e);
-        }
-
         try {
             const hb = await this.request('rest/v1/user_heartbeats?is_subscribed=eq.true&order=last_seen_at.desc');
             if (Array.isArray(hb)) heartbeats = hb;
@@ -395,24 +387,34 @@ const SupabaseService = {
             console.warn('Could not query user_heartbeats for subscribers:', e);
         }
 
-        // Merge and deduplicate by device_id or user_id
+        // Strict deduplication: Exactly ONE record per unique device_id
         const map = new Map();
         for (const h of heartbeats) {
-            const key = h.device_id || h.user_id || `hb_${Math.random()}`;
-            map.set(key, {
-                ...h,
-                subscription_plan: h.subscription_plan || 'عضویت ویژه عمارت (مایکت)',
-                status: 'ACTIVE',
-                is_subscribed: true
-            });
-        }
-        for (const p of profiles) {
-            const key = p.device_id || p.id || p.user_id || `prof_${Math.random()}`;
-            map.set(key, {
-                ...map.get(key),
-                ...p,
-                is_subscribed: true
-            });
+            if (h.is_subscribed !== true && h.is_subscribed !== 'true') continue;
+            const deviceId = (h.device_id || h.user_id || 'unknown').trim();
+            if (!deviceId) continue;
+
+            const curTime = new Date(h.last_seen_at || h.updated_at || h.created_at || 0).getTime();
+            if (map.has(deviceId)) {
+                const existing = map.get(deviceId);
+                const exTime = new Date(existing.last_seen_at || existing.updated_at || existing.created_at || 0).getTime();
+                if (curTime > exTime) {
+                    map.set(deviceId, {
+                        ...existing,
+                        ...h,
+                        subscription_plan: h.subscription_plan || 'عضویت ویژه عمارت (مایکت)',
+                        status: 'ACTIVE',
+                        is_subscribed: true
+                    });
+                }
+            } else {
+                map.set(deviceId, {
+                    ...h,
+                    subscription_plan: h.subscription_plan || 'عضویت ویژه عمارت (مایکت)',
+                    status: 'ACTIVE',
+                    is_subscribed: true
+                });
+            }
         }
         return Array.from(map.values());
     },

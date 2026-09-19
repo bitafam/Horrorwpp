@@ -1015,8 +1015,37 @@ fun GamingAiSummonerBannerCanvas(modifier: Modifier = Modifier) {
 }
 
 // ==========================================
-// GAMING FANTASY TOP BAR COMPONENT
+// GAMING FANTASY TOP BAR COMPONENT & VIP BADGE
 // ==========================================
+
+val LocalIsVipUser = androidx.compose.runtime.compositionLocalOf { false }
+
+@Composable
+fun VipHeaderBadge(
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        color = Color(0xFF281800),
+        shape = RoundedCornerShape(8.dp),
+        border = BorderStroke(1.dp, Color(0xFFFFD700).copy(alpha = 0.85f)),
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "👑", fontSize = 11.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "VIP",
+                color = Color(0xFFFFD700),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFamily = FontFamily.Serif
+            )
+        }
+    }
+}
 
 @Composable
 fun GamingTopBar(
@@ -1024,9 +1053,12 @@ fun GamingTopBar(
     subtitle: String? = null,
     icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.AutoAwesome,
     badgeText: String? = null,
+    isVip: Boolean? = null,
     onBack: () -> Unit,
     trailingContent: (@Composable () -> Unit)? = null
 ) {
+    val isVipEffective = isVip ?: LocalIsVipUser.current
+
     Surface(
         color = Color(0xFF07040C),
         modifier = Modifier
@@ -1121,8 +1153,12 @@ fun GamingTopBar(
                 }
             }
 
-            // Left Section (RTL): Trailing Actions or Home button
+            // Left Section (RTL): VIP Badge + Trailing Actions or Home button
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isVipEffective) {
+                    VipHeaderBadge(modifier = Modifier.padding(end = 8.dp))
+                }
+
                 if (trailingContent != null) {
                     trailingContent()
                 } else {
@@ -1172,6 +1208,8 @@ fun GothicGamingHomeScreen(
         label = "glowPulse"
     )
 
+    val isPremium by viewModel.isPremiumUser.collectAsState()
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1193,7 +1231,7 @@ fun GothicGamingHomeScreen(
             Surface(
                 color = Color(0xFF0C0716),
                 shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.5f)),
+                border = BorderStroke(1.dp, if (isPremium) Color(0xFFFFD700).copy(alpha = 0.75f) else Color(0xFFDEC595).copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
@@ -1220,6 +1258,12 @@ fun GothicGamingHomeScreen(
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.sp
+                        )
+                    }
+
+                    if (isPremium) {
+                        VipHeaderBadge(
+                            modifier = Modifier.align(Alignment.CenterStart)
                         )
                     }
                 }
@@ -2122,7 +2166,10 @@ fun UserMainScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+    CompositionLocalProvider(
+        LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl,
+        LocalIsVipUser provides isPremium
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -4262,6 +4309,10 @@ https://myket.ir/app/com.apps.hororhouse
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isPremium) {
+                        VipHeaderBadge(modifier = Modifier.padding(end = 4.dp))
+                    }
+
                     // Report Button
                     IconButton(
                         onClick = {

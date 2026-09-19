@@ -394,23 +394,30 @@ fun AiStoryPosterGraphic(
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Crop
 ) {
-    val effectiveUrl = remember(posterUrl, storyId) {
-        if (!posterUrl.isNullOrBlank() && (posterUrl.startsWith("http://") || posterUrl.startsWith("https://"))) {
-            posterUrl
-        } else {
-            com.example.data.HorrorPosterPresets.getPoster(storyId)
-        }
-    }
     val defaultRes = remember(posterUrl, storyId) { getStoryPosterDrawableRes(posterUrl, storyId) }
+    val isCustomRemoteUrl = remember(posterUrl) {
+        !posterUrl.isNullOrBlank() &&
+        (posterUrl.startsWith("http://") || posterUrl.startsWith("https://")) &&
+        !posterUrl.contains("unsplash.com")
+    }
 
-    AsyncImage(
-        model = effectiveUrl,
-        contentDescription = "پوستر داستان هوش تاریکی",
-        modifier = modifier,
-        contentScale = contentScale,
-        error = painterResource(id = defaultRes),
-        placeholder = painterResource(id = defaultRes)
-    )
+    if (isCustomRemoteUrl) {
+        AsyncImage(
+            model = posterUrl,
+            contentDescription = "پوستر داستان هوش تاریکی",
+            modifier = modifier,
+            contentScale = contentScale,
+            error = painterResource(id = defaultRes),
+            placeholder = painterResource(id = defaultRes)
+        )
+    } else {
+        Image(
+            painter = painterResource(id = defaultRes),
+            contentDescription = "پوستر داستان هوش تاریکی",
+            modifier = modifier,
+            contentScale = contentScale
+        )
+    }
 }
 
 // ==========================================
@@ -917,6 +924,10 @@ https://myket.ir/app/com.apps.hororhouse
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isPremium) {
+                        VipHeaderBadge(modifier = Modifier.padding(end = 4.dp))
+                    }
+
                     // Report Button
                     IconButton(
                         onClick = {

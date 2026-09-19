@@ -11,18 +11,19 @@ const corsHeaders = {
 };
 
 const POSTER_PRESETS = [
-  "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1508739773434-c26b3d09e071?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1519074069444-1ba4fff16def?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1542281286-9e0a16bb7366?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1509248961158-e54f6934749c?q=80&w=800&auto=format&fit=crop",
-  "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?q=80&w=800&auto=format&fit=crop"
+  "poster_dark_demon",
+  "poster_ghost_corridor",
+  "poster_blood_ritual",
+  "poster_screaming_wraith",
+  "poster_cemetery_curse",
+  "universal_horror",
+  "nightmare_crypt",
+  "haunted_chamber",
+  "img_ai_story_poster_1",
+  "img_ai_story_poster_2",
+  "img_poster_1",
+  "img_poster_2",
+  "img_poster_3"
 ];
 
 serve(async (req) => {
