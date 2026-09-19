@@ -17,7 +17,7 @@ data class GrimFortune(
     val month_index: Int, // 1 to 12 (Farvardin to Esfand)
     val month_name: String, // e.g. "فروردین", "اردیبهشت", ...
     val title: String,
-    val omen_poem: String?, // بیت یا شعر فال شوم حافظ
+    val omen_poem: String?, // بیت یا شعر فال شوم جادوگر شرور
     val fortune_text: String, // تفسیر طالع و پیش‌گویی هولناک
     val doom_level: String?, // e.g. "شوم", "بسیار شوم", "نفرین ابدی"
     val status: String, // 'DRAFT', 'PUBLISHED', 'ARCHIVED'

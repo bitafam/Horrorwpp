@@ -1343,7 +1343,7 @@ function initGrimFortuneTab() {
             const singlePrompt = `برای ماه «${mName}» یک طالع شوم بنویس با فرمت زیر:
 ===1===
 عنوان: [عنوان کوتاه طالع]
-شعر: [بیت شعر شوم سبک حافظ]
+شعر: [بیت شعر شوم سروده جادوگر شرور]
 طالع: [پیشگویی و هشدار]
 درجه: [شوم / بسیار شوم / نفرین ابدی]`;
 
@@ -1411,7 +1411,7 @@ function renderSelectedMonthFortune() {
 
     document.getElementById('selectedMonthTitle').textContent = fortune.title || `طالع ماه ${MONTH_NAMES[selectedMonthIndex - 1]}`;
     document.getElementById('selectedMonthDoom').textContent = fortune.doom_level || 'نامشخص';
-    document.getElementById('selectedMonthPoem').textContent = `بیت شوم حافظ: « ${fortune.omen_poem || '—'} »`;
+    document.getElementById('selectedMonthPoem').textContent = `بیت شوم جادوگر شرور: « ${fortune.omen_poem || '—'} »`;
     document.getElementById('selectedMonthText').textContent = fortune.fortune_text || '';
 }
 
