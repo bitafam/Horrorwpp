@@ -2484,6 +2484,38 @@ https://myket.ir/app/com.apps.hororhouse
                 }
             }
 
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // OFFICIAL AGE RATING BADGE (+16)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    color = Color(0xFF280715),
+                    shape = RoundedCornerShape(6.dp),
+                    border = BorderStroke(0.8.dp, Color(0xFFFF1E56).copy(alpha = 0.7f))
+                ) {
+                    Text(
+                        text = "+۱۶",
+                        color = Color(0xFFFF4D4D),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "رده‌بندی سنی مایکت: مناسب برای افراد بالای ۱۶ سال",
+                    color = Color(0xFF9E8FA8),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             // FOOTER SIGNATURE

@@ -65,7 +65,7 @@ fun AgeAndHealthGateScreen(
     onConfirm: () -> Unit
 ) {
     val context = LocalContext.current
-    var isOver15Checked by remember { mutableStateOf(false) }
+    var isOver16Checked by remember { mutableStateOf(false) }
     var noHeartConditionChecked by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -137,7 +137,7 @@ fun AgeAndHealthGateScreen(
                 border = BorderStroke(1.dp, Color(0xFFB8143F))
             ) {
                 Text(
-                    text = "هشدار الزامی ورود • رده سنی +۱۵",
+                    text = "هشدار الزامی ورود • رده سنی +۱۶",
                     color = Color(0xFFFF4D4D),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
@@ -204,7 +204,7 @@ fun AgeAndHealthGateScreen(
                     )
 
                     Text(
-                        text = "ورود به برنامه تنها برای افراد بالای ۱۵ سال تمام و فاقد هرگونه بیماری قلبی مجاز است.",
+                        text = "ورود به برنامه تنها برای افراد بالای ۱۶ سال تمام و فاقد هرگونه بیماری قلبی مجاز است.",
                         color = Color(0xFFFF6B6B),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -220,28 +220,28 @@ fun AgeAndHealthGateScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFF160920)),
-                border = BorderStroke(1.5.dp, if (isOver15Checked && noHeartConditionChecked) Color(0xFF00E676) else Color(0xFFB8143F).copy(alpha = 0.7f))
+                border = BorderStroke(1.5.dp, if (isOver16Checked && noHeartConditionChecked) Color(0xFF00E676) else Color(0xFFB8143F).copy(alpha = 0.7f))
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Checkbox 1: Age >= 15
+                    // Checkbox 1: Age >= 16
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .clickable {
-                                isOver15Checked = !isOver15Checked
+                                isOver16Checked = !isOver16Checked
                                 errorMessage = null
                             }
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
-                            checked = isOver15Checked,
+                            checked = isOver16Checked,
                             onCheckedChange = {
-                                isOver15Checked = it
+                                isOver16Checked = it
                                 errorMessage = null
                             },
                             colors = CheckboxDefaults.colors(
@@ -252,8 +252,8 @@ fun AgeAndHealthGateScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "سن من بالای ۱۵ سال تمام است.",
-                            color = if (isOver15Checked) Color(0xFFDEC595) else Color.White,
+                            text = "سن من بالای ۱۶ سال تمام است.",
+                            color = if (isOver16Checked) Color(0xFFDEC595) else Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -336,8 +336,8 @@ fun AgeAndHealthGateScreen(
             // Primary Confirm & Enter Button
             Button(
                 onClick = {
-                    if (!isOver15Checked || !noHeartConditionChecked) {
-                        errorMessage = "جهت ورود به برنامه، باید حتماً تأیید کنید که بالای ۱۵ سال هستید و بیماری قلبی ندارید."
+                    if (!isOver16Checked || !noHeartConditionChecked) {
+                        errorMessage = "جهت ورود به برنامه، باید حتماً تأیید کنید که بالای ۱۶ سال هستید و بیماری قلبی ندارید."
                         HorrorSoundManager.playScreamShort()
                     } else {
                         HorrorSoundManager.playClickSound()
@@ -349,7 +349,7 @@ fun AgeAndHealthGateScreen(
                     .height(52.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isOver15Checked && noHeartConditionChecked) Color(0xFFB8143F) else Color(0xFF4A1828)
+                    containerColor = if (isOver16Checked && noHeartConditionChecked) Color(0xFFB8143F) else Color(0xFF4A1828)
                 )
             ) {
                 Icon(
