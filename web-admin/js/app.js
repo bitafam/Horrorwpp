@@ -922,7 +922,7 @@ function parseBulkStories(inputText) {
         let poster = "";
         let author = "ناشناس";
         let source = "واقعی";
-        let tags = "ترسناک";
+        let tags = "ترسناک، واقعی";
 
         const lines = trimmed.split("\n");
         const hasKeys = lines.some(l => {
@@ -993,7 +993,7 @@ function parseBulkStories(inputText) {
                 author: author || "ناشناس",
                 source: source || "واقعی",
                 cover_image_url: (poster && poster.length > 4) ? poster : getRandomHorrorPoster(storyId),
-                tags: "ترسناک",
+                tags: tags || "ترسناک، واقعی",
                 status: "DRAFT",
                 rating: 5.0,
                 rating_count: 0,

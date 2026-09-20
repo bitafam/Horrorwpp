@@ -213,7 +213,7 @@ const SupabaseService = {
         if (payload.view_count === undefined) payload.view_count = 0;
         if (payload.rating === undefined) payload.rating = 5.0;
         if (payload.rating_count === undefined) payload.rating_count = 0;
-        if (!payload.tags) payload.tags = "ترسناک";
+        if (!payload.tags) payload.tags = "ترسناک، واقعی";
         if (!payload.status) payload.status = "DRAFT";
 
         // Ensure id is a valid UUID or generate one
