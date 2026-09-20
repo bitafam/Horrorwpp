@@ -56,6 +56,10 @@ fun AiStoriesUserSection(
     onStoryRead: (AiStory) -> Unit,
     onBack: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isLoadingMoreAiStories by viewModel.isLoadingMoreAiStories.collectAsState()
+    val hasMoreAiStories by viewModel.hasMoreAiStories.collectAsState()
+
     val publishedStories = remember(aiStories) {
         aiStories.filter { it.status == "PUBLISHED" }
     }
@@ -63,7 +67,7 @@ fun AiStoriesUserSection(
     var selectedGenre by remember { mutableStateOf("همه") }
     var selectedSort by remember { mutableStateOf("جدیدترین") }
     var searchQuery by remember { mutableStateOf("") }
-    var displayLimit by remember { mutableIntStateOf(20) }
+    var displayLimit by remember { mutableIntStateOf(10) }
 
     // Dynamic genres extracted strictly from existing generated stories
     val genres = remember(publishedStories) {
@@ -82,7 +86,7 @@ fun AiStoriesUserSection(
 
     // Reset pagination when filter or search changes
     LaunchedEffect(selectedGenre, selectedSort, searchQuery) {
-        displayLimit = 20
+        displayLimit = 10
     }
 
     val sortOptions = listOf("جدیدترین", "قدیمی‌ترین", "پربازدیدترین", "محبوب‌ترین")
@@ -301,8 +305,8 @@ fun AiStoriesUserSection(
                     )
                 }
 
-                // LOAD MORE BUTTON (IF MORE STORIES REMAIN)
-                if (filteredStories.size > displayLimit) {
+                // LOAD MORE BUTTON (IF MORE STORIES REMAIN OR HAS MORE IN DATABASE)
+                if (filteredStories.size > displayLimit || hasMoreAiStories) {
                     item {
                         Box(
                             modifier = Modifier
@@ -313,12 +317,15 @@ fun AiStoriesUserSection(
                             OutlinedButton(
                                 onClick = {
                                     HorrorSoundManager.playClickSound()
-                                    displayLimit += 20
+                                    displayLimit += 10
+                                    viewModel.loadMoreAiStories(context)
                                 },
+                                enabled = !isLoadingMoreAiStories,
                                 shape = RoundedCornerShape(12.dp),
                                 border = BorderStroke(1.dp, Color(0xFFDEC595)),
                                 colors = ButtonDefaults.outlinedButtonColors(
-                                    containerColor = Color(0xFF160A22)
+                                    containerColor = Color(0xFF160A22),
+                                    disabledContainerColor = Color(0xFF0F0717)
                                 ),
                                 modifier = Modifier
                                     .fillMaxWidth(0.9f)
@@ -328,19 +335,34 @@ fun AiStoriesUserSection(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Icon(
-                                        Icons.Default.ExpandMore,
-                                        contentDescription = null,
-                                        tint = Color(0xFFDEC595),
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "مشاهده داستان‌های بیشتر (${filteredStories.size - displayLimit} مورد باقی‌مانده)",
-                                        color = Color(0xFFDEC595),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    if (isLoadingMoreAiStories) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            color = Color(0xFFDEC595),
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "در حال بارگذاری داستان‌های بیشتر از دیتابیس...",
+                                            color = Color(0xFFDEC595),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    } else {
+                                        Icon(
+                                            Icons.Default.ExpandMore,
+                                            contentDescription = null,
+                                            tint = Color(0xFFDEC595),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "مشاهده داستان‌های بیشتر (نمایش ${displayedStories.size} داستان)",
+                                            color = Color(0xFFDEC595),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }

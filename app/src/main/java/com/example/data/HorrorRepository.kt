@@ -105,19 +105,19 @@ class HorrorRepository(context: Context) {
     }
 
     suspend fun saveRealStoriesLocalOnly(stories: List<RealStory>) = withContext(Dispatchers.IO) {
-        dao.upsertRealStories(stories.map {
+        dao.upsertRealStories(stories.take(10).map {
             CachedRealStory(it.id, it.title, it.content, it.author, it.source, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count)
         })
     }
 
     suspend fun saveAiStoriesLocalOnly(stories: List<AiStory>) = withContext(Dispatchers.IO) {
-        dao.upsertAiStories(stories.map {
+        dao.upsertAiStories(stories.take(10).map {
             CachedAiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count, it.createdAt)
         })
     }
 
     suspend fun saveUserSubmissionsLocalOnly(submissions: List<UserStorySubmission>) = withContext(Dispatchers.IO) {
-        dao.upsertUserSubmissions(submissions.map {
+        dao.upsertUserSubmissions(submissions.take(10).map {
             CachedUserSubmission(
                 it.id,
                 it.title,
@@ -246,20 +246,20 @@ class HorrorRepository(context: Context) {
     suspend fun getRealStories(forceRefresh: Boolean = false): List<RealStory> = withContext(Dispatchers.IO) {
         val cached = dao.getPublishedRealStories().ifEmpty { dao.getAllRealStories() }
         if (cached.isNotEmpty() && !forceRefresh) {
-            return@withContext cached.map {
+            return@withContext cached.take(10).map {
                 RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, cleanTagsString(it.tags), it.status, it.rating, it.ratingCount, it.viewCount, null, null)
             }
         }
         
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val resp = api.getRealStories(status = "eq.PUBLISHED")
+                val resp = api.getRealStories(status = "eq.PUBLISHED", order = "created_at.desc", limit = 10, offset = 0)
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
                     val cleanedList = list.map { story ->
                         story.copy(tags = cleanTagsString(story.tags))
                     }
-                    dao.upsertRealStories(cleanedList.map {
+                    dao.upsertRealStories(cleanedList.take(10).map {
                         CachedRealStory(
                             id = it.id,
                             title = it.title,
@@ -289,10 +289,27 @@ class HorrorRepository(context: Context) {
         
         val fallback = if (cached.isNotEmpty()) cached else dao.getAllRealStories()
         if (fallback.isNotEmpty()) {
-            fallback.map {
+            fallback.take(10).map {
                 RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, cleanTagsString(it.tags), it.status, it.rating, it.ratingCount, it.viewCount, null, null)
             }
         } else {
+            emptyList()
+        }
+    }
+
+    suspend fun loadMoreRealStories(offset: Int, limit: Int = 10): List<RealStory> = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext emptyList()
+        try {
+            val resp = api.getRealStories(status = "eq.PUBLISHED", order = "created_at.desc", limit = limit, offset = offset)
+            if (resp.isSuccessful && resp.body() != null) {
+                resp.body()!!.map { story ->
+                    story.copy(tags = cleanTagsString(story.tags))
+                }
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseError", "loadMoreRealStories exception: ${e.message}", e)
             emptyList()
         }
     }
@@ -617,17 +634,17 @@ class HorrorRepository(context: Context) {
     suspend fun getAiStories(forceRefresh: Boolean = false): List<AiStory> = withContext(Dispatchers.IO) {
         val cached = dao.getPublishedAiStories().ifEmpty { dao.getAllAiStories() }
         if (cached.isNotEmpty() && !forceRefresh) {
-            return@withContext cached.map {
+            return@withContext cached.take(10).map {
                 AiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, it.createdAt)
             }
         }
 
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val resp = api.getAiStories(status = "eq.PUBLISHED")
+                val resp = api.getAiStories(status = "eq.PUBLISHED", order = "created_at.desc", limit = 10, offset = 0)
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
-                    dao.upsertAiStories(list.map {
+                    dao.upsertAiStories(list.take(10).map {
                         CachedAiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.cover_image_url, it.tags, it.status, it.rating, it.rating_count, it.view_count, it.createdAt)
                     })
                     return@withContext list
@@ -645,10 +662,25 @@ class HorrorRepository(context: Context) {
 
         val fallback = if (cached.isNotEmpty()) cached else dao.getAllAiStories()
         if (fallback.isNotEmpty()) {
-            fallback.map {
+            fallback.take(10).map {
                 AiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, it.createdAt)
             }
         } else {
+            emptyList()
+        }
+    }
+
+    suspend fun loadMoreAiStories(offset: Int, limit: Int = 10): List<AiStory> = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext emptyList()
+        try {
+            val resp = api.getAiStories(status = "eq.PUBLISHED", order = "created_at.desc", limit = limit, offset = offset)
+            if (resp.isSuccessful && resp.body() != null) {
+                resp.body()!!
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseError", "loadMoreAiStories exception: ${e.message}", e)
             emptyList()
         }
     }
@@ -886,7 +918,7 @@ class HorrorRepository(context: Context) {
     suspend fun getUserSubmissions(forceRefresh: Boolean = false): List<UserStorySubmission> = withContext(Dispatchers.IO) {
         val cached = dao.getPublishedUserSubmissions().ifEmpty { dao.getAllUserSubmissions() }
         if (cached.isNotEmpty() && !forceRefresh) {
-            return@withContext cached.map {
+            return@withContext cached.take(10).map {
                 UserStorySubmission(
                     it.id,
                     it.title,
@@ -906,10 +938,10 @@ class HorrorRepository(context: Context) {
         
         if (SupabaseClientProvider.isConfigured) {
             try {
-                val resp = api.getUserSubmissions(status = "eq.PUBLISHED")
+                val resp = api.getUserSubmissions(status = "eq.PUBLISHED", order = "created_at.desc", limit = 10, offset = 0)
                 if (resp.isSuccessful && resp.body() != null) {
                     val list = resp.body()!!
-                    dao.upsertUserSubmissions(list.map {
+                    dao.upsertUserSubmissions(list.take(10).map {
                         CachedUserSubmission(
                             it.id,
                             it.title,
@@ -940,7 +972,7 @@ class HorrorRepository(context: Context) {
         
         val fallback = if (cached.isNotEmpty()) cached else dao.getAllUserSubmissions()
         if (fallback.isNotEmpty()) {
-            fallback.map {
+            fallback.take(10).map {
                 UserStorySubmission(
                     it.id,
                     it.title,
@@ -957,6 +989,21 @@ class HorrorRepository(context: Context) {
                 )
             }
         } else {
+            emptyList()
+        }
+    }
+
+    suspend fun loadMoreUserSubmissions(offset: Int, limit: Int = 10): List<UserStorySubmission> = withContext(Dispatchers.IO) {
+        if (!SupabaseClientProvider.isConfigured) return@withContext emptyList()
+        try {
+            val resp = api.getUserSubmissions(status = "eq.PUBLISHED", order = "created_at.desc", limit = limit, offset = offset)
+            if (resp.isSuccessful && resp.body() != null) {
+                resp.body()!!
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("SupabaseError", "loadMoreUserSubmissions exception: ${e.message}", e)
             emptyList()
         }
     }

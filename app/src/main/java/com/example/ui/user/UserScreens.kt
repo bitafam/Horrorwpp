@@ -70,7 +70,8 @@ enum class UserDestination {
     SUBMIT_STORY,
     AI_STORIES,
     SETTINGS,
-    SUBSCRIPTION
+    SUBSCRIPTION,
+    CONTACT_US
 }
 
 @Composable
@@ -2242,6 +2243,82 @@ https://myket.ir/app/com.apps.hororhouse
                 }
             }
 
+            // SINGLE ROW: CONTACT US (تماس با ما)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.6f), cornerRadiusDp = 12f)
+                    .clickable {
+                        HorrorSoundManager.playClickSound()
+                        onNavigate(UserDestination.CONTACT_US)
+                    },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0818))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1F112E))
+                            .border(1.dp, Color(0xFFDEC595), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Email,
+                            contentDescription = "تماس با ما",
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "تماس با ما و پشتیبانی",
+                                color = Color(0xFFEDE4F5),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = Color(0xFF2E163C),
+                                shape = RoundedCornerShape(4.dp),
+                                border = BorderStroke(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.6f))
+                            ) {
+                                Text(
+                                    text = "مستقیم",
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 8.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "ارتباط مستقیم با توسعه‌دهنده (امیرحسین سالاری) و ارسال پیام",
+                            color = Color(0xFF8B8496),
+                            fontSize = 9.5.sp
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFFDEC595),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
             // SINGLE ROW: CHECK FOR UPDATE IN MYKET
             Card(
                 modifier = Modifier
@@ -2580,6 +2657,11 @@ fun UserMainScreen(
                                     onBack = { popBack() }
                                 )
                             }
+                            UserDestination.CONTACT_US -> {
+                                ContactUsScreen(
+                                    onBack = { popBack() }
+                                )
+                            }
                         }
                     }
                 }
@@ -2817,7 +2899,13 @@ fun BeautifulStoriesDashboard(
     onOpenSubscription: (() -> Unit)? = null,
     onBack: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val isPremium by viewModel.isPremiumUser.collectAsState()
+    val isLoadingMoreRealStories by viewModel.isLoadingMoreRealStories.collectAsState()
+    val hasMoreRealStories by viewModel.hasMoreRealStories.collectAsState()
+    val isLoadingMoreUserSubmissions by viewModel.isLoadingMoreUserSubmissions.collectAsState()
+    val hasMoreUserSubmissions by viewModel.hasMoreUserSubmissions.collectAsState()
+
     var storyTab by remember { mutableIntStateOf(0) } // 0 = داستان‌های واقعی, 1 = داستان‌های شما
     var showSubmitDialog by remember { mutableStateOf(false) }
     var showPremiumPromptDialog by remember { mutableStateOf(false) }
@@ -2828,15 +2916,15 @@ fun BeautifulStoriesDashboard(
     var userSearchQuery by remember { mutableStateOf("") }
     var userFilterIndex by remember { mutableIntStateOf(0) } // 0 = جدیدترین‌ها, 1 = داغ‌ترین‌ها, 2 = محبوب‌ترین‌ها ♥️
     
-    var realStoriesLimit by remember { mutableIntStateOf(20) }
-    var userStoriesLimit by remember { mutableIntStateOf(20) }
+    var realStoriesLimit by remember { mutableIntStateOf(10) }
+    var userStoriesLimit by remember { mutableIntStateOf(10) }
 
     LaunchedEffect(searchQuery, selectedFilterIndex) {
-        realStoriesLimit = 20
+        realStoriesLimit = 10
     }
 
     LaunchedEffect(userSearchQuery, userFilterIndex) {
-        userStoriesLimit = 20
+        userStoriesLimit = 10
     }
 
     var isAmbientPlaying by remember { mutableStateOf(false) }
@@ -3171,17 +3259,22 @@ fun BeautifulStoriesDashboard(
                             )
                         }
 
-                        if (filteredStories.size > realStoriesLimit) {
+                        if (filteredStories.size > realStoriesLimit || hasMoreRealStories) {
                             Spacer(modifier = Modifier.height(8.dp))
                             Button(
                                 onClick = {
                                     HorrorSoundManager.playClickSound()
-                                    realStoriesLimit += 20
+                                    realStoriesLimit += 10
+                                    viewModel.loadMoreRealStories(context)
                                 },
+                                enabled = !isLoadingMoreRealStories,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F112E)),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1F112E),
+                                    disabledContainerColor = Color(0xFF140A20)
+                                ),
                                 border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f)),
                                 shape = RoundedCornerShape(10.dp)
                             ) {
@@ -3189,14 +3282,29 @@ fun BeautifulStoriesDashboard(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.Center
                                 ) {
-                                    Icon(Icons.Default.ExpandMore, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = "مشاهده داستان‌های بیشتر (نمایش ${displayedStories.size} از ${filteredStories.size})",
-                                        color = Color(0xFFDEC595),
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    if (isLoadingMoreRealStories) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            color = Color(0xFFDEC595),
+                                            strokeWidth = 2.dp
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "در حال بارگذاری داستان‌های بیشتر از دیتابیس...",
+                                            color = Color(0xFFDEC595),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    } else {
+                                        Icon(Icons.Default.ExpandMore, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "مشاهده داستان‌های بیشتر (نمایش ${displayedStories.size} داستان)",
+                                            color = Color(0xFFDEC595),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -3375,17 +3483,22 @@ fun BeautifulStoriesDashboard(
                                 )
                             }
 
-                            if (filteredUserSubmissions.size > userStoriesLimit) {
+                            if (filteredUserSubmissions.size > userStoriesLimit || hasMoreUserSubmissions) {
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Button(
                                     onClick = {
                                         HorrorSoundManager.playClickSound()
-                                        userStoriesLimit += 20
+                                        userStoriesLimit += 10
+                                        viewModel.loadMoreUserSubmissions(context)
                                     },
+                                    enabled = !isLoadingMoreUserSubmissions,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(48.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F112E)),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF1F112E),
+                                        disabledContainerColor = Color(0xFF140A20)
+                                    ),
                                     border = BorderStroke(1.dp, Color(0xFFDEC595).copy(alpha = 0.6f)),
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
@@ -3393,14 +3506,29 @@ fun BeautifulStoriesDashboard(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.Center
                                     ) {
-                                        Icon(Icons.Default.ExpandMore, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(18.dp))
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Text(
-                                            text = "مشاهده داستان‌های بیشتر (نمایش ${displayedUserSubmissions.size} از ${filteredUserSubmissions.size})",
-                                            color = Color(0xFFDEC595),
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        if (isLoadingMoreUserSubmissions) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(18.dp),
+                                                color = Color(0xFFDEC595),
+                                                strokeWidth = 2.dp
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "در حال بارگذاری روایات بیشتر از دیتابیس...",
+                                                color = Color(0xFFDEC595),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        } else {
+                                            Icon(Icons.Default.ExpandMore, contentDescription = null, tint = Color(0xFFDEC595), modifier = Modifier.size(18.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "مشاهده داستان‌های بیشتر (نمایش ${displayedUserSubmissions.size} داستان)",
+                                                color = Color(0xFFDEC595),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -3786,9 +3914,9 @@ fun GrimFortuneScreen(
 🔮 فال و طالع شوم متولدین ماه «${activeFortune.month_name}»:
 
 «${activeFortune.title}»
-${if (!activeFortune.omen_poem.isNullOrBlank()) "\n📜 «${activeFortune.omen_poem}»\n" else ""}
+${if (!activeFortune.omen_poem.isNullOrBlank()) "\n📜 «${activeFortune.omen_poem}» (سروده جادوگر شرور)\n" else ""}
 فرجام: ${activeFortune.doom_level ?: "بسیار شوم"}
-پیش‌گویی جادوگر: ${activeFortune.fortune_text}
+پیش‌گویی جادوگر شرور: ${activeFortune.fortune_text}
 
 ━━━━━━━━━━━━━━━━━━━━
 💀 برای دریافت طالع سایر ماه‌ها و خواندن صدها روایت ترسناک، اپلیکیشن «عمارت وحشت» را از مایکت دریافت کنید:
@@ -3802,8 +3930,8 @@ https://myket.ir/app/com.apps.hororhouse
             .background(Color(0xFF030106))
     ) {
         GamingTopBar(
-            title = "طالع شوم معبد جادوگری",
-            subtitle = "پیش‌گویی ماهانه ارواح و کواکب تاریک",
+            title = "طالع شوم جادوگر شرور",
+            subtitle = "پیش‌گویی ماهانه و سروده جادوگر شرور برای ۱۲ ماه",
             icon = Icons.Default.AutoAwesome,
             badgeText = monthNames.getOrNull(selectedMonthIndex - 1) ?: "طالع",
             onBack = handleBack
@@ -4277,7 +4405,7 @@ https://myket.ir/app/com.apps.hororhouse
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "طالع و پیشگویی شوم معبد جادوگری بر اساس ماه تولد برای شما آشکار خواهد شد:",
+                        text = "طالع و پیشگویی شوم جادوگر شرور بر اساس ماه تولد برای شما آشکار خواهد شد:",
                         color = Color(0xFFDEC595).copy(alpha = 0.9f),
                         fontSize = 11.sp,
                         textAlign = TextAlign.Center

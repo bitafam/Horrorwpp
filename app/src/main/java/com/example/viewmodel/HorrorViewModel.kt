@@ -917,6 +917,22 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
     private val _aiStoriesList = MutableStateFlow<List<AiStory>>(emptyList())
     val aiStoriesList: StateFlow<List<AiStory>> = _aiStoriesList.asStateFlow()
 
+    // Pagination States
+    private val _isLoadingMoreRealStories = MutableStateFlow(false)
+    val isLoadingMoreRealStories: StateFlow<Boolean> = _isLoadingMoreRealStories.asStateFlow()
+    private val _hasMoreRealStories = MutableStateFlow(true)
+    val hasMoreRealStories: StateFlow<Boolean> = _hasMoreRealStories.asStateFlow()
+
+    private val _isLoadingMoreUserSubmissions = MutableStateFlow(false)
+    val isLoadingMoreUserSubmissions: StateFlow<Boolean> = _isLoadingMoreUserSubmissions.asStateFlow()
+    private val _hasMoreUserSubmissions = MutableStateFlow(true)
+    val hasMoreUserSubmissions: StateFlow<Boolean> = _hasMoreUserSubmissions.asStateFlow()
+
+    private val _isLoadingMoreAiStories = MutableStateFlow(false)
+    val isLoadingMoreAiStories: StateFlow<Boolean> = _isLoadingMoreAiStories.asStateFlow()
+    private val _hasMoreAiStories = MutableStateFlow(true)
+    val hasMoreAiStories: StateFlow<Boolean> = _hasMoreAiStories.asStateFlow()
+
     // Admin Management States
     private val _adminGrimFortunes = MutableStateFlow<List<GrimFortune>>(emptyList())
     val adminGrimFortunes: StateFlow<List<GrimFortune>> = _adminGrimFortunes.asStateFlow()
@@ -1297,6 +1313,105 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                 android.util.Log.e("SupabaseSync", "Background sync exception: ${e.message}", e)
             } finally {
                 _loading.value = false
+            }
+        }
+    }
+
+    fun loadMoreRealStories(context: android.content.Context, onComplete: (Int) -> Unit = {}) {
+        if (_isLoadingMoreRealStories.value || !_hasMoreRealStories.value) return
+        if (!NetworkUtils.isOnline(context)) {
+            android.widget.Toast.makeText(context, "برای بارگذاری داستان‌های بیشتر به اینترنت نیاز است.", android.widget.Toast.LENGTH_SHORT).show()
+            onComplete(0)
+            return
+        }
+        viewModelScope.launch {
+            _isLoadingMoreRealStories.value = true
+            try {
+                val currentSize = _realStoriesList.value.size
+                val nextBatch = repository.loadMoreRealStories(offset = currentSize, limit = 10)
+                if (nextBatch.isNotEmpty()) {
+                    val existingIds = _realStoriesList.value.map { it.id }.toSet()
+                    val newItems = nextBatch.filter { it.id !in existingIds }
+                    _realStoriesList.value = _realStoriesList.value + newItems
+                    if (nextBatch.size < 10) {
+                        _hasMoreRealStories.value = false
+                    }
+                    onComplete(newItems.size)
+                } else {
+                    _hasMoreRealStories.value = false
+                    onComplete(0)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LoadMore", "Error loading more real stories: ${e.message}")
+                onComplete(0)
+            } finally {
+                _isLoadingMoreRealStories.value = false
+            }
+        }
+    }
+
+    fun loadMoreUserSubmissions(context: android.content.Context, onComplete: (Int) -> Unit = {}) {
+        if (_isLoadingMoreUserSubmissions.value || !_hasMoreUserSubmissions.value) return
+        if (!NetworkUtils.isOnline(context)) {
+            android.widget.Toast.makeText(context, "برای بارگذاری داستان‌های بیشتر به اینترنت نیاز است.", android.widget.Toast.LENGTH_SHORT).show()
+            onComplete(0)
+            return
+        }
+        viewModelScope.launch {
+            _isLoadingMoreUserSubmissions.value = true
+            try {
+                val currentSize = _userSubmissionsList.value.size
+                val nextBatch = repository.loadMoreUserSubmissions(offset = currentSize, limit = 10)
+                if (nextBatch.isNotEmpty()) {
+                    val existingIds = _userSubmissionsList.value.map { it.id }.toSet()
+                    val newItems = nextBatch.filter { it.id !in existingIds }
+                    _userSubmissionsList.value = _userSubmissionsList.value + newItems
+                    if (nextBatch.size < 10) {
+                        _hasMoreUserSubmissions.value = false
+                    }
+                    onComplete(newItems.size)
+                } else {
+                    _hasMoreUserSubmissions.value = false
+                    onComplete(0)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LoadMore", "Error loading more user submissions: ${e.message}")
+                onComplete(0)
+            } finally {
+                _isLoadingMoreUserSubmissions.value = false
+            }
+        }
+    }
+
+    fun loadMoreAiStories(context: android.content.Context, onComplete: (Int) -> Unit = {}) {
+        if (_isLoadingMoreAiStories.value || !_hasMoreAiStories.value) return
+        if (!NetworkUtils.isOnline(context)) {
+            android.widget.Toast.makeText(context, "برای بارگذاری داستان‌های بیشتر به اینترنت نیاز است.", android.widget.Toast.LENGTH_SHORT).show()
+            onComplete(0)
+            return
+        }
+        viewModelScope.launch {
+            _isLoadingMoreAiStories.value = true
+            try {
+                val currentSize = _aiStoriesList.value.size
+                val nextBatch = repository.loadMoreAiStories(offset = currentSize, limit = 10)
+                if (nextBatch.isNotEmpty()) {
+                    val existingIds = _aiStoriesList.value.map { it.id }.toSet()
+                    val newItems = nextBatch.filter { it.id !in existingIds && it.status == "PUBLISHED" }
+                    _aiStoriesList.value = _aiStoriesList.value + newItems
+                    if (nextBatch.size < 10) {
+                        _hasMoreAiStories.value = false
+                    }
+                    onComplete(newItems.size)
+                } else {
+                    _hasMoreAiStories.value = false
+                    onComplete(0)
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LoadMore", "Error loading more AI stories: ${e.message}")
+                onComplete(0)
+            } finally {
+                _isLoadingMoreAiStories.value = false
             }
         }
     }

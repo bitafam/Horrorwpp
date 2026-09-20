@@ -109,7 +109,10 @@ interface SupabaseApi {
     @GET("rest/v1/real_stories")
     suspend fun getRealStories(
         @Query("select") select: String = "*",
-        @Query("status") status: String? = null
+        @Query("status") status: String? = null,
+        @Query("order") order: String? = null,
+        @Query("limit") limit: Int? = null,
+        @Query("offset") offset: Int? = null
     ): Response<List<RealStory>>
 
     @POST("rest/v1/real_stories?on_conflict=id")
@@ -162,7 +165,10 @@ interface SupabaseApi {
     @GET("rest/v1/user_story_submissions")
     suspend fun getUserSubmissions(
         @Query("select") select: String = "*",
-        @Query("status") status: String? = null
+        @Query("status") status: String? = null,
+        @Query("order") order: String? = null,
+        @Query("limit") limit: Int? = null,
+        @Query("offset") offset: Int? = null
     ): Response<List<UserStorySubmission>>
 
     @POST("rest/v1/user_story_submissions?on_conflict=id")
@@ -226,7 +232,9 @@ interface SupabaseApi {
     suspend fun getAiStories(
         @Query("select") select: String = "*",
         @Query("status") status: String? = null,
-        @Query("order") order: String = "created_at.desc"
+        @Query("order") order: String = "created_at.desc",
+        @Query("limit") limit: Int? = null,
+        @Query("offset") offset: Int? = null
     ): Response<List<AiStory>>
 
     @POST("rest/v1/ai_stories?on_conflict=id")
