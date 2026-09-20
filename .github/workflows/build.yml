@@ -66,7 +66,7 @@ jobs:
             echo "Generating new debug.keystore..."
             keytool -genkey -v -keystore debug.keystore -keyalg RSA -keysize 2048 -validity 10000 \
               -alias androiddebugkey -keypass android -storepass android \
-              -dname "CN=Android Debug,O=Android,C=US"
+              -dname "CN=HorrorHouse,OU=Production,O=HorrorHouse,L=Tehran,ST=Tehran,C=IR"
           fi
 
       - name: Grant execute permission for gradlew
@@ -80,18 +80,11 @@ jobs:
           BUILT_APK=$(find app/build/outputs/apk -name "*.apk" | head -n 1)
           echo "Found built APK: $BUILT_APK"
           
-          # Determine keystore to use
-          KEYSTORE="debug.keystore"
-          KS_PASS="android"
-          KEY_PASS="android"
-          KEY_ALIAS="androiddebugkey"
-          
-          if [ -f "my-upload-key.jks" ] && [ -n "${{ secrets.STORE_PASSWORD }}" ]; then
-            KEYSTORE="my-upload-key.jks"
-            KS_PASS="${{ secrets.STORE_PASSWORD }}"
-            KEY_PASS="${{ secrets.KEY_PASSWORD }}"
-            KEY_ALIAS="upload"
-          fi
+          # Determine keystore to use (Production Release Keystore)
+          KEYSTORE="my-upload-key.jks"
+          KS_PASS="HorrorHouse2026Secure"
+          KEY_PASS="HorrorHouse2026Secure"
+          KEY_ALIAS="horrorhouse"
           
           # Ensure unsigned / clean APK
           cp "$BUILT_APK" app-to-align.apk
