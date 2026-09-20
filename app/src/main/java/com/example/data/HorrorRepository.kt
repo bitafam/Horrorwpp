@@ -24,7 +24,7 @@ class HorrorRepository(context: Context) {
 
     // GRIM FORTUNES
     suspend fun getGrimFortunes(forceRefresh: Boolean = false): List<GrimFortune> = withContext(Dispatchers.IO) {
-        val cached = dao.getPublishedGrimFortunes()
+        val cached = dao.getPublishedGrimFortunes().ifEmpty { dao.getAllGrimFortunes() }
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
                 GrimFortune(it.id, it.monthIndex, it.monthName, it.title, it.omenPoem, it.fortuneText, it.doomLevel, it.status, null, null)
@@ -44,16 +44,17 @@ class HorrorRepository(context: Context) {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "getGrimFortunes failed: $code - $errorBody")
-                    if (forceRefresh) throw Exception("خطا در دریافت طالع‌ها از سرور: $code")
+                    if (forceRefresh && cached.isEmpty()) throw Exception("خطا در دریافت طالع‌ها از سرور: $code")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getGrimFortunes exception: ${e.message}", e)
-                if (forceRefresh) throw e
+                if (forceRefresh && cached.isEmpty()) throw e
             }
         }
         
-        if (cached.isNotEmpty()) {
-            cached.map {
+        val fallback = if (cached.isNotEmpty()) cached else dao.getAllGrimFortunes()
+        if (fallback.isNotEmpty()) {
+            fallback.map {
                 GrimFortune(it.id, it.monthIndex, it.monthName, it.title, it.omenPoem, it.fortuneText, it.doomLevel, it.status, null, null)
             }
         } else {
@@ -243,7 +244,7 @@ class HorrorRepository(context: Context) {
 
     // REAL STORIES
     suspend fun getRealStories(forceRefresh: Boolean = false): List<RealStory> = withContext(Dispatchers.IO) {
-        val cached = dao.getPublishedRealStories()
+        val cached = dao.getPublishedRealStories().ifEmpty { dao.getAllRealStories() }
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
                 RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, cleanTagsString(it.tags), it.status, it.rating, it.ratingCount, it.viewCount, null, null)
@@ -278,16 +279,17 @@ class HorrorRepository(context: Context) {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "getRealStories failed: $code - $errorBody")
-                    if (forceRefresh) throw Exception("خطا در دریافت داستان‌ها از سرور: $code")
+                    if (forceRefresh && cached.isEmpty()) throw Exception("خطا در دریافت داستان‌ها از سرور: $code")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getRealStories exception: ${e.message}", e)
-                if (forceRefresh) throw e
+                if (forceRefresh && cached.isEmpty()) throw e
             }
         }
         
-        if (cached.isNotEmpty()) {
-            cached.map {
+        val fallback = if (cached.isNotEmpty()) cached else dao.getAllRealStories()
+        if (fallback.isNotEmpty()) {
+            fallback.map {
                 RealStory(it.id, it.title, it.content, it.author, it.source, it.coverImageUrl, cleanTagsString(it.tags), it.status, it.rating, it.ratingCount, it.viewCount, null, null)
             }
         } else {
@@ -613,7 +615,7 @@ class HorrorRepository(context: Context) {
 
     // AI STORIES
     suspend fun getAiStories(forceRefresh: Boolean = false): List<AiStory> = withContext(Dispatchers.IO) {
-        val cached = dao.getPublishedAiStories()
+        val cached = dao.getPublishedAiStories().ifEmpty { dao.getAllAiStories() }
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
                 AiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, it.createdAt)
@@ -633,16 +635,17 @@ class HorrorRepository(context: Context) {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "getAiStories failed: $code - $errorBody")
-                    if (forceRefresh) throw Exception("خطا در دریافت داستان‌های هوش تاریکی از سرور: $code")
+                    if (forceRefresh && cached.isEmpty()) throw Exception("خطا در دریافت داستان‌های هوش تاریکی از سرور: $code")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getAiStories exception: ${e.message}", e)
-                if (forceRefresh) throw e
+                if (forceRefresh && cached.isEmpty()) throw e
             }
         }
 
-        if (cached.isNotEmpty()) {
-            cached.map {
+        val fallback = if (cached.isNotEmpty()) cached else dao.getAllAiStories()
+        if (fallback.isNotEmpty()) {
+            fallback.map {
                 AiStory(it.id, it.title, it.content, it.genre, it.synopsis, it.coverImageUrl, it.tags, it.status, it.rating, it.ratingCount, it.viewCount, it.createdAt)
             }
         } else {
@@ -881,7 +884,7 @@ class HorrorRepository(context: Context) {
 
     // USER SUBMISSIONS
     suspend fun getUserSubmissions(forceRefresh: Boolean = false): List<UserStorySubmission> = withContext(Dispatchers.IO) {
-        val cached = dao.getPublishedUserSubmissions()
+        val cached = dao.getPublishedUserSubmissions().ifEmpty { dao.getAllUserSubmissions() }
         if (cached.isNotEmpty() && !forceRefresh) {
             return@withContext cached.map {
                 UserStorySubmission(
@@ -927,16 +930,17 @@ class HorrorRepository(context: Context) {
                     val code = resp.code()
                     val errorBody = resp.errorBody()?.string() ?: ""
                     android.util.Log.e("SupabaseError", "getUserSubmissions failed: $code - $errorBody")
-                    if (forceRefresh) throw Exception("خطا در دریافت ارسالی‌های کاربران: $code")
+                    if (forceRefresh && cached.isEmpty()) throw Exception("خطا در دریافت ارسالی‌های کاربران: $code")
                 }
             } catch (e: Exception) {
                 android.util.Log.e("SupabaseError", "getUserSubmissions exception: ${e.message}", e)
-                if (forceRefresh) throw e
+                if (forceRefresh && cached.isEmpty()) throw e
             }
         }
         
-        if (cached.isNotEmpty()) {
-            cached.map {
+        val fallback = if (cached.isNotEmpty()) cached else dao.getAllUserSubmissions()
+        if (fallback.isNotEmpty()) {
+            fallback.map {
                 UserStorySubmission(
                     it.id,
                     it.title,

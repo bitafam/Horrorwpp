@@ -434,33 +434,70 @@ const SupabaseService = {
         return Array.from(map.values());
     },
 
-    async deleteSubscriberHeartbeat(id) {
-        if (!id) return;
-        return await this.request(`rest/v1/user_heartbeats?id=eq.${id}`, {
-            method: 'DELETE'
-        });
+    async deleteSubscriberHeartbeat(identifier) {
+        if (!identifier) return;
+        const trimmed = String(identifier).trim();
+        try {
+            // In user_heartbeats, the primary identifier is device_id
+            return await this.request(`rest/v1/user_heartbeats?device_id=eq.${encodeURIComponent(trimmed)}`, {
+                method: 'DELETE'
+            });
+        } catch (e) {
+            console.warn('Delete by device_id failed, attempting by id column fallback:', e);
+            return await this.request(`rest/v1/user_heartbeats?id=eq.${encodeURIComponent(trimmed)}`, {
+                method: 'DELETE'
+            });
+        }
     },
 
     async cleanupDuplicateHeartbeats() {
         try {
             const heartbeats = await this.getHeartbeats();
             if (!Array.isArray(heartbeats) || heartbeats.length === 0) return 0;
-            const seen = new Map();
-            const toDeleteIds = [];
-            for (const h of heartbeats) {
-                const devId = (h.device_id || 'unknown').trim();
-                if (seen.has(devId)) {
-                    if (h.id) toDeleteIds.push(h.id);
+            
+            // Sort records newest first by last_seen_at
+            const sorted = [...heartbeats].sort((a, b) => {
+                const ta = new Date(a.last_seen_at || a.updated_at || a.created_at || 0).getTime();
+                const tb = new Date(b.last_seen_at || b.updated_at || b.created_at || 0).getTime();
+                return tb - ta;
+            });
+
+            // 1. Deduplicate by exact device_id
+            // 2. Also deduplicate subscribers with identical device_model if multiple test IDs exist
+            const seenDeviceIds = new Set();
+            const seenModels = new Set();
+            const toDeleteDeviceIds = [];
+
+            for (const h of sorted) {
+                const devId = (h.device_id || '').trim();
+                if (!devId) continue;
+
+                const modelKey = (h.device_model || 'unknown').trim().toLowerCase();
+                const isSub = h.is_subscribed === true || h.is_subscribed === 'true';
+
+                if (seenDeviceIds.has(devId)) {
+                    toDeleteDeviceIds.push(devId);
+                } else if (isSub && modelKey !== 'unknown' && seenModels.has(modelKey)) {
+                    // Older test heartbeat from the same device model
+                    toDeleteDeviceIds.push(devId);
                 } else {
-                    seen.set(devId, h.id || devId);
+                    seenDeviceIds.add(devId);
+                    if (isSub && modelKey !== 'unknown') {
+                        seenModels.add(modelKey);
+                    }
                 }
             }
-            if (toDeleteIds.length > 0) {
-                await this.request(`rest/v1/user_heartbeats?id=in.(${toDeleteIds.join(',')})`, {
-                    method: 'DELETE'
-                });
+
+            let deletedCount = 0;
+            for (const devId of toDeleteDeviceIds) {
+                try {
+                    await this.deleteSubscriberHeartbeat(devId);
+                    deletedCount++;
+                } catch (err) {
+                    console.warn('Failed to delete duplicate subscriber device_id:', devId, err);
+                }
             }
-            return toDeleteIds.length;
+            return deletedCount;
         } catch (e) {
             console.error('Error cleaning duplicate heartbeats:', e);
             return 0;

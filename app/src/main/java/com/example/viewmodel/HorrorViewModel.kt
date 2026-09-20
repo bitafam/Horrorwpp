@@ -704,6 +704,22 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
         _isPremiumUser.value = isPremium
         prefs.edit().putBoolean(PREF_IS_PREMIUM, isPremium).apply()
         sendHeartbeat(getApplication())
+        if (isPremium) {
+            viewModelScope.launch {
+                try {
+                    val fortunes = _grimFortunesList.value.ifEmpty { getMockGrimFortunes() }
+                    repository.saveGrimFortunesLocalOnly(fortunes)
+                    val stories = _realStoriesList.value.ifEmpty { getMockRealStories() }
+                    repository.saveRealStoriesLocalOnly(stories)
+                    val ai = _aiStoriesList.value
+                    if (ai.isNotEmpty()) {
+                        repository.saveAiStoriesLocalOnly(ai)
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("OfflineCache", "Error caching for VIP: ${e.message}")
+                }
+            }
+        }
     }
 
     fun getPersistentDeviceId(context: android.content.Context): String {
@@ -1200,31 +1216,48 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
 
     fun loadUserData() {
         viewModelScope.launch {
+            // 1. Immediately populate from local Room database so the UI displays instantly without waiting or blank screens
+            val localGfs = repository.getGrimFortunes(false)
+            if (localGfs.isNotEmpty()) {
+                _grimFortunesList.value = localGfs
+            } else {
+                val mockGfs = getMockGrimFortunes()
+                repository.saveGrimFortunesLocalOnly(mockGfs)
+                _grimFortunesList.value = mockGfs
+            }
+
+            val localRs = repository.getRealStories(false)
+            if (localRs.isNotEmpty()) {
+                _realStoriesList.value = localRs
+            } else {
+                val mockRs = getMockRealStories()
+                repository.saveRealStoriesLocalOnly(mockRs)
+                _realStoriesList.value = mockRs
+            }
+
+            val localSubs = repository.getUserSubmissions(false)
+            if (localSubs.isNotEmpty()) _userSubmissionsList.value = localSubs
+
+            val localAi = repository.getAiStories(false)
+            if (localAi.isNotEmpty()) _aiStoriesList.value = localAi.filter { it.status == "PUBLISHED" }
+
+            // 2. If offline, keep local cached data and finish
             if (!NetworkUtils.isOnline(getApplication())) {
-                _errorMessage.value = "⚠️ اتصال اینترنت برقرار نیست. لطفاً اتصال خود را بررسی کنید."
-                // Load previously confirmed local data only if available, without mock fallback mutations
-                val gfs = repository.getGrimFortunes(false)
-                if (gfs.isNotEmpty()) _grimFortunesList.value = gfs
-                val rs = repository.getRealStories(false)
-                if (rs.isNotEmpty()) _realStoriesList.value = rs
-                val subs = repository.getUserSubmissions(false)
-                if (subs.isNotEmpty()) _userSubmissionsList.value = subs
-                val ai = repository.getAiStories(false)
-                if (ai.isNotEmpty()) _aiStoriesList.value = ai.filter { it.status == "PUBLISHED" }
                 _loading.value = false
                 return@launch
             }
 
-            _loading.value = true
+            // 3. If online, fetch updates from Supabase in background
+            _loading.value = _realStoriesList.value.isEmpty()
             try {
-                // Fetch strictly from remote database (Supabase)
+                // Fetch from remote database (Supabase) and update Room cache
                 var gfs = repository.getGrimFortunes(true)
                 if (gfs.isEmpty() && SupabaseClientProvider.isConfigured) {
                     val mockGfs = getMockGrimFortunes()
                     repository.upsertGrimFortunes(mockGfs)
                     gfs = repository.getGrimFortunes(true)
                 }
-                _grimFortunesList.value = gfs
+                if (gfs.isNotEmpty()) _grimFortunesList.value = gfs
 
                 var rs = repository.getRealStories(true)
                 if (rs.isEmpty() && SupabaseClientProvider.isConfigured) {
@@ -1234,13 +1267,13 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     }
                     rs = repository.getRealStories(true)
                 }
-                _realStoriesList.value = rs
+                if (rs.isNotEmpty()) _realStoriesList.value = rs
 
                 var subs = repository.getUserSubmissions(true)
-                _userSubmissionsList.value = subs
+                if (subs.isNotEmpty()) _userSubmissionsList.value = subs
 
                 var ai = repository.getAiStories(true)
-                _aiStoriesList.value = ai.filter { it.status == "PUBLISHED" }
+                if (ai.isNotEmpty()) _aiStoriesList.value = ai.filter { it.status == "PUBLISHED" }
 
                 if (SupabaseClientProvider.isConfigured) {
                     try {
@@ -1261,7 +1294,7 @@ class HorrorViewModel(application: Application) : AndroidViewModel(application) 
                     } catch (_: Exception) {}
                 }
             } catch (e: Exception) {
-                _errorMessage.value = "خطا در دریافت داده‌ها از سرور: ${e.localizedMessage}"
+                android.util.Log.e("SupabaseSync", "Background sync exception: ${e.message}", e)
             } finally {
                 _loading.value = false
             }

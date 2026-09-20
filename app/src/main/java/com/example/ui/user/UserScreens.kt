@@ -1154,7 +1154,7 @@ fun GothicSummoningLoading(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Image(
-                            painter = painterResource(id = R.drawable.img_poster_dark_demon_1789804434865),
+                            painter = painterResource(id = R.drawable.app_logo_gothic_1788530562840),
                             contentDescription = "لوگوی عمارت وحشت",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier

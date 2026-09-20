@@ -75,7 +75,7 @@ interface HorrorDao {
     @Query("SELECT * FROM cached_grim_fortunes ORDER BY monthIndex ASC")
     suspend fun getAllGrimFortunes(): List<CachedGrimFortune>
 
-    @Query("SELECT * FROM cached_grim_fortunes WHERE status = 'PUBLISHED' ORDER BY monthIndex ASC")
+    @Query("SELECT * FROM cached_grim_fortunes WHERE UPPER(status) = 'PUBLISHED' OR status IS NULL OR status = '' ORDER BY monthIndex ASC")
     suspend fun getPublishedGrimFortunes(): List<CachedGrimFortune>
 
     @Upsert
@@ -91,7 +91,7 @@ interface HorrorDao {
     @Query("SELECT * FROM cached_real_stories")
     suspend fun getAllRealStories(): List<CachedRealStory>
 
-    @Query("SELECT * FROM cached_real_stories WHERE status = 'PUBLISHED'")
+    @Query("SELECT * FROM cached_real_stories WHERE UPPER(status) = 'PUBLISHED' OR status IS NULL OR status = ''")
     suspend fun getPublishedRealStories(): List<CachedRealStory>
 
     @Upsert
@@ -107,7 +107,7 @@ interface HorrorDao {
     @Query("SELECT * FROM cached_ai_stories ORDER BY id DESC")
     suspend fun getAllAiStories(): List<CachedAiStory>
 
-    @Query("SELECT * FROM cached_ai_stories WHERE status = 'PUBLISHED' ORDER BY id DESC")
+    @Query("SELECT * FROM cached_ai_stories WHERE UPPER(status) = 'PUBLISHED' OR status IS NULL OR status = '' ORDER BY id DESC")
     suspend fun getPublishedAiStories(): List<CachedAiStory>
 
     @Upsert
@@ -126,7 +126,7 @@ interface HorrorDao {
     @Query("SELECT * FROM cached_user_submissions WHERE id = :id LIMIT 1")
     suspend fun getUserSubmissionById(id: String): CachedUserSubmission?
 
-    @Query("SELECT * FROM cached_user_submissions WHERE status = 'PUBLISHED' ORDER BY id DESC")
+    @Query("SELECT * FROM cached_user_submissions WHERE UPPER(status) = 'PUBLISHED' OR status IS NULL OR status = '' ORDER BY id DESC")
     suspend fun getPublishedUserSubmissions(): List<CachedUserSubmission>
 
     @Upsert
