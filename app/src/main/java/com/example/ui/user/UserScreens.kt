@@ -3836,28 +3836,12 @@ fun StoryItemCard(
                     .padding(14.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Top Row: Tag badge + Rating + Views
+                // Top Row: Rating + Views (tag removed as requested)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Category Tag
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFFB8143F).copy(alpha = 0.85f))
-                            .border(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = if (index % 2 == 0) "روایت باستانی" else "واقعه واقعی",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
                     // Rating & Views Badges
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
