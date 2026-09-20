@@ -804,20 +804,28 @@ private fun sendEmailIntent(
     }
 }
 
-private fun openMyketDeveloperPage(context: Context) {
+fun openMyketDeveloperPage(context: Context) {
+    val developerPackage = "com.apps.wmqd"
+    val myketPackage = "ir.mservices.market"
     try {
-        // First try to open Myket app search/developer
-        val myketUri = Uri.parse("myket://search?q=امیرحسین سالاری")
-        val intent = Intent(Intent.ACTION_VIEW, myketUri)
+        // Official Myket developer intent: myket://developer/[PACKAGE_NAME]
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            data = Uri.parse("myket://developer/$developerPackage")
+            setPackage(myketPackage)
+        }
         context.startActivity(intent)
-    } catch (e: Exception) {
-        // Fallback to web browser
+    } catch (_: Exception) {
         try {
-            val webUri = Uri.parse("https://myket.ir/developer/dev-67258")
-            val webIntent = Intent(Intent.ACTION_VIEW, webUri)
-            context.startActivity(webIntent)
+            val fallbackIntent = Intent(Intent.ACTION_VIEW, Uri.parse("myket://developer/$developerPackage"))
+            context.startActivity(fallbackIntent)
         } catch (_: Exception) {
-            Toast.makeText(context, "خطا در باز کردن مارکت مایکت", Toast.LENGTH_SHORT).show()
+            try {
+                val webUri = Uri.parse("https://myket.ir/app/$developerPackage")
+                val webIntent = Intent(Intent.ACTION_VIEW, webUri)
+                context.startActivity(webIntent)
+            } catch (_: Exception) {
+                Toast.makeText(context, "خطا در باز کردن مارکت مایکت", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

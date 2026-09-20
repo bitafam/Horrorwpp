@@ -2408,6 +2408,82 @@ https://myket.ir/app/com.apps.hororhouse
                 }
             }
 
+            // SINGLE ROW: OTHER APPS IN MYKET (دیگر برنامه‌های ما در مایکت)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .gothicBorder(borderColor = Color(0xFFDEC595).copy(alpha = 0.6f), cornerRadiusDp = 12f)
+                    .clickable {
+                        HorrorSoundManager.playClickSound()
+                        openMyketDeveloperPage(context)
+                    },
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF0F0818))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF1F112E))
+                            .border(1.dp, Color(0xFFDEC595), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = "دیگر برنامه‌های ما",
+                            tint = Color(0xFFDEC595),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "دیگر برنامه‌های ما در مایکت",
+                                color = Color(0xFFEDE4F5),
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                color = Color(0xFF2E163C),
+                                shape = RoundedCornerShape(4.dp),
+                                border = BorderStroke(0.5.dp, Color(0xFFDEC595).copy(alpha = 0.6f))
+                            ) {
+                                Text(
+                                    text = "صفحه سازنده",
+                                    color = Color(0xFFDEC595),
+                                    fontSize = 8.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "مشاهده تمام برنامه‌ها و آثار دیگر ما در مارکت مایکت",
+                            color = Color(0xFF8B8496),
+                            fontSize = 9.5.sp
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFFDEC595),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(10.dp))
 
             // FOOTER SIGNATURE
@@ -3253,7 +3329,6 @@ fun BeautifulStoriesDashboard(
                                 index = index,
                                 onRead = {
                                     HorrorSoundManager.playPageTurnSound()
-                                    viewModel.incrementStoryViews(story.id)
                                     onStoryRead(story)
                                 }
                             )
@@ -3473,7 +3548,6 @@ fun BeautifulStoriesDashboard(
                                     index = idx,
                                     onRead = {
                                         HorrorSoundManager.playPageTurnSound()
-                                        viewModel.incrementSubmissionViews(sub.id)
                                         if (onUserStoryRead != null) {
                                             onUserStoryRead(sub.toRealStory())
                                         } else {
@@ -4678,12 +4752,10 @@ fun StoryReaderScreen(
     }
 
     LaunchedEffect(story.id) {
-        if (NetworkUtils.isOnline(context)) {
-            if (isUserSub) {
-                viewModel.incrementSubmissionViews(story.id)
-            } else {
-                viewModel.incrementStoryViews(story.id)
-            }
+        if (isUserSub) {
+            viewModel.incrementSubmissionViews(story.id)
+        } else {
+            viewModel.incrementStoryViews(story.id)
         }
     }
 
