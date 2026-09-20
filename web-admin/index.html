@@ -857,15 +857,16 @@ SELECT cron.schedule(
             </div>
             <div class="dialog-content">
                 <p style="font-size: 0.8rem; color: var(--muted-ash); line-height: 1.5;">
-                    داستان‌ها را با <code>---</code> از هم جدا کنید. می‌توانید از کلیدواژه‌های <code>عنوان:</code>، <code>متن:</code>، <code>پوستر:</code>، <code>نویسنده:</code> استفاده کنید یا خط اول را عنوان و بقیه را متن قرار دهید.
+                    داستان‌ها را با <code>---</code> از هم جدا کنید. فیلدهای خالی (مثل پوستر، امتیاز، بازدید و وضعیت پیش‌نویس) به صورت خودکار مقداردهی می‌شوند.
                 </p>
-                <textarea id="txtBulkStoriesInput" class="textarea-input" style="min-height: 240px; font-family: monospace; font-size: 0.82rem;" placeholder="عنوان: کلبه متروکه
-نویسنده: سهراب
-پوستر: https://...
-متن: شبی سرد و بارانی بود که به آن کلبه رسیدیم...
----
-عنوان: زمزمه‌های چاه
-متن: سال‌ها پیش در حیاط عمارت چاهی عمیق وجود داشت..."></textarea>
+                <textarea id="txtBulkStoriesInput" class="textarea-input" style="min-height: 240px; font-family: monospace; font-size: 0.82rem;" placeholder="---
+عنوان: رد پا در برف
+نویسنده: virgool
+پوستر:
+
+متن:
+این داستان ترسناک ایرانی تو یکی از شهرستانهای غرب کشور بوده و...
+---"></textarea>
             </div>
             <div class="dialog-actions">
                 <button class="btn btn-dark" data-close="modalBulkStories">انصراف</button>

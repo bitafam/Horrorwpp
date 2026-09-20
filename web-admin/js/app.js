@@ -891,8 +891,27 @@ function updateRealBulkBar() {
     }
 }
 
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        try {
+            return crypto.randomUUID();
+        } catch (e) {}
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 function parseBulkStories(inputText) {
-    const rawBlocks = inputText.split("---");
+    if (!inputText || typeof inputText !== 'string') return [];
+    
+    // Split by markdown horizontal rules / triple dashes
+    const rawBlocks = inputText.split(/\n\s*---\s*\n/).length > 1 
+        ? inputText.split(/\n\s*---\s*\n/) 
+        : inputText.split("---");
+        
     const list = [];
     for (const block of rawBlocks) {
         const trimmed = block.trim();
@@ -900,44 +919,85 @@ function parseBulkStories(inputText) {
 
         let title = "";
         let content = "";
-        let poster = null;
-        let author = "کاتب عمارت";
-        let source = "روایات واقعی";
+        let poster = "";
+        let author = "ناشناس";
+        let source = "واقعی";
+        let tags = "ترسناک";
 
-        const lines = trimmed.split("\n").map(l => l.trim()).filter(Boolean);
-        if (lines.length === 0) continue;
+        const lines = trimmed.split("\n");
+        const hasKeys = lines.some(l => {
+            const t = l.trim();
+            return t.startsWith("عنوان:") || t.startsWith("عنوان :") || 
+                   t.startsWith("متن:") || t.startsWith("متن :") ||
+                   t.startsWith("نویسنده:") || t.startsWith("نویسنده :") ||
+                   t.startsWith("پوستر:") || t.startsWith("پوستر :");
+        });
 
-        const hasKeys = lines.some(l => l.startsWith("عنوان:") || l.startsWith("متن:"));
         if (hasKeys) {
-            for (const line of lines) {
-                if (line.startsWith("عنوان:")) title = line.replace("عنوان:", "").trim();
-                else if (line.startsWith("متن:")) content = line.replace("متن:", "").trim();
-                else if (line.startsWith("پوستر:")) poster = line.replace("پوستر:", "").trim();
-                else if (line.startsWith("نویسنده:")) author = line.replace("نویسنده:", "").trim();
-                else if (line.startsWith("منبع:")) source = line.replace("منبع:", "").trim();
-                else if (content) content += "\n" + line;
+            let currentKey = "";
+            let contentLines = [];
+
+            for (const rawLine of lines) {
+                const line = rawLine.trim();
+                if (line.startsWith("عنوان:") || line.startsWith("عنوان :")) {
+                    currentKey = "title";
+                    title = line.replace(/^عنوان\s*:/, "").trim();
+                } else if (line.startsWith("نویسنده:") || line.startsWith("نویسنده :")) {
+                    currentKey = "author";
+                    const val = line.replace(/^نویسنده\s*:/, "").trim();
+                    if (val) author = val;
+                } else if (line.startsWith("پوستر:") || line.startsWith("پوستر :")) {
+                    currentKey = "poster";
+                    poster = line.replace(/^پوستر\s*:/, "").trim();
+                } else if (line.startsWith("منبع:") || line.startsWith("منبع :")) {
+                    currentKey = "source";
+                    const val = line.replace(/^منبع\s*:/, "").trim();
+                    if (val) source = val;
+                } else if (line.startsWith("تگ:") || line.startsWith("ژانر:") || line.startsWith("برچسب:")) {
+                    currentKey = "tags";
+                    const val = line.replace(/^(تگ|ژانر|برچسب)\s*:/, "").trim();
+                    if (val) tags = val;
+                } else if (line.startsWith("متن:") || line.startsWith("متن :")) {
+                    currentKey = "content";
+                    const firstPart = line.replace(/^متن\s*:/, "").trim();
+                    if (firstPart) {
+                        contentLines.push(firstPart);
+                    }
+                } else {
+                    if (currentKey === "content") {
+                        contentLines.push(rawLine);
+                    } else if (currentKey === "title" && !title) {
+                        title = line;
+                    }
+                }
             }
+            content = contentLines.join("\n").trim();
         } else {
-            title = lines[0];
-            content = lines.slice(1).join("\n");
-            if (!content) {
-                content = title;
-                title = title.length > 25 ? title.slice(0, 25) + "..." : title;
+            const nonBlankLines = lines.map(l => l.trim()).filter(Boolean);
+            if (nonBlankLines.length > 0) {
+                title = nonBlankLines[0];
+                content = lines.slice(lines.indexOf(title) + 1).join("\n").trim();
+                if (!content) {
+                    content = title;
+                    title = title.length > 25 ? title.slice(0, 25) + "..." : title;
+                }
             }
         }
 
         if (title && content) {
-            const storyId = `real-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            const storyId = generateUUID();
             list.push({
                 id: storyId,
-                title,
-                content,
-                author,
-                source,
-                cover_image_url: poster || getRandomHorrorPoster(storyId),
-                tags: "وحشت, واقعی",
-                status: "PUBLISHED",
-                views_count: 0
+                title: title,
+                content: content,
+                author: author || "ناشناس",
+                source: source || "واقعی",
+                cover_image_url: (poster && poster.length > 4) ? poster : getRandomHorrorPoster(storyId),
+                tags: "ترسناک",
+                status: "DRAFT",
+                rating: 5.0,
+                rating_count: 0,
+                view_count: 0
             });
         }
     }

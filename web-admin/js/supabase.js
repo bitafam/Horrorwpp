@@ -209,11 +209,22 @@ const SupabaseService = {
 
     async insertRealStory(story) {
         const payload = { ...story };
-        // Ensure id is a valid UUID or let database auto-generate
+        delete payload.views_count;
+        if (payload.view_count === undefined) payload.view_count = 0;
+        if (payload.rating === undefined) payload.rating = 5.0;
+        if (payload.rating_count === undefined) payload.rating_count = 0;
+        if (!payload.tags) payload.tags = "ترسناک";
+        if (!payload.status) payload.status = "DRAFT";
+
+        // Ensure id is a valid UUID or generate one
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(payload.id || '');
         if (!isUUID) {
-            if (window.crypto && crypto.randomUUID) {
-                payload.id = crypto.randomUUID();
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                try {
+                    payload.id = crypto.randomUUID();
+                } catch (e) {
+                    delete payload.id;
+                }
             } else {
                 delete payload.id;
             }
